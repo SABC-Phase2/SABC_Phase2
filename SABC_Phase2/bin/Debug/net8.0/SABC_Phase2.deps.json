@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "SABC_Phase2/1.0.0": {
+        "runtime": {
+          "SABC_Phase2.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SABC_Phase2/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
