@@ -1,5 +1,181 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model SABC_Phase2.Models.Tender.TenderViewModel
+
 @{
+    ViewBag.Title = "Create Tender";
 }
+
+<h2>Create Tender</h2>
+
+<form asp-action="Create" enctype="multipart/form-data" method="post">
+    <div class="form-group">
+        <label>Tender Type</label><br />
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="TenderType" value="RFQ" required />
+            <label class="form-check-label">RFQ</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="TenderType" value="RFP" />
+            <label class="form-check-label">RFP</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="TenderType" value="RFI" />
+            <label class="form-check-label">RFI</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="TenderType" value="RFO" />
+            <label class="form-check-label">RFO</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="TenderNumber"></label>
+        <input asp-for="TenderNumber" class="form-control" />
+        <span asp-validation-for="TenderNumber" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="ClosingDate"></label>
+        <input asp-for="ClosingDate" type="date" class="form-control" />
+        <span asp-validation-for="ClosingDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="ClosingTime" class="control-label"></label>
+        <input asp-for="ClosingTime" class="form-control" type="time" />
+        <span asp-validation-for="ClosingTime" class="text-danger"></span>
+    </div>
+
+
+    <div class="form-group">
+        <label asp-for="Status"></label>
+        <select asp-for="Status" class="form-control">
+            <option value="">-- Select Status --</option>
+            <option value="Open Tender">Open Tender</option>
+            <option value="Closed Tender">Closed Tender</option>
+            <option value="Awarded Tender">Awarded Tender</option>
+            <option value="Cancelled Tender">Cancelled Tender</option>
+        </select>
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Title"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Description"></label>
+        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="UploadedFiles">Upload PDF Documents</label>
+        <input type="file" id="UploadedFiles" multiple accept=".pdf" class="form-control" />
+        <div id="fileList" class="mt-2"></div>
+        <span asp-validation-for="UploadedFiles" class="text-danger"></span>
+    </div>
+
+
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+@section Scripts {
+    <script>
+        const fileInput = document.getElementById("UploadedFiles");
+        const fileListDisplay = document.getElementById("fileList");
+        const form = document.querySelector("form");
+
+        const storedFiles = [];
+
+        fileInput.addEventListener("change", function () {
+            for (const file of fileInput.files) {
+                if (!file.name.endsWith(".pdf")) {
+                    alert(`"${file.name}" is not a PDF.`);
+                    continue;
+                }
+
+                // Avoid duplicates
+                if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    continue;
+                }
+
+                storedFiles.push(file);
+            }
+
+            updateFileListDisplay();
+            fileInput.value = ""; // Clear file input so new selections work properly
+        });
+
+        function updateFileListDisplay() {
+            fileListDisplay.innerHTML = "";
+            if (storedFiles.length === 0) {
+                fileListDisplay.innerHTML = "<p class='text-muted'>No files selected.</p>";
+                return;
+            }
+
+            const ul = document.createElement("ul");
+            ul.classList.add("list-group");
+
+            storedFiles.forEach((file, index) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex justify-content-between align-items-center";
+                li.innerHTML = `
+                    ${file.name}
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index})">Remove</button>
+                `;
+                ul.appendChild(li);
+            });
+
+            fileListDisplay.appendChild(ul);
+        }
+
+        window.removeFile = function (index) {
+            storedFiles.splice(index, 1);
+            updateFileListDisplay();
+        };
+
+        form.addEventListener("submit", function (e) {
+            if (storedFiles.length === 0) {
+                alert("Please upload at least one PDF file.");
+                e.preventDefault();
+                return;
+            }
+
+            // Create a new FormData manually
+            const formData = new FormData(form);
+
+            storedFiles.forEach(file => {
+                formData.append("UploadedFiles", file);
+            });
+
+            // Use fetch to submit the form manually
+            e.preventDefault();
+            fetch(form.action, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text().then(html => {
+                        document.body.innerHTML = html;
+                    });
+                }
+            })
+            .catch(error => {
+                alert("Error submitting form");
+                console.error(error);
+            });
+        });
+    </script>
+@{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+}
+}
+
+
+

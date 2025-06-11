@@ -1,7 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using SABC_Phase2.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<Phase2Context>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("Phase2ContextConnection")));
 
 var app = builder.Build();
 

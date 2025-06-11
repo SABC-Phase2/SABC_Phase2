@@ -1,5 +1,31 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model List<SABC_Phase2.Models.Tender.Tender>
+
 @{
+    ViewBag.Title = "Tender List";
 }
+
+<h2>All Tenders</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Tender Title</th>
+            <th>Status</th>
+            <th>Date Published</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var tender in Model)
+        {
+            <tr>
+                <td>@tender.Title</td>
+                <td>@tender.Status</td>
+                <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
+                <td>
+                    <a asp-controller="TenderAdmin" asp-action="Edit" asp-route-id="@tender.Id" class="btn btn-primary btn-sm">Edit</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
