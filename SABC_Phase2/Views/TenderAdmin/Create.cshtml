@@ -4,9 +4,27 @@
     ViewBag.Title = "Create Tender";
 }
 
+
+
 <h2>Create Tender</h2>
 
 <form asp-action="Create" enctype="multipart/form-data" method="post">
+
+
+    <!-- Schedule Tender Button and Picker Panel -->
+<button type="button" class="btn btn-primary" id="scheduleTenderBtn">Schedule Tender</button>
+<div id="schedulePickers" style="display:none; margin-top:10px;">
+    <div class="form-group">
+        <label for="scheduledDate">Scheduled Date</label>
+        <input type="date" id="scheduledDate" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label for="scheduledTime">Scheduled Time</label>
+        <input type="time" id="scheduledTime" class="form-control" />
+    </div>
+</div>
+
+
     <div class="form-group">
         <label>Tender Type</label><br />
         <div class="form-check form-check-inline">
@@ -78,12 +96,27 @@
     </div>
 
 
+    <!-- Hidden inputs to submit scheduled data -->
+    <input type="hidden" name="IsScheduled" id="IsScheduled" value="false" />
+    <input type="hidden" name="ScheduledDate" id="HiddenScheduledDate" />
+    <input type="hidden" name="ScheduledTime" id="HiddenScheduledTime" />
 
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 
 @section Scripts {
     <script>
+
+               document.getElementById("scheduleTenderBtn").addEventListener("click", function () {
+            const pickers = document.getElementById("schedulePickers");
+            const isNowVisible = pickers.style.display === "none";
+            pickers.style.display = isNowVisible ? "block" : "none";
+
+            // Mark form as scheduled when picker is visible
+            document.getElementById("IsScheduled").value = isNowVisible ? "true" : "false";
+        });
+
+
         const fileInput = document.getElementById("UploadedFiles");
         const fileListDisplay = document.getElementById("fileList");
         const form = document.querySelector("form");
@@ -138,6 +171,15 @@
         };
 
         form.addEventListener("submit", function (e) {
+
+                // Populate hidden fields if scheduling is active
+        const isScheduled = document.getElementById("IsScheduled").value === "true";
+
+        if (isScheduled) {
+            document.getElementById("HiddenScheduledDate").value = document.getElementById("scheduledDate").value;
+            document.getElementById("HiddenScheduledTime").value = document.getElementById("scheduledTime").value;
+        }
+
             if (storedFiles.length === 0) {
                 alert("Please upload at least one PDF file.");
                 e.preventDefault();

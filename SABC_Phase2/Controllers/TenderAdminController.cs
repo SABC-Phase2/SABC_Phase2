@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Data;
 using SABC_Phase2.Models.Tender;
+using SABC_Phase2.Services;
 
 namespace SABC_Phase2.Controllers
 {
@@ -30,44 +32,88 @@ namespace SABC_Phase2.Controllers
         {
             if (!ModelState.IsValid)
             {
-                Console.WriteLine("ModelState is invalid:");
-                foreach (var kvp in ModelState)
-                {
-                    foreach (var error in kvp.Value.Errors)
-                    {
-                        Console.WriteLine($"- {kvp.Key}: {error.ErrorMessage}");
-                    }
-                }
                 return View(model);
             }
 
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+
+            if (model.IsScheduled && model.ScheduledDate.HasValue && model.ScheduledTime.HasValue)
+            {
+                // COMBINE DATE + TIME (assumed local)
+                DateTime localPublishDateTime = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
+
+                // CONVERT combined local datetime to UTC before saving
+                DateTime publishDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localPublishDateTime);
+
+                var scheduledTender = new ScheduledTender
+                {
+                    TenderType = model.TenderType,
+                    TenderNumber = model.TenderNumber,
+                    ClosingDate = model.ClosingDate,
+                    ClosingTime = model.ClosingTime,
+                    Status = "Scheduled",
+                    Title = model.Title,
+                    Description = model.Description,
+                    ScheduledPublishDateTime = publishDateTimeUtc,
+                    CreatedOn = DateTime.UtcNow,
+                    Documents = new List<ScheduledTenderDocument>()
+                };
+
+                // Upload and associate documents
+                if (model.UploadedFiles != null && model.UploadedFiles.Any())
+                {
+                    foreach (var file in model.UploadedFiles)
+                    {
+                        if (file.Length > 0)
+                        {
+                            var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                            using var stream = file.OpenReadStream();
+                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                            scheduledTender.Documents.Add(new ScheduledTenderDocument
+                            {
+                                FileName = file.FileName,
+                                FilePath = blobFileName
+                            });
+                        }
+                    }
+                }
+
+                _context.ScheduledTenders.Add(scheduledTender);
+                await _context.SaveChangesAsync();
+
+                // Schedule the publishing job with UTC times
+                var delay = publishDateTimeUtc - DateTime.UtcNow;
+                if (delay < TimeSpan.Zero) delay = TimeSpan.Zero; // Avoid negative delay
+
+                BackgroundJob.Schedule<ITenderPublishingService>(
+                    service => service.PublishScheduledTendersAsync(),
+                    delay);
+
+                return RedirectToAction("Index");
+            }
+
+            // Proceed with normal tender creation
             var tender = new Tender
             {
                 TenderType = model.TenderType,
                 TenderNumber = model.TenderNumber,
                 ClosingDate = model.ClosingDate,
-                ClosingTime = model.ClosingTime, // <-- Add this line
+                ClosingTime = model.ClosingTime,
                 Status = model.Status,
                 Title = model.Title,
                 Description = model.Description,
-                DatePublished = DateTime.Now,
+                DatePublished = DateTime.UtcNow,
                 Documents = new List<TenderDocument>()
             };
 
-            _context.Tenders.Add(tender);
-            await _context.SaveChangesAsync();
-
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
-                Console.WriteLine("Uploading documents...");
                 foreach (var file in model.UploadedFiles)
                 {
-                    if (file != null && file.Length > 0)
+                    if (file.Length > 0)
                     {
-                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-
+                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
                         var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
 
@@ -79,13 +125,14 @@ namespace SABC_Phase2.Controllers
                         });
                     }
                 }
-
-                await _context.SaveChangesAsync();
-
             }
+
+            _context.Tenders.Add(tender);
+            await _context.SaveChangesAsync();
 
             return RedirectToAction("Index");
         }
+
 
 
 

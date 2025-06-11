@@ -34,6 +34,9 @@ namespace SABC_Phase2.Models.Tender
         public List<IFormFile> UploadedFiles { get; set; }
 
 
+        public bool IsScheduled { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public TimeSpan? ScheduledTime { get; set; }
 
         //public List<TenderDocumentViewModel> ExistingDocuments { get; set; }
 
