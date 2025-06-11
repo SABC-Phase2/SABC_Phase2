@@ -8,5 +8,12 @@ namespace SABC_Phase2.Controllers
         {
             return View();
         }
+
+        // GET: /TenderAdmin/Create
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
     }
 }

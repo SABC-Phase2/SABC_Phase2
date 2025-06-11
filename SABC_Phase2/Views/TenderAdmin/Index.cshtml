@@ -1,5 +1,369 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["BannerText"] = "Tenders";
 }
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+@model SABC_Phase2.Models.Tender.TenderViewModel
+<style>
+    .table-container {
+        margin-top: 35px;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 8px;
+        overflow-x: auto;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .tender-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .tender-table thead th {
+            background-color: #f5c012;
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 0; /* Reset all corners */
+        }
+
+            .tender-table thead th:nth-child(3) {
+                white-space: nowrap;
+            }
+
+            .tender-table thead th:nth-child(4) {
+                white-space: nowrap;
+            }
+
+            /* Specific column background overrides */
+            .tender-table thead th:nth-child(2), /* TITLES */
+            .tender-table thead th:nth-child(4) { /* DATE PUBLISHED */
+                background-color: #333;
+            }
+
+            /* Only round top-left for first header and top-right for last header */
+            .tender-table thead th:first-child {
+                border-top-left-radius: 6px;
+            }
+
+            .tender-table thead th:last-child {
+                border-top-right-radius: 6px;
+                background-color: #f5c012; /* Action column also uses dark background */
+            }
+
+            .tender-table thead th:nth-child(4) i {
+                margin-left: 8px;
+                font-size: 0.9rem;
+            }
+
+        .tender-table tbody tr {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            transition: background 0.2s ease-in-out;
+        }
+
+            .tender-table tbody tr:hover {
+                background-color: #f1f1f1;
+            }
+
+        .tender-table td {
+            padding: 16px;
+            vertical-align: middle;
+        }
+
+    .tender-thumbnail {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .tender-title {
+        font-size: 0.95rem;
+        color: #333;
+    }
+    }
+
+    .tender-status {
+        font-weight: 600;
+        color: #00a651;
+    }
+
+    .edit-btn {
+        background-color: #fff;
+        border: 1px solid #00a651;
+        color: #00a651;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .edit-btn:hover {
+            background-color: #00a651;
+            color: #fff;
+        }
+
+    .tender-table tbody tr:not(:last-child) {
+        border-bottom: 2px solid #333; /* light gray, adjust as needed */
+    }
+
+    .tender-action-bar {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 25px 0;
+        margin-top: 45px;
+        flex-wrap: wrap;
+    }
+
+    .search-wrapper {
+        position: relative;
+        width: 250px;
+    }
+
+        .search-wrapper i {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 1rem;
+        }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 12px 12px 38px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+    }
+
+        .search-input::placeholder {
+            color: #ccc;
+        }
+
+    .filter-dropdown {
+        padding: 12px 36px 12px 12px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+        min-width: 180px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF8,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ccc'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 10px;
+    }
+
+    .refresh-btn {
+        background-color: #333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 14px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .new-tender-btn {
+        margin-left: auto;
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        position: relative;
+    }
+
+        .new-tender-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.00rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+        margin-top: 18px;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
+
+    .breadcrumb-active {
+        color: #1a7f37;
+        font-weight: 500;
+    }
+
+    .custom-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.pagination-list {
+    list-style: none;
+    display: flex;
+    gap: 18px;
+    background: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.page-item span {
+    cursor: pointer;
+    font-size: 1rem;
+    color: #333;
+}
+
+.page-item.active span {
+    background-color: #000;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    text-align: center;
+    line-height: 16px;
+    transform: rotate(45deg);
+    position: relative;
+}
+
+.page-item.active span::before {
+    content: attr(data-page);
+    transform: rotate(-45deg);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.page-item:not(.active):hover span {
+    text-decoration: underline;
+}
+
+.page-item.next span {
+    font-weight: 500;
+}
+</style>
+
+@* Tender Table *@
+
+<div class="breadcrumb-custom">
+    <span class="breadcrumb-active">Home</span>
+</div>
+
+<div class="tender-action-bar">
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="text" class="search-input" placeholder="Search keyword" />
+    </div>
+
+    <select class="filter-dropdown">
+        <option value="all">ALL</option>
+        <option value="open">Open</option>
+        <option value="closed">Closed</option>
+    </select>
+
+    <button class="refresh-btn">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <button class="new-tender-btn">
+        <i class="fas fa-plus"></i> New Tender
+    </button>
+</div>
+
+
+<div class="table-container">
+    <table class="tender-table">
+        <thead>
+            <tr>
+                <th>THUMBNAILS</th>
+                <th>TITLES</th>
+                <th>TENDER STATUS</th>
+                <th>DATE PUBLISHED <i class="fas fa-sort"></i></th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @* Sample Row – Replace with your foreach loop when pulling from DB *@
+            <tr>
+                <td><img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" /></td>
+                <td class="tender-title">RFQ/RIS/2023/14 : APPOINTMENT OF A SERVICE PROVIDER TO ASSIST SABC WITH IMPLEMENTATION OF BUSINESS CONTINUITY MANAGEMENT (BCM) AS ONCE OFF PROJECT</td>
+                <td class="tender-status">Open Tender</td>
+                <td>12 / 02 / 2025</td>
+                <td><button class="edit-btn"><i class="fas fa-edit"></i> Edit</button></td>
+            </tr>
+            <tr>
+                <td><img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" /></td>
+                <td class="tender-title">RFQ/RIS/2023/14 : APPOINTMENT OF A SERVICE PROVIDER TO ASSIST SABC WITH IMPLEMENTATION OF BUSINESS CONTINUITY MANAGEMENT (BCM) AS ONCE OFF PROJECT</td>
+                <td class="tender-status">Open Tender</td>
+                <td>12 / 02 / 2025</td>
+                <td><button class="edit-btn"><i class="fas fa-edit"></i> Edit</button></td>
+            </tr>
+            <tr>
+                <td><img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" /></td>
+                <td class="tender-title">RFQ/RIS/2023/14 : APPOINTMENT OF A SERVICE PROVIDER TO ASSIST SABC WITH IMPLEMENTATION OF BUSINESS CONTINUITY MANAGEMENT (BCM) AS ONCE OFF PROJECT</td>
+                <td class="tender-status">Open Tender</td>
+                <td>12 / 02 / 2025</td>
+                <td><button class="edit-btn"><i class="fas fa-edit"></i> Edit</button></td>
+            </tr>
+           
+            @* Repeat rows dynamically *@
+        </tbody>
+    </table>
+
+
+</div>
+
+@{
+    int currentPage = 1;
+    int totalPages = 78;
+}
+<div class="custom-pagination">
+    <ul class="pagination-list">
+        @if (currentPage > 1)
+        {
+            <li class="page-item"><span>@(currentPage - 1)</span></li>
+        }
+
+        <li class="page-item active"><span data-page="@currentPage">@currentPage</span></li>
+
+        <li class="page-item"><span>@(currentPage + 1)</span></li>
+        <li class="page-item dots"><span>....</span></li>
+        <li class="page-item"><span>76</span></li>
+        <li class="page-item"><span>78</span></li>
+        <li class="page-item next"><span>Next</span></li>
+    </ul>
+</div>

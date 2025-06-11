@@ -1,0 +1,177 @@
+﻿
+<style>
+/* MASTER FOOTER */
+#SABCMasterFooter {
+        background: #000000;
+        color: #FFFFFF;
+        min-height: 90px;
+        font-size: 0.8em;
+        font-family: Arial, Helvetica, sans-serif;
+        width: 100%;
+        display: block;
+}
+
+#SABCMasterFooter a:link,
+#SABCMasterFooter a:active,
+#SABCMasterFooter a:visited {
+    color: #FFFFFF;
+    text-decoration: none;
+}
+
+#SABCMasterFooter a:hover {
+    text-decoration: underline;
+}
+
+    .rowSABC {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center; /* Changed from flex-start to center */
+        justify-content: space-between;
+        padding: 30px 106px;
+    }
+
+    .sabclogo {
+        width: 150px; /* Smaller fixed width */
+        padding-top: 20px; /* Remove extra top padding */
+        display: flex;
+        align-items: center; /* Vertically center logo with buttons */
+    }
+
+        .sabclogo img {
+            max-width: 100%;
+            max-height: 50px; /* Limit logo height */
+            height: auto;
+        }
+
+
+.leftmainfooterBtns {
+    padding-top: 40px;
+    display: flex;
+    gap: 5px;
+    width: auto;
+}
+
+.buttonmainfooter1,
+.buttonmainfooter1:link,
+.buttonmainfooter1:active,
+.buttonmainfooter1:visited {
+    width: 26px;
+    height: 26px;
+    border: 2px solid #FFFFFF;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    color: #fff !important;
+    cursor: pointer;
+}
+
+.buttonmainfooter1 span {
+    display: inline-block;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 20px;
+    height: 20px;
+}
+
+.twitter {
+    background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-twitter-small.png);
+}
+
+.facebook {
+    background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-facebook-small.png);
+}
+
+.youtube {
+    background-image: url(https://www.sabc.co.za/sabc/wp-content/uploads/2024/04/yt_icon_rgb-1.png);
+}
+
+.bccsalogo {
+    width: 50%; /* Reduced size */
+    text-align: right;
+    padding-top: 10px;
+    margin-top: -50px;
+}
+
+.bccsalogo img {
+    max-width: 80%;
+}
+
+.dmma {
+    width: 12%;
+    text-align: right;
+    padding-top: 8px;
+    order: 5; /* Ensures it’s pushed to the far right */
+}
+
+.dmma img {
+    max-width: 100%;
+}
+
+.nav {
+    width: 50%;
+    padding-top: 40px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.nav ul {
+    display: table;
+    list-style-type: none;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.nav li {
+    display: table-cell;
+    width: 25%;
+    padding-bottom: 10px;
+}
+</style>
+
+    <div id="SABCMasterFooter">
+    <div class="rowSABC">
+        <div class="sabclogo">
+            <a href="http://www.sabc.co.za/sabc/" title="SABC Portal Home">
+                <img src="~/lib/Images/logo.png" alt="SABC Logo">
+            </a>
+        </div>
+
+        <div class="leftmainfooterBtns">
+            <a href="http://www.twitter.com/sabcportal" class="buttonmainfooter1" title="Twitter" target="_blank"><span class="twitter"></span></a>
+            <a href="http://www.facebook.com/sabcportal" class="buttonmainfooter1" title="Facebook" target="_blank"><span class="facebook"></span></a>
+            <a href="http://www.youtube.com/sabc" class="buttonmainfooter1" title="YouTube" target="_blank"><span class="youtube"></span></a>
+        </div>
+
+
+        <div class="nav">
+            <ul>
+                <li><a href="https://www.sabc.co.za/sabc/about-us/" title="About the SABC">About the SABC</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/contact/" title="Contact Us">Contact Us</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/sabc-careers/" title="Jobs">Jobs</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/tender-search/" title="Tenders">Tenders</a></li>
+            </ul>
+            <ul>
+                <li><a href="https://www.sabcsales.co.za/" title="Advertise">Advertise</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/disclaimer/" title="Disclaimer">Disclaimer</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/sabc-board/" title="SABC Board">SABC Board</a></li>
+                <li><a href="https://www.sabc.co.za/sabc/media-statement" title="Press Releases">Press Releases</a></li>
+            </ul>
+        </div>
+
+        <div class="dmma">
+            <p>SABC © 2025</p>
+            <a href="http://www.iabsa.net/" title="IAB South Africa Website" target="_blank">
+                <img src="https://www.sabc.co.za/sabc/wp-content/uploads/2017/08/mastfooter-iabsa-logo.png" alt="IAB Logo">
+            </a>
+            <div class="bccsalogo">
+                <a href="https://www.sabc.co.za/sabc/bccsa-code-of-conduct/" title="BCCSA South Africa" target="_blank">
+                    <img src="https://www.sabc.co.za/sabc/wp-content/uploads/2023/04/bbcsa.png" alt="BCCSA Logo">
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
