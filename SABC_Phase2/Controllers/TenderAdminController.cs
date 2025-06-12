@@ -7,11 +7,20 @@ using SABC_Phase2.Services;
 
 namespace SABC_Phase2.Controllers
 {
+    /// <summary>
+    /// Controller responsible for administering tender creation and listing.
+    /// Supports both immediate and scheduled publishing via Hangfire and Azure Blob Storage for document uploads.
+    /// </summary>
     public class TenderAdminController : Controller
     {
         private readonly Phase2Context _context;
         private readonly IConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
+        /// </summary>
+        /// <param name="context">Database context for Tender operations.</param>
+        /// <param name="configuration">App configuration settings, used for services like Azure Blob Storage.</param>
         public TenderAdminController(Phase2Context context, IConfiguration configuration)
         {
             _context = context;
@@ -19,6 +28,9 @@ namespace SABC_Phase2.Controllers
         }
 
         // GET: /TenderAdmin/Create
+        /// <summary>
+        /// GET: Render the Create Tender view.
+        /// </summary>
         [HttpGet]
         public IActionResult Create()
         {
@@ -26,17 +38,23 @@ namespace SABC_Phase2.Controllers
         }
 
         // POST: /TenderAdmin/Create
+        /// <summary>
+        /// POST: Handles Tender creation logic.
+        /// Supports both immediate and scheduled publishing.
+        /// </summary>
+        /// <param name="model">Tender data entered by the user.</param>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
+            // Validate the incoming model state
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
-
+            // Initialize BlobStorageService for document upload
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-
+            // Scheduled Tender Logic
             if (model.IsScheduled && model.ScheduledDate.HasValue && model.ScheduledTime.HasValue)
             {
                 // COMBINE DATE + TIME (assumed local)
@@ -44,7 +62,7 @@ namespace SABC_Phase2.Controllers
 
                 // CONVERT combined local datetime to UTC before saving
                 DateTime publishDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localPublishDateTime);
-
+                // Create ScheduledTender entity
                 var scheduledTender = new ScheduledTender
                 {
                     TenderType = model.TenderType,
@@ -59,7 +77,7 @@ namespace SABC_Phase2.Controllers
                     Documents = new List<ScheduledTenderDocument>()
                 };
 
-                // Upload and associate documents
+                // Upload files and associate them with the scheduled tender
                 if (model.UploadedFiles != null && model.UploadedFiles.Any())
                 {
                     foreach (var file in model.UploadedFiles)
@@ -78,11 +96,11 @@ namespace SABC_Phase2.Controllers
                         }
                     }
                 }
-
+                // Persist the scheduled tender to the database
                 _context.ScheduledTenders.Add(scheduledTender);
                 await _context.SaveChangesAsync();
 
-                // Schedule the publishing job with UTC times
+                // Schedule the background job using Hangfire
                 var delay = publishDateTimeUtc - DateTime.UtcNow;
                 if (delay < TimeSpan.Zero) delay = TimeSpan.Zero; // Avoid negative delay
 
@@ -94,6 +112,7 @@ namespace SABC_Phase2.Controllers
             }
 
             // Proceed with normal tender creation
+            // Immediate Tender Logic
             var tender = new Tender
             {
                 TenderType = model.TenderType,
@@ -106,7 +125,7 @@ namespace SABC_Phase2.Controllers
                 DatePublished = DateTime.UtcNow,
                 Documents = new List<TenderDocument>()
             };
-
+            // Upload and attach documents
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
@@ -134,7 +153,9 @@ namespace SABC_Phase2.Controllers
         }
 
 
-
+        /// <summary>
+        /// Displays a list of all published tenders with signed-access URIs for their documents.
+        /// </summary>
 
         public IActionResult Index()
         {
@@ -152,13 +173,14 @@ namespace SABC_Phase2.Controllers
                     Documents = t.Documents.ToList()
                 })
                 .ToList();
-
+            // Generate SAS URIs for document downloads
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
 
             foreach (var tender in tenders)
             {
                 foreach (var doc in tender.Documents)
                 {
+                    // Replace file path with SAS token-secured download URL
                     doc.FilePath = blobService.GetBlobSasUri(doc.FilePath);
                 }
             }

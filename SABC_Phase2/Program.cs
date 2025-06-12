@@ -5,45 +5,65 @@ using SABC_Phase2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ---------------------------
+// Add services to the container
+// ---------------------------
+
+// MVC Controllers and Razor Views
 builder.Services.AddControllersWithViews();
 
+// EF Core with SQL Server using connection string from appsettings.json
 builder.Services.AddDbContext<Phase2Context>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Phase2ContextConnection")));
 
-// Configure Hangfire to use SQL Server storage
+// Hangfire: Configure background job storage using SQL Server
 builder.Services.AddHangfire(config =>
     config.UseSqlServerStorage(builder.Configuration.GetConnectionString("Phase2ContextConnection")));
+
+// Register Hangfire's background job server
 builder.Services.AddHangfireServer();
 
-// Register your custom publishing service
+// Register your custom tender publishing service for DI
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ---------------------------
+// Configure the HTTP request pipeline
+// ---------------------------
+
 if (!app.Environment.IsDevelopment())
 {
+    // Production: Use global error handler and enforce HTTPS
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseHttpsRedirection();   // Redirect HTTP to HTTPS
+app.UseStaticFiles();        // Serve static files from wwwroot
 
 app.UseRouting();
-
 app.UseAuthorization();
 
-// Hangfire Dashboard (optional, for monitoring jobs)
-app.UseHangfireDashboard(); // You can add options or protect it with authorization if needed
+// ---------------------------
+// Hangfire Dashboard
+// ---------------------------
+// Provides a UI for monitoring background jobs.
+// Consider adding authentication to this route in production.
+app.UseHangfireDashboard();
 
-// Schedule the background job to run every minute
+// ---------------------------
+// Background Job Scheduling
+// ---------------------------
+// This registers a recurring job that runs every minute to publish scheduled tenders.
 RecurringJob.AddOrUpdate<ITenderPublishingService>(
-    "publish-scheduled-tenders",
-    service => service.PublishScheduledTendersAsync(),
-    Cron.Minutely); // You can change this to Cron.Hourly or a custom expression
+    "publish-scheduled-tenders",                        // Job ID
+    service => service.PublishScheduledTendersAsync(),  // Job method
+    Cron.Minutely);                                     // Schedule: every minute
 
+// ---------------------------
+// Configure default route for MVC
+// ---------------------------
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

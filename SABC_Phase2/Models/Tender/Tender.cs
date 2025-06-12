@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace SABC_Phase2.Models.Tender
 {
+    /// <summary>
+    /// Represents a published tender entry.
+    /// This is the primary model shown to the public or end-users once a tender is active.
+    /// </summary>
     public class Tender
     {
         [Key]
