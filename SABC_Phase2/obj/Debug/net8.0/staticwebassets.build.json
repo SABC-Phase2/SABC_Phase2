@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "tNEtAKkkhg56/e6ERZecIsjk9/piKBUNfoEZ6jsbiGQ=",
+  "Hash": "Rq1jLTtXjGdTBU/qRJqbazk6qNidY3HBI+3DH263a1o=",
   "Source": "SABC_Phase2",
   "BasePath": "_content/SABC_Phase2",
   "Mode": "Default",
@@ -1128,6 +1128,27 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\lib\\Images\\logo.png"
+    },
+    {
+      "Identity": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\logoblack.png",
+      "SourceId": "SABC_Phase2",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\",
+      "BasePath": "_content/SABC_Phase2",
+      "RelativePath": "lib/Images/logoblack#[.{fingerprint}]?.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "jy9r4jvp9x",
+      "Integrity": "K0t4C8D5FyFrTNr/YKem1ZZO/WF7ETneDPROkulhPg8=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\lib\\Images\\logoblack.png"
     },
     {
       "Identity": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\sabc-logo.png",
@@ -5583,6 +5604,88 @@
         {
           "Name": "integrity",
           "Value": "sha256-m5yNnvzCQORE3NQsFNCEwke1Rr5UJ2JM7tkDzhSyWYQ="
+        }
+      ]
+    },
+    {
+      "Route": "lib/Images/logoblack.jy9r4jvp9x.png",
+      "AssetFile": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\logoblack.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "79400"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"K0t4C8D5FyFrTNr/YKem1ZZO/WF7ETneDPROkulhPg8=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 11 Jun 2025 13:19:26 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "jy9r4jvp9x"
+        },
+        {
+          "Name": "label",
+          "Value": "lib/Images/logoblack.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-K0t4C8D5FyFrTNr/YKem1ZZO/WF7ETneDPROkulhPg8="
+        }
+      ]
+    },
+    {
+      "Route": "lib/Images/logoblack.png",
+      "AssetFile": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\logoblack.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "79400"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"K0t4C8D5FyFrTNr/YKem1ZZO/WF7ETneDPROkulhPg8=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 11 Jun 2025 13:19:26 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=3600, must-revalidate"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-K0t4C8D5FyFrTNr/YKem1ZZO/WF7ETneDPROkulhPg8="
         }
       ]
     },

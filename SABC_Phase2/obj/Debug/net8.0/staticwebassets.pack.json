@@ -29,6 +29,10 @@
       "PackagePath": "staticwebassets\\lib\\Images\\logo.png"
     },
     {
+      "Id": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\logoblack.png",
+      "PackagePath": "staticwebassets\\lib\\Images\\logoblack.png"
+    },
+    {
       "Id": "C:\\Users\\Kiara Mohan\\Source\\Repos\\SABC_Phase2\\SABC_Phase2\\wwwroot\\lib\\Images\\sabc-logo.png",
       "PackagePath": "staticwebassets\\lib\\Images\\sabc-logo.png"
     },
