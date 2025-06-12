@@ -1,0 +1,263 @@
+﻿<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+        <style>
+
+  .sidebar {
+    background-color: #333;
+    color: #fff;
+    width: 280px;
+    position: fixed;
+    top: 120px; /* Adjust to your header height */
+    left: 0;
+    height: calc(100vh - 90px);
+    padding: 10px;
+    padding-left: 10px;
+    transition: width 0.3s ease;
+    overflow: auto;
+        overflow-x: hidden;
+    z-index: 9998;
+}
+
+    .menu {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Center contents horizontally */
+        gap: 10px; /* Small gap between nav items */
+
+    }
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+    .menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center horizontally */
+        cursor: pointer;
+        padding: 18px 10px; /* Remove side padding for better fit */
+        width: 100%;
+    }
+
+        .menu-toggle i {
+            margin-right: 13px;
+            font-size: 2em;
+        }
+
+            .menu-toggle i.fas.fa-bars {
+                font-size: 2em; /* Adjust this value as needed for desired size */
+            }
+
+    .profile {
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center horizontally */
+        padding: 10px 0; /* Remove side padding for better fit */
+        border-top: 1px solid #666;
+        border-bottom: 1px solid #666;
+        margin-bottom: 15px;
+        width: 100%;
+    }
+
+        .profile .info {
+            margin-left: 10px;
+        }
+
+        .profile img {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+
+        .profile .name {
+            font-weight: bold;
+        }
+
+        .profile .role {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+    .menu-section {
+        width: 90%; /* Slightly wider for a larger active area */
+        justify-content: flex-start;
+        margin: 0;
+        box-sizing: border-box;
+        padding: 14px 18px; /* Increased padding for more space around text */
+        border-radius: 8px; /* Optional: slightly more rounded corners */
+        display: flex;
+        align-items: center;
+        transition: background 0.2s, color 0.2s;
+    }
+
+        .menu-section:hover {
+            background-color: #444;
+        }
+        font-face-name{
+        color: #fbbd08;
+        }
+        .menu-section.active {
+            background-color: #fbbd08;
+            color: black;
+        }
+
+        .menu-section i {
+            width: 30px;
+            text-align: center;
+        }
+
+    .submenu {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+        .submenu.visible {
+            display: flex;
+        }
+
+    .submenu-icon {
+        margin-left: auto;
+        transition: transform 0.3s ease;
+    }
+
+        .submenu-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+    /* Style sub-items same as menu-section but indented */
+    .menu-section.sub-item {
+        padding-left: 70px;
+        font-size: 14px;
+    }
+
+        .menu-section.sub-item:hover {
+            background-color: #444;
+        }
+
+
+        .submenu li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+    .dot {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+    }
+
+    .green {
+        color: #33cc33 !important;
+    }
+
+
+    .label {
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    .sidebar.collapsed {
+        width: 70px;
+        min-width: 70px;
+    }
+
+        .sidebar.collapsed .profile .info {
+            display: none; /* Hide text info in collapsed mode */
+        }
+    .sidebar.collapsed .label {
+        display: none;
+    }
+
+    .menu-toggle i.fas.fa-bars.rotated {
+        transform: rotate(90deg);
+        transition: transform 0.3s;
+    }
+
+    .sidebar.collapsed .submenu-icon {
+        display: none !important;
+    }
+
+        </style>
+
+<div class="sidebar expanded" id="sidebar">
+    <div class="menu-toggle" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+      <span class="label">Hide Menu</span>
+    </div>
+
+    <div class="profile">
+      <i class="fas fa-user-circle fa-3x"></i>
+      <div class="info">
+        <span class="name">Truth Xiviti</span>
+        <br />
+        <span class="role">Administrator</span>
+      </div>
+    </div>
+
+    <div class="menu">
+        <div class="menu-section has-submenu active" onclick="toggleSubmenu(this)">
+            <i class="fas fa-users"></i>
+            <span class="label">Tenders</span>
+            <i class="fas fa-chevron-up submenu-icon" style="margin-left:auto;"></i>
+        </div>
+
+        <div class="submenu visible">
+            <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Open Tenders</span></div>
+            <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Closed Tenders</span></div>
+            <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Canceled Tenders</span></div>
+            <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Awarded Tenders</span></div>
+        </div>
+          <div class="menu-section"><i class="fas fa-file-alt"></i><span class="label">  Scheduled Tenders</span></div>
+      <div class="menu-section"><i class="fas fa-times"></i><span class="label">  Drafts</span></div>
+      <div class="menu-section"><i class="fas fa-download"></i><span class="label">  Reports</span></div>
+      <div class="menu-section"><i class="fas fa-question"></i><span class="label">  Help</span></div>
+    </div>
+  </div>
+
+
+
+<script>
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      sidebar.classList.toggle("collapsed");
+      const menuIcon = sidebar.querySelector(".menu-toggle i.fas.fa-bars");
+      if (menuIcon) {
+        menuIcon.classList.toggle("rotated", sidebar.classList.contains("collapsed"));
+      }
+    }
+    function toggleSubmenu(element) {
+      const submenu = element.nextElementSibling;
+      submenu.classList.toggle("visible");
+
+      const icon = element.querySelector(".submenu-icon");
+      if (icon) icon.classList.toggle("rotated");
+    }
+
+      function adjustSidebarHeight() {
+        const headerHeight = 120; // Same as .sidebar top
+        const footer = document.querySelector('footer');
+        const sidebar = document.querySelector('.sidebar');
+
+        if (footer && sidebar) {
+            const footerRect = footer.getBoundingClientRect();
+            const footerTop = footerRect.top + window.scrollY;
+            const viewportHeight = window.innerHeight;
+            const scrollY = window.scrollY;
+
+            // Distance from top of page to top of footer minus the header height
+            const maxHeight = footerTop - scrollY - headerHeight;
+
+            sidebar.style.height = `${Math.max(0, maxHeight)}px`;
+        }
+    }
+
+    window.addEventListener('scroll', adjustSidebarHeight);
+    window.addEventListener('resize', adjustSidebarHeight);
+    window.addEventListener('load', adjustSidebarHeight);
+</script>

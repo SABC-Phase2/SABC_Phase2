@@ -16,7 +16,7 @@ public class BlobStorageService
     /// </summary>
     private readonly BlobServiceClient _blobServiceClient;
     // Container name used for all tender-related documents.
-    private readonly string _containerName = "tender-documents";
+    private readonly string _containerName = "tender-documents-tashlyn";
 
     /// <summary>
     /// Constructor that initializes the BlobServiceClient using the provided connection string.

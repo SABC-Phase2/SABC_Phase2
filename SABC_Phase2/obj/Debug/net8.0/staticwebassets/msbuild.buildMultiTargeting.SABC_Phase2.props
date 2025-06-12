@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\SABC_Phase2.props" />
-</Project>

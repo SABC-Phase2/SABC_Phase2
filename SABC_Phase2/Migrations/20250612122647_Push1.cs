@@ -33,6 +33,27 @@ namespace SABC_Phase2.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenderAdminsDraft",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TenderType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenderNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClosingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ClosingTime = table.Column<TimeSpan>(type: "time", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenderAdminsDraft", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tenders",
                 columns: table => new
                 {
@@ -74,6 +95,27 @@ namespace SABC_Phase2.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenderAdminsDraftDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TenderDraftId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenderAdminsDraftDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TenderAdminsDraftDocuments_TenderAdminsDraft_TenderDraftId",
+                        column: x => x.TenderDraftId,
+                        principalTable: "TenderAdminsDraft",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TenderDocuments",
                 columns: table => new
                 {
@@ -100,6 +142,11 @@ namespace SABC_Phase2.Migrations
                 column: "ScheduledTenderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TenderAdminsDraftDocuments_TenderDraftId",
+                table: "TenderAdminsDraftDocuments",
+                column: "TenderDraftId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TenderDocuments_TenderId",
                 table: "TenderDocuments",
                 column: "TenderId");
@@ -112,10 +159,16 @@ namespace SABC_Phase2.Migrations
                 name: "ScheduledTendersDocuments");
 
             migrationBuilder.DropTable(
+                name: "TenderAdminsDraftDocuments");
+
+            migrationBuilder.DropTable(
                 name: "TenderDocuments");
 
             migrationBuilder.DropTable(
                 name: "ScheduledTenders");
+
+            migrationBuilder.DropTable(
+                name: "TenderAdminsDraft");
 
             migrationBuilder.DropTable(
                 name: "Tenders");

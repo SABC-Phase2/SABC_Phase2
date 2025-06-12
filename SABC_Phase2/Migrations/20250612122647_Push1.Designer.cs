@@ -12,7 +12,7 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250611135011_Push1")]
+    [Migration("20250612122647_Push1")]
     partial class Push1
     {
         /// <inheritdoc />
@@ -164,6 +164,72 @@ namespace SABC_Phase2.Migrations
                     b.ToTable("TenderDocuments");
                 });
 
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.TenderDraft", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ClosingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan?>("ClosingTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenderNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenderType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TenderAdminsDraft");
+                });
+
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.TenderDraftDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenderDraftId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderDraftId");
+
+                    b.ToTable("TenderAdminsDraftDocuments");
+                });
+
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTenderDocument", b =>
                 {
                     b.HasOne("SABC_Phase2.Models.Tender.ScheduledTender", "ScheduledTender")
@@ -186,12 +252,28 @@ namespace SABC_Phase2.Migrations
                     b.Navigation("Tender");
                 });
 
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.TenderDraftDocument", b =>
+                {
+                    b.HasOne("SABC_Phase2.Models.Tender.TenderDraft", "TenderDraft")
+                        .WithMany("Documents")
+                        .HasForeignKey("TenderDraftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TenderDraft");
+                });
+
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTender", b =>
                 {
                     b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("SABC_Phase2.Models.Tender.Tender", b =>
+                {
+                    b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.TenderDraft", b =>
                 {
                     b.Navigation("Documents");
                 });

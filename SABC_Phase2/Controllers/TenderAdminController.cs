@@ -15,7 +15,7 @@ namespace SABC_Phase2.Controllers
     {
         private readonly Phase2Context _context;
         private readonly IConfiguration _configuration;
-
+    
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
@@ -25,6 +25,7 @@ namespace SABC_Phase2.Controllers
         {
             _context = context;
             _configuration = configuration;
+           
         }
 
         // GET: /TenderAdmin/Create
@@ -47,37 +48,67 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
-            // Validate the incoming model state
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-            // Initialize BlobStorageService for document upload
+            bool isDraft = Request.Form["IsDraft"] == "true";
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-            // Scheduled Tender Logic
-            if (model.IsScheduled && model.ScheduledDate.HasValue && model.ScheduledTime.HasValue)
-            {
-                // COMBINE DATE + TIME (assumed local)
-                DateTime localPublishDateTime = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
 
-                // CONVERT combined local datetime to UTC before saving
-                DateTime publishDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localPublishDateTime);
-                // Create ScheduledTender entity
-                var scheduledTender = new ScheduledTender
+            // 1. If this is a draft being submitted as a full tender (i.e., all required fields are filled and not saving as draft)
+            if (!isDraft && model.Id > 0)
+            {
+                // Validate required fields
+                if (!ModelState.IsValid)
+                {
+                    // Repopulate existing docs for redisplay
+                    var draft = await _context.TenderAdminsDraft
+                        .Include(d => d.Documents)
+                        .FirstOrDefaultAsync(d => d.Id == model.Id);
+
+                    if (draft != null)
+                    {
+                        ViewBag.DraftDocuments = draft.Documents.Select(doc => new
+                        {
+                            doc.Id,
+                            doc.FileName,
+                            SasUrl = blobService.GetBlobSasUri(doc.FilePath)
+                        }).ToList();
+                    }
+                    return View(model);
+                }
+
+                // Get the draft and its documents
+                var draftToPublish = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.Id == model.Id);
+
+                if (draftToPublish == null)
+                {
+                    return NotFound();
+                }
+
+                // Create the main Tender
+                var tender = new Tender
                 {
                     TenderType = model.TenderType,
                     TenderNumber = model.TenderNumber,
                     ClosingDate = model.ClosingDate,
                     ClosingTime = model.ClosingTime,
-                    Status = "Scheduled",
+                    Status = model.Status,
                     Title = model.Title,
                     Description = model.Description,
-                    ScheduledPublishDateTime = publishDateTimeUtc,
-                    CreatedOn = DateTime.UtcNow,
-                    Documents = new List<ScheduledTenderDocument>()
+                    DatePublished = DateTime.UtcNow,
+                    Documents = new List<TenderDocument>()
                 };
 
-                // Upload files and associate them with the scheduled tender
+                // Move draft documents to TenderDocuments
+                foreach (var draftDoc in draftToPublish.Documents)
+                {
+                    tender.Documents.Add(new TenderDocument
+                    {
+                        FileName = draftDoc.FileName,
+                        FilePath = draftDoc.FilePath
+                    });
+                }
+
+                // Add any newly uploaded files
                 if (model.UploadedFiles != null && model.UploadedFiles.Any())
                 {
                     foreach (var file in model.UploadedFiles)
@@ -88,7 +119,7 @@ namespace SABC_Phase2.Controllers
                             using var stream = file.OpenReadStream();
                             var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
 
-                            scheduledTender.Documents.Add(new ScheduledTenderDocument
+                            tender.Documents.Add(new TenderDocument
                             {
                                 FileName = file.FileName,
                                 FilePath = blobFileName
@@ -96,24 +127,109 @@ namespace SABC_Phase2.Controllers
                         }
                     }
                 }
-                // Persist the scheduled tender to the database
-                _context.ScheduledTenders.Add(scheduledTender);
-                await _context.SaveChangesAsync();
 
-                // Schedule the background job using Hangfire
-                var delay = publishDateTimeUtc - DateTime.UtcNow;
-                if (delay < TimeSpan.Zero) delay = TimeSpan.Zero; // Avoid negative delay
-
-                BackgroundJob.Schedule<ITenderPublishingService>(
-                    service => service.PublishScheduledTendersAsync(),
-                    delay);
-
+                // Save the new tender
+                _context.Tenders.Add(tender);
+                await _context.SaveChangesAsync(); // Save tender first to get its Id
+                                                   // Enqueue the draft cleanup job
+                BackgroundJob.Enqueue<IDraftCleanupService>(x => x.CleanupPublishedDraftAsync(draftToPublish.Id));
                 return RedirectToAction("Index");
             }
 
-            // Proceed with normal tender creation
-            // Immediate Tender Logic
-            var tender = new Tender
+            // 2. If saving as draft (new or update)
+            if (isDraft)
+            {
+                // If updating an existing draft
+                if (model.Id > 0)
+                {
+                    var existingDraft = await _context.TenderAdminsDraft
+                        .Include(d => d.Documents)
+                        .FirstOrDefaultAsync(d => d.Id == model.Id);
+
+                    if (existingDraft == null)
+                        return NotFound();
+
+                    existingDraft.TenderType = string.IsNullOrWhiteSpace(model.TenderType) ? null : model.TenderType;
+                    existingDraft.TenderNumber = string.IsNullOrWhiteSpace(model.TenderNumber) ? null : model.TenderNumber;
+                    existingDraft.ClosingDate = model.ClosingDate == default ? null : model.ClosingDate;
+                    existingDraft.ClosingTime = model.ClosingTime;
+                    existingDraft.Status = string.IsNullOrWhiteSpace(model.Status) ? null : model.Status;
+                    existingDraft.Title = string.IsNullOrWhiteSpace(model.Title) ? null : model.Title;
+                    existingDraft.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description;
+                    existingDraft.LastModifiedDate = DateTime.UtcNow;
+
+                    // Add new uploaded files to draft
+                    if (model.UploadedFiles != null && model.UploadedFiles.Any())
+                    {
+                        foreach (var file in model.UploadedFiles)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                                using var stream = file.OpenReadStream();
+                                var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                                existingDraft.Documents.Add(new TenderDraftDocument
+                                {
+                                    FileName = file.FileName,
+                                    FilePath = blobFileName
+                                });
+                            }
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction("DraftIndex");
+                }
+                else // New draft
+                {
+                    var draft = new TenderDraft
+                    {
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        TenderType = string.IsNullOrWhiteSpace(model.TenderType) ? null : model.TenderType,
+                        TenderNumber = string.IsNullOrWhiteSpace(model.TenderNumber) ? null : model.TenderNumber,
+                        ClosingDate = model.ClosingDate == default ? null : model.ClosingDate,
+                        ClosingTime = model.ClosingTime,
+                        Status = string.IsNullOrWhiteSpace(model.Status) ? null : model.Status,
+                        Title = string.IsNullOrWhiteSpace(model.Title) ? null : model.Title,
+                        Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description,
+                        Documents = new List<TenderDraftDocument>()
+                    };
+
+                    if (model.UploadedFiles != null && model.UploadedFiles.Any())
+                    {
+                        foreach (var file in model.UploadedFiles)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                                using var stream = file.OpenReadStream();
+                                var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                                draft.Documents.Add(new TenderDraftDocument
+                                {
+                                    FileName = file.FileName,
+                                    FilePath = blobFileName
+                                });
+                            }
+                        }
+                    }
+
+                    _context.TenderAdminsDraft.Add(draft);
+                    await _context.SaveChangesAsync();
+
+                    return RedirectToAction("DraftIndex");
+                }
+            }
+
+            // 3. Normal tender creation (not from draft)
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var newTender = new Tender
             {
                 TenderType = model.TenderType,
                 TenderNumber = model.TenderNumber,
@@ -125,28 +241,27 @@ namespace SABC_Phase2.Controllers
                 DatePublished = DateTime.UtcNow,
                 Documents = new List<TenderDocument>()
             };
-            // Upload and attach documents
+
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
                 {
                     if (file.Length > 0)
                     {
-                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
+                        var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
                         var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
 
-                        tender.Documents.Add(new TenderDocument
+                        newTender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            FilePath = blobFileName,
-                            TenderId = tender.Id
+                            FilePath = blobFileName
                         });
                     }
                 }
             }
 
-            _context.Tenders.Add(tender);
+            _context.Tenders.Add(newTender);
             await _context.SaveChangesAsync();
 
             return RedirectToAction("Index");
@@ -189,6 +304,54 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        public IActionResult DraftIndex()
+        {
+            var drafts = _context.TenderAdminsDraft
+                .OrderByDescending(d => d.CreatedDate)
+                .ToList();
+            return View(drafts);
+        }
+
+
+        [HttpGet]
+        public IActionResult ContinueDraft(int id)
+        {
+            var draft = _context.TenderAdminsDraft
+                .Include(d => d.Documents)
+                .FirstOrDefault(d => d.Id == id);
+
+            if (draft == null)
+            {
+                return NotFound();
+            }
+
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+
+            // Prepare document view models with SAS URLs
+            var draftDocs = draft.Documents?.Select(doc => new
+            {
+                doc.Id,
+                doc.FileName,
+                SasUrl = blobService.GetBlobSasUri(doc.FilePath)
+            }).ToList();
+
+            var model = new TenderViewModel
+            {
+                Id = draft.Id,
+                TenderType = draft.TenderType,
+                TenderNumber = draft.TenderNumber,
+                ClosingDate = draft.ClosingDate ?? default,
+                ClosingTime = draft.ClosingTime,
+                Status = draft.Status,
+                Title = draft.Title,
+                Description = draft.Description,
+                IsDraft = true
+            };
+
+            ViewBag.DraftDocuments = draftDocs;
+
+            return View("Create", model);
+        }
 
 
     }

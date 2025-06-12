@@ -4,12 +4,17 @@
     ViewBag.Title = "Create Tender";
 }
 
+@{
+    var draftDocs = ViewBag.DraftDocuments as IEnumerable<dynamic>;
+}
+
+
 
 
 <h2>Create Tender</h2>
 
 <form asp-action="Create" enctype="multipart/form-data" method="post">
-
+    <button type="button" class="btn btn-primary" id="taSaveDraftTender">Save As Draft</button>
 
     <!-- Schedule Tender Button and Picker Panel -->
 <button type="button" class="btn btn-primary" id="scheduleTenderBtn">Schedule Tender</button>
@@ -88,24 +93,62 @@
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 
+
+
     <div class="form-group">
         <label for="UploadedFiles">Upload PDF Documents</label>
         <input type="file" id="UploadedFiles" multiple accept=".pdf" class="form-control" />
         <div id="fileList" class="mt-2"></div>
         <span asp-validation-for="UploadedFiles" class="text-danger"></span>
     </div>
-
+    <!-- Existing Draft Documents -->
+    @if (draftDocs != null && draftDocs.Any())
+    {
+        <div class="form-group">
+            <label>Existing Draft Documents</label>
+            <ul class="list-group mb-2" id="existingDocsList">
+                @foreach (var doc in draftDocs)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center" data-docid="@doc.Id">
+                        <a href="@doc.SasUrl" target="_blank">@doc.FileName</a>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeExistingDoc(@doc.Id)">Remove</button>
+                        <input type="hidden" name="ExistingDocumentIds" value="@doc.Id" />
+                    </li>
+                }
+            </ul>
+        </div>
+    }
 
     <!-- Hidden inputs to submit scheduled data -->
     <input type="hidden" name="IsScheduled" id="IsScheduled" value="false" />
     <input type="hidden" name="ScheduledDate" id="HiddenScheduledDate" />
     <input type="hidden" name="ScheduledTime" id="HiddenScheduledTime" />
+    <input type="hidden" name="IsDraft" id="IsDraft" value="false" />
 
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 
 @section Scripts {
     <script>
+
+           // Remove existing draft document from the list (client-side only)
+        function removeExistingDoc(docId) {
+            var li = document.querySelector('li[data-docid="' + docId + '"]');
+            if (li) {
+                li.remove();
+            }
+            // Optionally, add a hidden input to mark for deletion on submit
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "RemoveDocumentIds";
+            input.value = docId;
+            document.querySelector("form").appendChild(input);
+        }
+
+                document.getElementById("taSaveDraftTender").addEventListener("click", function () {
+            document.getElementById("IsDraft").value = "true";
+            form.requestSubmit(); // Triggers the form submit event
+        });
 
                document.getElementById("scheduleTenderBtn").addEventListener("click", function () {
             const pickers = document.getElementById("schedulePickers");
@@ -170,17 +213,18 @@
             updateFileListDisplay();
         };
 
-        form.addEventListener("submit", function (e) {
+             form.addEventListener("submit", function (e) {
+            // Populate hidden fields if scheduling is active
+            const isScheduled = document.getElementById("IsScheduled").value === "true";
+            const isDraft = document.getElementById("IsDraft").value === "true";
 
-                // Populate hidden fields if scheduling is active
-        const isScheduled = document.getElementById("IsScheduled").value === "true";
+            if (isScheduled) {
+                document.getElementById("HiddenScheduledDate").value = document.getElementById("scheduledDate").value;
+                document.getElementById("HiddenScheduledTime").value = document.getElementById("scheduledTime").value;
+            }
 
-        if (isScheduled) {
-            document.getElementById("HiddenScheduledDate").value = document.getElementById("scheduledDate").value;
-            document.getElementById("HiddenScheduledTime").value = document.getElementById("scheduledTime").value;
-        }
-
-            if (storedFiles.length === 0) {
+            // Only require PDF if NOT saving as draft
+            if (!isDraft && storedFiles.length === 0) {
                 alert("Please upload at least one PDF file.");
                 e.preventDefault();
                 return;

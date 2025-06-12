@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "mJ8rV7xK4vc=",
+  "dgSpecHash": "4fCCJvq26tU=",
   "success": true,
   "projectFilePath": "C:\\Users\\New User\\source\\repos\\SABC_Phase2_Cleaned\\SABC_Phase2\\SABC_Phase2.csproj",
   "expectedPackageFiles": [
@@ -93,8 +93,7 @@
     "C:\\Users\\New User\\.nuget\\packages\\system.text.json\\9.0.6\\system.text.json.9.0.6.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\system.threading.channels\\7.0.0\\system.threading.channels.7.0.0.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "C:\\Users\\New User\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
-    "C:\\Users\\New User\\.nuget\\packages\\microsoft.net.sdk.compilers.toolset\\9.0.301\\microsoft.net.sdk.compilers.toolset.9.0.301.nupkg.sha512"
+    "C:\\Users\\New User\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
   ],
   "logs": []
 }

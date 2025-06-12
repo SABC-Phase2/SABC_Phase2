@@ -1,0 +1,46 @@
+﻿@model IEnumerable<SABC_Phase2.Models.Tender.TenderDraft>
+
+@{
+    ViewBag.Title = "Draft Tenders";
+}
+
+<h2>Draft Tenders</h2>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Number</th>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Created</th>
+            <th>Last Modified</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var draft in Model)
+            {
+                <tr>
+                    <td>@draft.TenderType</td>
+                    <td>@draft.TenderNumber</td>
+                    <td>@draft.Status</td>
+                    <td>@draft.Title</td>
+                    <td>@draft.CreatedDate.ToString("yyyy-MM-dd")</td>
+                    <td>@draft.LastModifiedDate?.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <a asp-action="ContinueDraft" asp-route-id="@draft.Id" class="btn btn-sm btn-success">Continue</a>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="text-center">No draft tenders found.</td>
+            </tr>
+        }
+    </tbody>
+</table>

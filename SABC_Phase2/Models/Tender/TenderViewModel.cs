@@ -30,7 +30,7 @@ namespace SABC_Phase2.Models.Tender
 
         public string Description { get; set; }
 
-        [Required(ErrorMessage = "Please upload at least one PDF file.")]
+    //    [Required(ErrorMessage = "Please upload at least one PDF file.")]
         public List<IFormFile> UploadedFiles { get; set; }
 
 
@@ -38,6 +38,7 @@ namespace SABC_Phase2.Models.Tender
         public DateTime? ScheduledDate { get; set; }
         public TimeSpan? ScheduledTime { get; set; }
 
+        public bool IsDraft { get; set; }
         //public List<TenderDocumentViewModel> ExistingDocuments { get; set; }
 
     }

@@ -25,7 +25,8 @@ builder.Services.AddHangfireServer();
 
 // Register your custom tender publishing service for DI
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
-
+// Add this to your services configuration
+builder.Services.AddScoped<IDraftCleanupService, DraftCleanupService>();
 var app = builder.Build();
 
 // ---------------------------
@@ -66,6 +67,6 @@ RecurringJob.AddOrUpdate<ITenderPublishingService>(
 // ---------------------------
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=TenderAdmin}/{action=Index}/{id?}");
 
 app.Run();

@@ -214,12 +214,6 @@ C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.build.endpoints.json
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets\msbuild.SABC_Phase2.Microsoft.AspNetCore.StaticWebAssets.props
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets\msbuild.SABC_Phase2.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets\msbuild.build.SABC_Phase2.props
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.SABC_Phase2.props
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.SABC_Phase2.props
-C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.pack.json
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\SABC_Pha.9CB86425.Up2Date
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\SABC_Phase2.dll
@@ -227,3 +221,8 @@ C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\SABC_Phase2.pdb
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\SABC_Phase2.genruntimeconfig.cache
 C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\ref\SABC_Phase2.dll
+C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\New User\source\repos\SABC_Phase2_Cleaned\SABC_Phase2\obj\Debug\net8.0\staticwebassets.build.json.cache
