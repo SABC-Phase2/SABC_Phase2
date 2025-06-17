@@ -340,11 +340,232 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var tender = await _context.Tenders
+                .Include(t => t.Documents)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tender == null)
+                return NotFound();
+
+            var dto = new TenderEditDto
+            {
+                Id = tender.Id,
+                TenderType = tender.TenderType,
+                TenderNumber = tender.TenderNumber,
+                ClosingDate = tender.ClosingDate,
+                ClosingTime = tender.ClosingTime,
+                Status = tender.Status,
+                Title = tender.Title,
+                Description = tender.Description,
+                ExistingDocuments = tender.Documents?.Select(doc => new TenderDocumentViewModel
+                {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    FilePath = doc.FilePath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
+            };
+
+            return View("Edit", dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, TenderEditDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Edit", dto);
+            }
+
+            var tender = await _context.Tenders
+                .Include(t => t.Documents)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tender == null)
+                return NotFound();
+
+            // Update fields
+            tender.TenderType = dto.TenderType;
+            tender.TenderNumber = dto.TenderNumber;
+            tender.ClosingDate = dto.ClosingDate.Value;
+            tender.ClosingTime = dto.ClosingTime;
+            tender.Status = dto.Status;
+            tender.Title = dto.Title;
+            tender.Description = dto.Description;
+
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+
+            // Handle document deletions
+            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
+            {
+                var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
+                foreach (var doc in docsToRemove)
+                {
+                    // Remove from blob storage
+                    await blobService.DeleteFileAsync(doc.FilePath);
+                    // Remove from EF context
+                    _context.TenderDocuments.Remove(doc);
+                }
+            }
+
+            // Handle new PDF uploads
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                foreach (var file in dto.UploadedFiles)
+                {
+                    if (file.Length > 0)
+                    {
+                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
+                        using var stream = file.OpenReadStream();
+                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                        tender.Documents.Add(new TenderDocument
+                        {
+                            FileName = file.FileName,
+                            FilePath = blobFileName,
+                            TenderId = tender.Id
+                        });
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Index");
+        }
 
 
+        [HttpGet]
+        public IActionResult ScheduledIndex(int page = 1, int pageSize = 9)
+        {
+            var totalItems = _context.ScheduledTenders.Count();
+
+            var scheduledTenders = _context.ScheduledTenders
+                .Include(t => t.Documents)
+                .OrderByDescending(t => t.ScheduledPublishDateTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            return View(scheduledTenders);
+        }
+    
+
+
+
+    [HttpGet]
+        public async Task<IActionResult> EditScheduled(int id)
+        {
+            var scheduledTender = await _context.ScheduledTenders
+                .Include(t => t.Documents)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (scheduledTender == null)
+                return NotFound();
+            var dto = new TenderEditDto
+            {
+                Id = scheduledTender.Id,
+                TenderType = scheduledTender.TenderType,
+                TenderNumber = scheduledTender.TenderNumber,
+                ClosingDate = scheduledTender.ClosingDate,
+                ClosingTime = scheduledTender.ClosingTime,
+                Status = scheduledTender.Status,
+                Title = scheduledTender.Title,
+                Description = scheduledTender.Description,
+                ScheduledPublishDateTime = scheduledTender.ScheduledPublishDateTime, // <-- ADD THIS LINE
+                ExistingDocuments = scheduledTender.Documents?.Select(doc => new TenderDocumentViewModel
+                {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    FilePath = doc.FilePath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
+            };
+
+            // Optionally: add ScheduledDate/ScheduledTime to the DTO if you want to edit them
+
+            return View("EditScheduled", dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditScheduled(int id, TenderEditDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("EditScheduled", dto);
+            }
+
+            var scheduledTender = await _context.ScheduledTenders
+                .Include(t => t.Documents)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (scheduledTender == null)
+                return NotFound();
+
+            // Update fields
+            scheduledTender.TenderType = dto.TenderType;
+            scheduledTender.TenderNumber = dto.TenderNumber;
+            scheduledTender.ClosingDate = dto.ClosingDate.Value;
+            scheduledTender.ClosingTime = dto.ClosingTime;
+            scheduledTender.Status = dto.Status;
+            scheduledTender.Title = dto.Title;
+            scheduledTender.Description = dto.Description;
+
+            // --- Add this block ---
+            if (dto.IsScheduled && dto.ScheduledDate.HasValue && dto.ScheduledTime.HasValue)
+            {
+                var userTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+                var localDateTime = dto.ScheduledDate.Value.Date + dto.ScheduledTime.Value;
+                scheduledTender.ScheduledPublishDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, userTimeZone);
+            }
+
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+
+            // Handle document deletions
+            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
+            {
+                var docsToRemove = scheduledTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
+                foreach (var doc in docsToRemove)
+                {
+                    await blobService.DeleteFileAsync(doc.FilePath);
+                    _context.ScheduledTendersDocuments.Remove(doc);
+                }
+            }
+
+            // Handle new PDF uploads
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                foreach (var file in dto.UploadedFiles)
+                {
+                    if (file.Length > 0)
+                    {
+                        var blobFileName = $"{scheduledTender.Id}/{Guid.NewGuid()}_{file.FileName}";
+                        using var stream = file.OpenReadStream();
+                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                        scheduledTender.Documents.Add(new ScheduledTenderDocument
+                        {
+                            FileName = file.FileName,
+                            FilePath = blobFileName,
+                            ScheduledTenderId = scheduledTender.Id
+                        });
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("ScheduledIndex");
+        }
     }
 
 }
-
-
 

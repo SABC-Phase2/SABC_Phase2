@@ -68,8 +68,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cRWRpdC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/EditScheduled.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cRWRpdFNjaGVkdWxlZC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/ScheduledIndex.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cU2NoZWR1bGVkSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/_ViewImports.cshtml]
