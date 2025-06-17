@@ -207,13 +207,23 @@
         </div>
 
         <div class="submenu visible">
-            <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Open Tenders</span></div>
+            <div class="menu-section sub-item">
+                <i class="fas fa-circle-dot green"></i>
+                <a asp-controller="TenderAdmin" asp-action="Index" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    Open Tenders
+                </a>
+            </div>
             <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Closed Tenders</span></div>
             <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Canceled Tenders</span></div>
             <div class="menu-section sub-item"><i class="fas fa-circle-dot green"></i><span class="label">Awarded Tenders</span></div>
         </div>
           <div class="menu-section"><i class="fas fa-file-alt"></i><span class="label">  Scheduled Tenders</span></div>
-      <div class="menu-section"><i class="fas fa-times"></i><span class="label">  Drafts</span></div>
+        <div class="menu-section">
+            <i class="fas fa-times"></i>
+            <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                Drafts
+            </a>
+        </div>
       <div class="menu-section"><i class="fas fa-download"></i><span class="label">  Reports</span></div>
       <div class="menu-section"><i class="fas fa-question"></i><span class="label">  Help</span></div>
     </div>

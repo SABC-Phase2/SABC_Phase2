@@ -1,0 +1,119 @@
+﻿@model List<SABC_Phase2.Models.Tender.TenderDraft>
+
+@{
+    ViewData["BannerText"] = "Draft Tenders";
+}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+<style>
+    .draft-table-container {
+        margin-top: 35px;
+        margin-bottom: 80px;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .draft-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .draft-table th, .draft-table td {
+            padding: 14px;
+            text-align: center;
+        }
+
+    .draft-thumbnail {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #f5f5f5;
+    }
+
+    .edit-btn {
+        background-color: #fff;
+        border: 1px solid #00a651;
+        color: #00a651;
+        font-size: 0.95rem;
+        padding: 6px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+        .edit-btn:hover {
+            background-color: #00a651;
+            color: #fff;
+        }
+
+    .draft-title {
+        font-weight: 600;
+        color: #222;
+    }
+
+    .draft-date {
+        color: #888;
+        font-size: 0.98rem;
+    }
+</style>
+
+<div class="draft-table-container">
+    <h2>Draft Tenders</h2>
+    <table class="draft-table">
+        <thead>
+            <tr>
+                <th>Thumbnail</th>
+                <th>Draft Date</th>
+                <th>Title</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var draft in Model)
+                {
+                    <tr>
+                        <td>
+                            @{
+                                // Use first document as thumbnail if available, else fallback image
+                                var thumbUrl = draft.Documents?.FirstOrDefault()?.FilePath;
+                                if (!string.IsNullOrEmpty(thumbUrl))
+                                {
+                                    <img src="@thumbUrl" class="draft-thumbnail" alt="Draft Document" />
+                                }
+                                else
+                                {
+                                    <img src="~/lib/Images/logoblack.png" class="draft-thumbnail" alt="No Document" />
+                                }
+                            }
+                        </td>
+                        <td class="draft-date">@draft.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td class="draft-title">@(!string.IsNullOrWhiteSpace(draft.Title) ? draft.Title : "(No Title)")</td>
+                        <td>
+                            <a asp-controller="TenderAdmin" asp-action="EditDraft" asp-route-id="@draft.Id" class="edit-btn">
+                                Continue <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" style="color:#888;">No drafts found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -33,10 +33,16 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// GET: Render the Create Tender view.
         /// </summary>
+        //[HttpGet]
+        //public IActionResult Create()
+        //{
+        //    return View();
+        //}
+
         [HttpGet]
         public IActionResult Create()
         {
-            return View();
+            return View(new TenderViewModel());
         }
 
         // POST: /TenderAdmin/Create
@@ -54,6 +60,7 @@ namespace SABC_Phase2.Controllers
             {
                 return View(model);
             }
+
             // Initialize BlobStorageService for document upload
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
             // Scheduled Tender Logic
@@ -69,7 +76,7 @@ namespace SABC_Phase2.Controllers
                 {
                     TenderType = model.TenderType,
                     TenderNumber = model.TenderNumber,
-                    ClosingDate = model.ClosingDate,
+                    ClosingDate = model.ClosingDate.Value,
                     ClosingTime = model.ClosingTime,
                     Status = "Scheduled",
                     Title = model.Title,
@@ -119,15 +126,16 @@ namespace SABC_Phase2.Controllers
             {
                 TenderType = model.TenderType,
                 TenderNumber = model.TenderNumber,
-                ClosingDate = model.ClosingDate,
+                ClosingDate = model.ClosingDate.Value,
                 ClosingTime = model.ClosingTime,
                 Status = model.Status,
                 Title = model.Title,
                 Description = model.Description,
                 DatePublished = DateTime.UtcNow,
+                DraftId = model.DraftId,
                 Documents = new List<TenderDocument>()
             };
-            // Upload and attach documents
+
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
@@ -150,6 +158,27 @@ namespace SABC_Phase2.Controllers
 
             _context.Tenders.Add(tender);
             await _context.SaveChangesAsync();
+
+            // --- Remove the draft and its documents if this was from a draft ---
+            if (model.DraftId.HasValue)
+            {
+                var draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.DraftId == model.DraftId.Value);
+
+                if (draft != null)
+                {
+                    // Remove draft documents
+                    if (draft.Documents != null && draft.Documents.Any())
+                    {
+                        _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
+                    }
+                    // Remove the draft itself
+                    _context.TenderAdminsDraft.Remove(draft);
+
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             return RedirectToAction("Index");
         }
@@ -186,121 +215,132 @@ namespace SABC_Phase2.Controllers
 
             return View(tenders);
         }
-        // GET: TenderAdmin/Edit/5
-        [HttpGet]
-        public IActionResult Edit(int id)
-        {
-            var tender = _context.Tenders
-                .Where(t => t.Id == id)
-                .Select(t => new TenderViewModel
-                {
-                    Id = t.Id,
-                    TenderType = t.TenderType,
-                    TenderNumber = t.TenderNumber,
-                    ClosingDate = t.ClosingDate,
-                    ClosingTime = t.ClosingTime,
-                    Status = t.Status,
-                    Title = t.Title,
-                    Description = t.Description,
-                    ExistingDocuments = t.Documents.Select(d => new TenderDocumentViewModel
-                    {
-                        Id = d.Id,
-                        FileName = d.FileName,
-                        FilePath = d.FilePath
-                    }).ToList()
-                })
-                .FirstOrDefault();
 
-            if (tender == null)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDraft()
+        {
+            var form = Request.Form;
+            var files = Request.Form.Files;
+
+            // Try to get DraftId from the form
+            Guid draftGuid;
+            TenderDraft draft = null;
+            if (Guid.TryParse(form["DraftId"], out draftGuid))
+            {
+                draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.DraftId == draftGuid);
+            }
+
+            if (draft == null)
+            {
+                // Create new draft
+                draft = new TenderDraft
+                {
+                    DraftId = Guid.NewGuid(),
+                    CreatedDate = DateTime.UtcNow,
+                    Documents = new List<TenderDraftDocument>()
+                };
+                _context.TenderAdminsDraft.Add(draft);
+            }
+            else
+            {
+                // Update existing draft
+                draft.LastModifiedDate = DateTime.UtcNow;
+
+                // Optionally: Remove old documents if you want to replace them
+                // _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
+                // draft.Documents.Clear();
+            }
+
+            // Update fields
+            draft.TenderType = form["TenderType"];
+            draft.TenderNumber = form["TenderNumber"];
+            draft.Status = form["Status"];
+            draft.Title = form["Title"];
+            draft.Description = form["Description"];
+
+            if (DateTime.TryParse(form["ClosingDate"], out var closingDate))
+                draft.ClosingDate = closingDate;
+            if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
+                draft.ClosingTime = closingTime;
+
+            // Handle file uploads (Azure Blob Storage)
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            foreach (var file in files)
+            {
+                if (file.Length > 0)
+                {
+                    var blobFileName = $"{draft.DraftId}/{Guid.NewGuid()}_{file.FileName}";
+                    using var stream = file.OpenReadStream();
+                    var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                    draft.Documents.Add(new TenderDraftDocument
+                    {
+                        FileName = file.FileName,
+                        FilePath = blobFileName
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Draft saved successfully.", draftId = draft.DraftId });
+        }
+
+
+        [HttpGet]
+        public IActionResult DraftIndex()
+        {
+            var drafts = _context.TenderAdminsDraft
+                .Include(d => d.Documents)
+                .OrderByDescending(d => d.CreatedDate)
+                .ToList();
+
+            return View(drafts);
+        }
+
+
+
+        [HttpGet]
+        public IActionResult EditDraft(int id)
+        {
+            var draft = _context.TenderAdminsDraft
+                .Include(d => d.Documents)
+                .FirstOrDefault(d => d.Id == id);
+
+            if (draft == null)
                 return NotFound();
 
-            return View(tender);
-        }
-
-       [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Edit(
-    TenderViewModel model,
-    List<IFormFile> UploadedFiles,
-    [FromForm] List<int> DocumentsToDelete)
-{
-    if (!ModelState.IsValid)
-    {
-        // Repopulate ExistingDocuments if needed
-        var tenderDocs = _context.TenderDocuments
-            .Where(d => d.TenderId == model.Id)
-            .Select(d => new TenderDocumentViewModel
+            // Map draft to TenderViewModel (leave missing fields as null/default)
+            var model = new TenderViewModel
             {
-                Id = d.Id,
-                FileName = d.FileName,
-                FilePath = d.FilePath
-            }).ToList();
-        model.ExistingDocuments = tenderDocs;
-        return View(model);
-    }
-
-    var tender = _context.Tenders
-        .Include(t => t.Documents)
-        .FirstOrDefault(t => t.Id == model.Id);
-
-    if (tender == null)
-        return NotFound();
-
-    // Update tender fields
-    tender.TenderType = model.TenderType;
-    tender.TenderNumber = model.TenderNumber;
-    tender.ClosingDate = model.ClosingDate;
-    tender.ClosingTime = model.ClosingTime;
-    tender.Status = model.Status;
-    tender.Title = model.Title;
-    tender.Description = model.Description;
-
-    // Handle document deletions
-    if (DocumentsToDelete != null && DocumentsToDelete.Any())
-    {
-        var docsToRemove = tender.Documents.Where(d => DocumentsToDelete.Contains(d.Id)).ToList();
-        foreach (var doc in docsToRemove)
-        {
-            // Optionally: Delete the file from disk
-            var filePath = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('~', '/').Replace('/', Path.DirectorySeparatorChar));
-            if (System.IO.File.Exists(filePath))
-                System.IO.File.Delete(filePath);
-
-            _context.TenderDocuments.Remove(doc);
-        }
-    }
-
-    // Handle new uploads
-    if (UploadedFiles != null && UploadedFiles.Any())
-    {
-        foreach (var file in UploadedFiles)
-        {
-            if (file.Length > 0)
-            {
-                var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads/tenderdocs");
-                Directory.CreateDirectory(uploadsFolder);
-                var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                DraftId = draft.DraftId, // <-- Add this line!
+                TenderType = draft.TenderType,
+                TenderNumber = draft.TenderNumber,
+                ClosingDate = draft.ClosingDate ?? default,
+                ClosingTime = draft.ClosingTime,
+                Status = draft.Status,
+                Title = draft.Title,
+                Description = draft.Description,
+                ExistingDocuments = draft.Documents?.Select(doc => new TenderDocumentViewModel
                 {
-                    await file.CopyToAsync(stream);
-                }
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    FilePath = doc.FilePath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
+            };
 
-                var doc = new TenderDocument
-                {
-                    FileName = file.FileName,
-                    FilePath = $"/uploads/tenderdocs/{uniqueFileName}",
-                    TenderId = tender.Id
-                };
-                _context.TenderDocuments.Add(doc);
-            }
+            // If ClosingDate is null, set to today to avoid validation error
+            if (draft.ClosingDate == null)
+                model.ClosingDate = DateTime.Today;
+
+            return View("Create", model); // Reuse the Create view
         }
-    }
 
-    await _context.SaveChangesAsync();
-    return RedirectToAction("Index");
-}
+
+
 
     }
 

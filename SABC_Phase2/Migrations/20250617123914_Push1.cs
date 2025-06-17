@@ -38,6 +38,7 @@ namespace SABC_Phase2.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    DraftId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     TenderType = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -66,7 +67,8 @@ namespace SABC_Phase2.Migrations
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DatePublished = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    DatePublished = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DraftId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {

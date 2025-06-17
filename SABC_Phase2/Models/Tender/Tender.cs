@@ -35,6 +35,8 @@ namespace SABC_Phase2.Models.Tender
 
         public DateTime DatePublished { get; set; } // <--- New field
 
+        // Add this property
+        public Guid? DraftId { get; set; }
         public ICollection<TenderDocument> Documents { get; set; }
 
      

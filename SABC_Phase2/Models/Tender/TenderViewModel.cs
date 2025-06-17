@@ -8,16 +8,18 @@ namespace SABC_Phase2.Models.Tender
 {
     public class TenderViewModel
     {
+
+       public Guid? DraftId { get; set; }
         public int Id { get; set; }
         [Required]
         public string TenderType { get; set; }
-
+ 
         [Required]
         public string TenderNumber { get; set; }
-        
+
         [Required]
         [DataType(DataType.Date)]
-        public DateTime ClosingDate { get; set; }
+        public DateTime? ClosingDate { get; set; }
 
         [DataType(DataType.Time)]
         public TimeSpan? ClosingTime { get; set; }
