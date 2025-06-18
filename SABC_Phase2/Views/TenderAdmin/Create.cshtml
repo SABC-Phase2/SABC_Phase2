@@ -15,6 +15,9 @@
 <div class="tab-header">
     <div id="tabDetails" class="tab-btn active" onclick="showTab('details')">Details</div>
     <div id="tabDocuments" class="tab-btn" onclick="showTab('documents')">Documents</div>
+
+
+    <div id="tabSubmit" class="tab-btn disabled" onclick="if(!this.classList.contains('disabled')) showTab('submit')">Submit</div>
 </div>
 
 <div class="tab-container">
@@ -93,30 +96,9 @@
                     <span asp-validation-for="Description" class="text-danger"></span>
                 </div>
 
-                <!-- Schedule Tender Section -->
-                <div class="form-group full-width">
-                    <div class="schedule-container">
-                        <div class="schedule-toggle" id="scheduleToggle">
-                            <input type="checkbox" id="IsScheduled" name="IsScheduled" value="false" />
-                            <span class="schedule-toggle-text">Schedule this tender for later publication</span>
-                        </div>
-                        <div class="schedule-fields" id="scheduleFields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="ScheduledDate">Scheduled Date</label>
-                                    <input type="date" id="ScheduledDate" name="ScheduledDate" class="form-control" />
-                                </div>
-                                <div class="form-group">
-                                    <label for="ScheduledTime">Scheduled Time</label>
-                                    <input type="time" id="ScheduledTime" name="ScheduledTime" class="form-control" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+             
 
-                <!-- Save to Draft Button -->
-                <button type="button" class="action-btn cancel-btn mt-3" onclick="saveDraft()">Save to Draft</button>
+             
             </div>
         </div>
 
@@ -151,148 +133,294 @@
                 </label>
             </div>
         </div>
+
+
+        <div id="submit" class="tab-content">
+            <!-- Centered Tabs Above Submit Tender -->
+            <div class="submit-tabs-container">
+                <div class="submit-tabs">
+                    <div id="submitTabPublish" class="submit-tab active" onclick="showSubmitTab('publish')">Publish Now</div>
+                    <div id="submitTabSchedule" class="submit-tab" onclick="showSubmitTab('schedule')">Schedule</div>
+                    <div id="submitTabDraft" class="submit-tab" onclick="showSubmitTab('draft')">Save as Draft</div>
+                </div>
+            </div>
+
+            <!-- Submit Tab Content Sections -->
+            <div id="submitTabContentPublish" class="submit-tab-content active">
+                <p>Ready to publish your tender immediately.</p>
+            </div>
+            <div id="submitTabContentSchedule" class="submit-tab-content">
+                <p>Set a date and time to schedule your tender publication.</p>
+                <!-- Schedule Tender Section moved here -->
+                <div class="form-group full-width">
+                    <div class="schedule-container">
+                        <div class="schedule-toggle" id="scheduleToggle">
+                            <input type="checkbox" id="IsScheduled" name="IsScheduled" value="false" />
+                            <span class="schedule-toggle-text">Schedule this tender for later publication</span>
+                        </div>
+                        <div class="schedule-fields" id="scheduleFields">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ScheduledDate">Scheduled Date</label>
+                                    <input type="date" id="ScheduledDate" name="ScheduledDate" class="form-control" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="ScheduledTime">Scheduled Time</label>
+                                    <input type="time" id="ScheduledTime" name="ScheduledTime" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          
+        </div>
     </form>
 </div>
 
-<div class="action-buttons">
-    <button type="button" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "Tender")'">Cancel</button>
-    <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Continue <span class="arrow-icon"></span></button>
 
+<div class="action-buttons">
+    <button type="button" id="cancelBtn" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "Tender")'">Cancel</button>
+    <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">Done <span class="arrow-icon"></span></button>
+    <button type="button" id="continueBtn" class="action-btn preview-btn" onclick="goToSubmitTab()">Continue</button>
 </div>
+@* <div class="action-buttons">
+    <button type="button" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "Tender")'">Cancel</button>
+    <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Done <span class="arrow-icon"></span></button>
+    
+ 
+    <button type="button" class="action-btn preview-btn" onclick="goToSubmitTab()">Continue</button>
+
+</div> *@
+
+
 
 @section Scripts {
     <script>
-        function showTab(tab) {
-            document.getElementById("details").classList.remove("active");
-            document.getElementById("documents").classList.remove("active");
-            document.getElementById("tabDetails").classList.remove("active");
-            document.getElementById("tabDocuments").classList.remove("active");
 
-            document.getElementById(tab).classList.add("active");
-            document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
+
+                                function goToSubmitTab() {
+                    // Enable the Submit tab
+                    var submitTab = document.getElementById("tabSubmit");
+                    submitTab.classList.remove("disabled");
+                    // Switch to the Submit tab
+                    showTab('submit');
+                }
+
+                         function showSubmitTab(tab) {
+            // Remove active from all tabs
+            document.querySelectorAll('.submit-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.submit-tab-content').forEach(el => el.classList.remove('active'));
+
+            // Activate selected tab and content
+            const tabId = 'submitTab' + capitalize(tab);
+            const contentId = 'submitTabContent' + capitalize(tab);
+
+            const tabElement = document.getElementById(tabId);
+            const contentElement = document.getElementById(contentId);
+
+            if (tabElement) tabElement.classList.add('active');
+            if (contentElement) contentElement.classList.add('active');
+
+            // Attach schedule toggle event if on schedule tab
+            if (tab === 'schedule') {
+                setTimeout(function() {
+                    var toggle = document.getElementById('scheduleToggle');
+                    if (toggle && !toggle.dataset.bound) {
+                        toggle.addEventListener('click', function() {
+                            const checkbox = document.getElementById('IsScheduled');
+                            const scheduleFields = document.getElementById('scheduleFields');
+                            checkbox.value = checkbox.value === 'false' ? 'true' : 'false';
+                            scheduleFields.classList.toggle('show');
+                        });
+                        toggle.dataset.bound = "true";
+                    }
+                }, 0);
+            }
         }
 
-        // Schedule Tender Toggle
-        document.getElementById('scheduleToggle').addEventListener('click', function() {
-            const checkbox = document.getElementById('IsScheduled');
-            const scheduleFields = document.getElementById('scheduleFields');
-
-            checkbox.value = checkbox.value === 'false' ? 'true' : 'false';
-            scheduleFields.classList.toggle('show');
-        });
-
-        const fileInput = document.getElementById("UploadedFiles");
-        const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
-        const uploadInputGroup = document.getElementById("uploadInputGroup");
-        const form = document.querySelector("form");
-
-        const storedFiles = [];
-
-        fileInput.addEventListener("change", function () {
-            for (const file of fileInput.files) {
-                if (!file.name.endsWith(".pdf")) {
-                    alert(`${file.name} is not a PDF.`);
-                    continue;
+                function capitalize(str) {
+                    return str.charAt(0).toUpperCase() + str.slice(1);
                 }
 
-                if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                    continue;
-                }
+                        function updateActionButtons(tab) {
+                        // Show Cancel always
+                        document.getElementById("cancelBtn").style.display = "inline-flex";
 
-                const fileInfo = {
-                    file: file,
-                    uploadedAt: new Date()
-                };
+                        if (tab === "submit") {
+                            document.getElementById("doneBtn").style.display = "inline-flex";
+                            document.getElementById("continueBtn").style.display = "none";
+                        } else {
+                            document.getElementById("doneBtn").style.display = "none";
+                            document.getElementById("continueBtn").style.display = "inline-flex";
+                        }
+                    }
 
-                storedFiles.push(fileInfo);
-            }
+                    function showTab(tab) {
+                        // Hide all tab contents
+                        document.getElementById("details").classList.remove("active");
+                        document.getElementById("documents").classList.remove("active");
+                        document.getElementById("preview")?.classList.remove("active");
+                        document.getElementById("submit").classList.remove("active");
 
-            renderUploadedFiles();
-            fileInput.value = "";
-        });
+                        // Remove active from all tab buttons
+                        document.getElementById("tabDetails").classList.remove("active");
+                        document.getElementById("tabDocuments").classList.remove("active");
+                        document.getElementById("tabPreview")?.classList.remove("active");
+                        document.getElementById("tabSubmit").classList.remove("active");
 
-                function renderUploadedFiles() {
-            // 1. Preserve and re-render existing documents (from Razor)
-            // These have the class 'existing-doc' and a data-doc-id attribute
-            const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
-            uploadedFilesContainer.innerHTML = "";
-            existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
+                        // Show the selected tab
+                        document.getElementById(tab).classList.add("active");
+                        document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
 
-            // 2. Render new uploads (from JS)
-            storedFiles.forEach((fileInfo, index) => {
-                const { file, uploadedAt } = fileInfo;
+                        // Update action buttons visibility
+                        updateActionButtons(tab);
+                    }
 
-                const fileRow = document.createElement("div");
-                fileRow.className = `uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 ${index % 2 === 0 ? 'bg-light' : 'bg-secondary text-white'}`;
+                    // Initial state on page load
+                    document.addEventListener("DOMContentLoaded", function() {
+                        updateActionButtons("details");
+                    });
 
-                const fileDetails = document.createElement("div");
 
-                const fileName = document.createElement("strong");
-                fileName.textContent = file.name;
+                // Schedule Tender Toggle
+                // document.getElementById('scheduleToggle').addEventListener('click', function() {
+                //     const checkbox = document.getElementById('IsScheduled');
+                //     const scheduleFields = document.getElementById('scheduleFields');
 
-                const fileMeta = document.createElement("div");
-                fileMeta.className = "text-muted small mt-1";
-                fileMeta.style.fontSize = "0.75rem";
+                //     checkbox.value = checkbox.value === 'false' ? 'true' : 'false';
+                //     scheduleFields.classList.toggle('show');
+                // });
 
-                const size = formatFileSize(file.size);
-                const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                fileMeta.textContent = `${size} • Uploaded at ${time}`;
+                const fileInput = document.getElementById("UploadedFiles");
+                const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
+                const uploadInputGroup = document.getElementById("uploadInputGroup");
+                const form = document.querySelector("form");
 
-                fileDetails.appendChild(fileName);
-                fileDetails.appendChild(fileMeta);
+                const storedFiles = [];
 
-                const actions = document.createElement("div");
-                actions.className = "uploaded-file-actions d-flex";
+                fileInput.addEventListener("change", function () {
+                    for (const file of fileInput.files) {
+                        if (!file.name.endsWith(".pdf")) {
+                            alert(`${file.name} is not a PDF.`);
+                            continue;
+                        }
 
-                const viewBtn = document.createElement("button");
-                viewBtn.type = "button";
-                viewBtn.className = "btn btn-outline-primary btn-sm me-2";
-                viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                viewBtn.onclick = () => {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, "_blank");
-                };
+                        if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                            continue;
+                        }
 
-                const deleteBtn = document.createElement("button");
-                deleteBtn.type = "button";
-                deleteBtn.className = "btn btn-outline-danger btn-sm";
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.onclick = () => {
-                    storedFiles.splice(index, 1);
+                        const fileInfo = {
+                            file: file,
+                            uploadedAt: new Date()
+                        };
+
+                        storedFiles.push(fileInfo);
+                    }
+
                     renderUploadedFiles();
-                };
+                    fileInput.value = "";
+                });
 
-                actions.appendChild(viewBtn);
-                actions.appendChild(deleteBtn);
+                        function renderUploadedFiles() {
+                    // 1. Preserve and re-render existing documents (from Razor)
+                    // These have the class 'existing-doc' and a data-doc-id attribute
+                    const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
+                    uploadedFilesContainer.innerHTML = "";
+                    existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
 
-                fileRow.appendChild(fileDetails);
-                fileRow.appendChild(actions);
+                    // 2. Render new uploads (from JS)
+                    storedFiles.forEach((fileInfo, index) => {
+                        const { file, uploadedAt } = fileInfo;
 
-                uploadedFilesContainer.appendChild(fileRow);
-            });
+                        const fileRow = document.createElement("div");
+                        fileRow.className = `uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 ${index % 2 === 0 ? 'bg-light' : 'bg-secondary text-white'}`;
 
-            if (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3")) {
-                uploadInputGroup.classList.add("mt-3");
+                        const fileDetails = document.createElement("div");
+
+                        const fileName = document.createElement("strong");
+                        fileName.textContent = file.name;
+
+                        const fileMeta = document.createElement("div");
+                        fileMeta.className = "text-muted small mt-1";
+                        fileMeta.style.fontSize = "0.75rem";
+
+                        const size = formatFileSize(file.size);
+                        const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        fileMeta.textContent = `${size} • Uploaded at ${time}`;
+
+                        fileDetails.appendChild(fileName);
+                        fileDetails.appendChild(fileMeta);
+
+                        const actions = document.createElement("div");
+                        actions.className = "uploaded-file-actions d-flex";
+
+                        const viewBtn = document.createElement("button");
+                        viewBtn.type = "button";
+                        viewBtn.className = "btn btn-outline-primary btn-sm me-2";
+                        viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                        viewBtn.onclick = () => {
+                            const fileURL = URL.createObjectURL(file);
+                            window.open(fileURL, "_blank");
+                        };
+
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.type = "button";
+                        deleteBtn.className = "btn btn-outline-danger btn-sm";
+                        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                        deleteBtn.onclick = () => {
+                            storedFiles.splice(index, 1);
+                            renderUploadedFiles();
+                        };
+
+                        actions.appendChild(viewBtn);
+                        actions.appendChild(deleteBtn);
+
+                        fileRow.appendChild(fileDetails);
+                        fileRow.appendChild(actions);
+
+                        uploadedFilesContainer.appendChild(fileRow);
+                    });
+
+                    if (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3")) {
+                        uploadInputGroup.classList.add("mt-3");
+                    }
+                }
+
+                function formatFileSize(bytes) {
+                    if (bytes < 1024) return `${bytes} B`;
+                    else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                    else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                }
+
+           function submitForm() {
+            const activeSubmitTab = document.querySelector('.submit-tab.active');
+            if (!activeSubmitTab) return;
+
+            const doneBtn = document.getElementById("doneBtn");
+            if (doneBtn) doneBtn.disabled = true;
+            if (doneBtn) doneBtn.innerHTML = 'Processing... <span class="arrow-icon"></span>';
+
+            // Handle different submit tabs
+            if (activeSubmitTab.id === 'submitTabDraft') {
+                saveDraft();
+                return;
+            }
+            else if (activeSubmitTab.id === 'submitTabSchedule') {
+                scheduleTender();
+                return;
+            }
+            else if (activeSubmitTab.id === 'submitTabPublish') {
+                // Regular tender creation for Publish Now
+                createTender();
+                return;
             }
         }
 
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return `${bytes} B`;
-            else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-            else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-        }
-
-          function submitForm() {
-            const continueBtn = document.getElementById("continueBtn");
-            if (continueBtn.disabled) return; // Prevent double click via fast JS
-
-            continueBtn.disabled = true;
-            continueBtn.innerHTML = 'Submitting... <span class="arrow-icon"></span>';
-
+        function createTender() {
             if (storedFiles.length === 0) {
                 alert("Please upload at least one PDF file.");
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = 'Continue <span class="arrow-icon"></span>';
+                resetDoneButton();
                 return;
             }
 
@@ -300,6 +428,9 @@
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
             });
+
+            // Add a flag to indicate this is a publish now action
+            formData.append("PublishNow", "true");
 
             fetch(form.action, {
                 method: "POST",
@@ -317,38 +448,109 @@
             .catch(error => {
                 alert("Error submitting form");
                 console.error(error);
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = 'Continue <span class="arrow-icon"></span>';
+                resetDoneButton();
             });
         }
 
+        function scheduleTender() {
+            // Get the checkbox element (not the value)
+            const checkbox = document.getElementById('IsScheduled');
+            // Determine if scheduling is enabled
+            const isScheduled = checkbox.value === 'true';
+            const scheduledDate = document.getElementById('ScheduledDate').value;
+            const scheduledTime = document.getElementById('ScheduledTime').value;
 
-    function saveDraft() {
-    const form = document.querySelector("form");
-    const formData = new FormData(form);
+            if (isScheduled && (!scheduledDate || !scheduledTime)) {
+                alert("Please provide both date and time for scheduling.");
+                resetDoneButton();
+                return;
+            }
 
-    // Add files from the JS file list (if using custom file handling)
-    storedFiles.forEach(fileInfo => {
-        formData.append("UploadedFiles", fileInfo.file);
-    });
+            if (storedFiles.length === 0) {
+                alert("Please upload at least one PDF file.");
+                resetDoneButton();
+                return;
+            }
 
-    fetch('/TenderAdmin/SaveDraft', {
-        method: "POST",
-        body: formData,
-        headers: {
-            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            const formData = new FormData(form);
+            storedFiles.forEach(fileInfo => {
+                formData.append("UploadedFiles", fileInfo.file);
+            });
+
+            // Add scheduling information
+            formData.append("IsScheduled", isScheduled);
+            if (isScheduled) {
+                formData.append("ScheduledDate", scheduledDate);
+                formData.append("ScheduledTime", scheduledTime);
+            }
+
+            // Use the same form action as create, but we'll differentiate in the controller
+            fetch(form.action, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    return response.json().then(data => {
+                        if (data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            alert(data.message || "Tender scheduled successfully");
+                            resetDoneButton();
+                        }
+                    });
+                } else {
+                    return response.text().then(html => {
+                        document.body.innerHTML = html;
+                    });
+                }
+            })
+            .catch(error => {
+                alert("Error scheduling tender");
+                console.error(error);
+                resetDoneButton();
+            });
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message || "Draft saved.");
-        // Optionally redirect or update UI
-    })
-    .catch(error => {
-        alert("Error saving draft");
-        console.error(error);
-    });
-}
+
+        function saveDraft() {
+            const form = document.querySelector("form");
+            const formData = new FormData(form);
+
+            storedFiles.forEach(fileInfo => {
+                formData.append("UploadedFiles", fileInfo.file);
+            });
+
+            fetch('/TenderAdmin/SaveDraft', {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || "Draft saved.");
+                resetDoneButton();
+            })
+            .catch(error => {
+                alert("Error saving draft");
+                console.error(error);
+                resetDoneButton();
+            });
+        }
+
+        function resetDoneButton() {
+            const doneBtn = document.getElementById("doneBtn");
+            if (doneBtn) {
+                doneBtn.disabled = false;
+                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+            }
+        }
     </script>
 }
 
@@ -700,6 +902,56 @@
     }
 
         .schedule-fields.show {
+            display: block;
+        }
+
+
+    @*New css*@
+    .tab-btn.disabled {
+        pointer-events: none;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .submit-tabs-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    .submit-tabs {
+        display: flex;
+        gap: 24px;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 2px 8px rgba(34,197,94,0.08);
+        padding: 0 24px;
+    }
+
+    .submit-tab {
+        padding: 14px 36px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #1a7f37;
+        background: transparent;
+        border: none;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+
+        .submit-tab.active {
+            background: #1a7f37;
+            color: #fff;
+        }
+
+    .submit-tab-content {
+        display: none;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+        .submit-tab-content.active {
             display: block;
         }
 </style>
