@@ -7,6 +7,8 @@
     int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
     int emptyRows = pageSize - Model.Count;
+
+    var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -47,6 +49,7 @@
             <tbody>
                 @foreach (var tender in Model)
                 {
+                    var localTime = TimeZoneInfo.ConvertTimeFromUtc(tender.ScheduledPublishDateTime, saTimeZone);
                     <tr>
                         <td>
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
@@ -57,7 +60,7 @@
                                 @tender.Status
                             </span>
                         </td>
-                        <td>@tender.ScheduledPublishDateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@localTime.ToString("yyyy-MM-dd HH:mm")</td>
                         <td>
                             <a asp-controller="TenderAdmin" asp-action="EditScheduled" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
                         </td>

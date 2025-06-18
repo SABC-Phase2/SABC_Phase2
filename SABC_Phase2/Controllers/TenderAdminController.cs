@@ -457,11 +457,11 @@ namespace SABC_Phase2.Controllers
 
             return View(scheduledTenders);
         }
-    
 
 
 
-    [HttpGet]
+
+        [HttpGet]
         public async Task<IActionResult> EditScheduled(int id)
         {
             var scheduledTender = await _context.ScheduledTenders
@@ -519,12 +519,18 @@ namespace SABC_Phase2.Controllers
             scheduledTender.Title = dto.Title;
             scheduledTender.Description = dto.Description;
 
+
+
+
             // --- Add this block ---
             if (dto.IsScheduled && dto.ScheduledDate.HasValue && dto.ScheduledTime.HasValue)
             {
                 var userTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
                 var localDateTime = dto.ScheduledDate.Value.Date + dto.ScheduledTime.Value;
                 scheduledTender.ScheduledPublishDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, userTimeZone);
+
+
+
             }
 
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);

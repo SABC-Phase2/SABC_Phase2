@@ -6,6 +6,11 @@
 
 @{
     ViewBag.Title = "Edit Scheduled Tender";
+
+    var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+    DateTime? localScheduled = Model.ScheduledPublishDateTime.HasValue
+        ? TimeZoneInfo.ConvertTimeFromUtc(Model.ScheduledPublishDateTime.Value, saTimeZone)
+        : (DateTime?)null;
 }
 
 <div class="breadcrumb-custom">
@@ -101,7 +106,7 @@
                 <div class="form-group full-width">
                     <label>Scheduled Publish Date & Time</label>
                     <input type="text" class="form-control"
-                           value="@(Model.ScheduledPublishDateTime.HasValue? Model.ScheduledPublishDateTime.Value.ToString("yyyy-MM-dd HH:mm") : "")"
+                           value="@(localScheduled.HasValue? localScheduled.Value.ToString("yyyy-MM-dd HH:mm") : "")"
                            readonly />
                 </div>
 
