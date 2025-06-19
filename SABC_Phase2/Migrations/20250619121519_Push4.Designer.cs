@@ -12,8 +12,8 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250618070006_Push2")]
-    partial class Push2
+    [Migration("20250619121519_Push4")]
+    partial class Push4
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,68 @@ namespace SABC_Phase2.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("SABC_Phase2.Models.OVRS.OVRS_User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MiddleName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Supplier")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SABC_Phase2.Models.OVRS.TenderApplications", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("OVRS_UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OVRS_UserId");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("Applied_For_Tenders");
+                });
 
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTender", b =>
                 {
@@ -234,6 +296,25 @@ namespace SABC_Phase2.Migrations
                     b.HasIndex("TenderDraftId");
 
                     b.ToTable("TenderAdminsDraftDocuments");
+                });
+
+            modelBuilder.Entity("SABC_Phase2.Models.OVRS.TenderApplications", b =>
+                {
+                    b.HasOne("SABC_Phase2.Models.OVRS.OVRS_User", "OVRS_User")
+                        .WithMany()
+                        .HasForeignKey("OVRS_UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SABC_Phase2.Models.Tender.Tender", "Tender")
+                        .WithMany()
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OVRS_User");
+
+                    b.Navigation("Tender");
                 });
 
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTenderDocument", b =>

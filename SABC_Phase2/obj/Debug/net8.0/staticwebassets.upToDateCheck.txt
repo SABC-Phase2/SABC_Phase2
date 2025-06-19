@@ -48,6 +48,7 @@ wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
 wwwroot\lib\bootstrap\LICENSE
 wwwroot\lib\Images\banner.png
 wwwroot\lib\Images\bg.png
+wwwroot\lib\Images\cropped_logoblack.png
 wwwroot\lib\Images\logo.png
 wwwroot\lib\Images\logoblack.png
 wwwroot\lib\Images\sabc-logo.png

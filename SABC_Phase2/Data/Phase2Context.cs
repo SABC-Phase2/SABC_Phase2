@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Models.Tender;
+using SABC_Phase2.Models.OVRS;
 
 namespace SABC_Phase2.Data
 {
@@ -8,7 +9,8 @@ namespace SABC_Phase2.Data
         public Phase2Context(DbContextOptions<Phase2Context> options) : base(options)
         {
         }
-
+        public DbSet<OVRS_User> Users { get; set; }
+        public DbSet<TenderApplications> Applied_For_Tenders { get; set; }
         public DbSet<Tender> Tenders { get; set; }
         public DbSet<TenderDocument> TenderDocuments { get; set; }
 

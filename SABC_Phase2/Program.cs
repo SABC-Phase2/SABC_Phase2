@@ -2,6 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Data;
 using Hangfire;
 using SABC_Phase2.Services;
+using QuestPDF.Infrastructure; // Add this at the top
+
+// Set the QuestPDF license type before building the app
+QuestPDF.Settings.License = LicenseType.Community;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +31,7 @@ builder.Services.AddHangfireServer();
 // Register your custom tender publishing service for DI
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
 
+builder.Services.AddTransient<TenderReportPdfService>();
 var app = builder.Build();
 
 // ---------------------------

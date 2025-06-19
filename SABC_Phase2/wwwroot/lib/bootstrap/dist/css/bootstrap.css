@@ -4476,8 +4476,9 @@ textarea.form-control-lg {
 }
 
 .card-body {
-  flex: 1 1 auto;
-  padding: 1rem 1rem;
+    flex: 1 1 auto;
+    padding: 0 30px 30px 30px; /* Match .report-card padding, add bottom padding */
+    box-sizing: border-box;
 }
 
 .card-title {
@@ -4722,7 +4723,8 @@ textarea.form-control-lg {
   float: left;
   padding-right: 0.5rem;
   color: #6c757d;
-  content: var(--bs-breadcrumb-divider, "/") /* rtl: var(--bs-breadcrumb-divider, "/") */;
+  content: var(--bs-breadcrumb-divider, "/") /* rtl: var(--bs-breadcrumb-divider, "/") */
+    ;
 }
 .breadcrumb-item.active {
   color: #6c757d;

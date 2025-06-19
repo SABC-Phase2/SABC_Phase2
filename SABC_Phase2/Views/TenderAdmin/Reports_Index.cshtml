@@ -1,0 +1,274 @@
+﻿@model List<SABC_Phase2.Models.Tender.Tender>
+
+@{
+    ViewData["BannerText"] = "Reports";
+    var closedTenders = Model?.Where(t => t.Status != null && t.Status.ToLower().Contains("closed")).ToList() ?? new List<SABC_Phase2.Models.Tender.Tender>();
+    int tendersPerRow = 4;
+    int maxRows = 2;
+    int maxTenders = tendersPerRow * maxRows;
+    var displayTenders = closedTenders.Take(maxTenders).ToList();
+}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+<div class="report-action-bar">
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="text" class="search-input" placeholder="Search keyword" />
+    </div>
+    <button class="new-tender-btn" onclick="window.location.href='@Url.Action("Create", "TenderAdmin")'">
+        <i class="fas fa-plus"></i> New Tender
+    </button>
+</div>
+
+<div class="card report-card">
+    <div class="card-header">
+        <h2>Closed Tenders</h2>
+    </div>
+    <div class="card-body">
+        @if (!displayTenders.Any())
+        {
+            <div class="no-tenders">No closed tenders found.</div>
+        }
+        else
+        {
+            <div class="tender-blocks-container">
+                @for (int i = 0; i < displayTenders.Count; i += tendersPerRow)
+                {
+                    <div class="tender-block-row">
+                        @foreach (var tender in displayTenders.Skip(i).Take(tendersPerRow))
+                        {
+                            <a href="@Url.Action("tender_Report", "TenderAdmin", new { id = tender.Id })" style="text-decoration:none; color:inherit;">
+                                <div class="tender-block">
+                                    <div class="tender-block-logo-wrap">
+                                        <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
+                                        <span class="tender-block-status">CLOSED</span>
+                                    </div>
+                                    <div class="tender-block-number">@tender.TenderNumber</div>
+                                    <div class="tender-block-title">
+                                        @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+                                    </div>
+                                    <div class="tender-block-closing">
+                                        CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span><br />
+                                        TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .report-action-bar {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 25px 0 35px 0;
+        flex-wrap: wrap;
+    }
+
+    .search-wrapper {
+        position: relative;
+        width: 250px;
+    }
+
+        .search-wrapper i {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 1rem;
+        }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 12px 12px 38px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-size: 1rem;
+    }
+
+        .search-input::placeholder {
+            color: #ccc;
+        }
+
+    .new-tender-btn {
+        margin-left: auto;
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        position: relative;
+    }
+
+        .new-tender-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
+    .report-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+       
+        margin-bottom: 60px;
+      
+
+    }
+
+    .card-header h2 {
+        margin: 0 0 18px 0;
+        font-size: 1.5rem;
+        color: #222;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .tender-blocks-container {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        padding: 0; /* Remove horizontal padding */
+        box-sizing: border-box;
+    }
+
+    .tender-block-row {
+        display: flex;
+        gap: 25px; /* smaller gap */
+        justify-content: flex-start;
+        align-items: stretch;
+    }
+
+    /* Block that populates on cards */
+    .tender-block {
+        flex: 0 1 calc((100% - 30px) / 4);
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.10);
+        padding: 28px 18px 18px 18px;
+        min-width: 0; /* Prevent overflow */
+        max-width: none; /* Remove max-width restriction */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 340px;
+        position: relative;
+        border: 1.5px solid #ededed;
+        transition: box-shadow 0.2s;
+        height: 100%; /* Ensure block fills the row height */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+        .tender-block:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+        }
+
+    .tender-block-logo-wrap {
+        position: relative;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        margin-bottom: 18px;
+        min-height: 110px; /* Ensures enough space for logo and label */
+    }
+
+    .tender-block-thumbnail {
+        width: 110px;
+        height: 110px;
+        aspect-ratio: 1/1;
+        object-fit: cover;
+        display: block;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 50%;
+        border: none;
+        z-index: 1;
+    }
+
+.tender-block-status {
+    position: absolute;
+    top: 18px;
+    right: -20px; /* Move to right edge */
+    background: #e74c3c;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 22px 0 0 22px; /* Curve on left, straight on right */
+    padding: 7px 22px 7px 18px;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 8px rgba(231,76,60,0.08);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    height: 38px;
+}
+
+    .tender-block-number {
+        font-size: 1.18rem;
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 10px;
+        text-align: center;
+        margin-top: 2px;
+        letter-spacing: 0.01em;
+    }
+
+    .tender-block-title {
+        font-size: 1.01rem;
+        color: #888;
+        margin-bottom: 18px;
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        line-height: 1.3;
+        min-height: 48px;
+        max-width: 95%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .tender-block-closing {
+        font-size: 1.04rem;
+        color: #222;
+        margin-top: auto;
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 2px;
+        letter-spacing: 0.01em;
+    }
+
+    .closing-red {
+        color: #e74c3c;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .no-tenders {
+        color: #888;
+        font-size: 1.1rem;
+        text-align: center;
+        padding: 30px 0;
+    }
+</style>

@@ -17,16 +17,20 @@ namespace SABC_Phase2.Controllers
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
 
+        private readonly TenderReportPdfService _pdfService;
+
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
         /// <param name="context">Database context for Tender operations.</param>
         /// <param name="configuration">App configuration settings, used for services like Azure Blob Storage.</param>
-        public TenderAdminController(Phase2Context context, IConfiguration configuration, IWebHostEnvironment env)
+        public TenderAdminController(Phase2Context context, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService)
         {
             _context = context;
             _configuration = configuration;
             _env = env;
+            _pdfService = pdfService;
         }
 
         // GET: /TenderAdmin/Create
@@ -570,6 +574,89 @@ namespace SABC_Phase2.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction("ScheduledIndex");
+        }
+
+
+
+        //---------------------------------------------------------------------------------------------------
+        //ReportsIndex()
+
+        //---------------------------------------------------------------------------------------------------
+        // Reports and Supplier Report Actions
+        //---------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Displays a list of all published tenders for reporting purposes.
+        /// This is the entry point for the reports section, showing all tenders in the system.
+        /// </summary>
+        [HttpGet]
+        public IActionResult Reports_Index()
+        {
+            // Retrieve all tenders from the database.
+            // This list is passed to the view for display.
+            var tenders = _context.Tenders.ToList();
+            return View(tenders);
+        }
+
+        /// <summary>
+        /// Displays a detailed report for a specific tender, including supplier application statistics.
+        /// Shows the number of local and foreign suppliers who have applied for the selected tender.
+        /// </summary>
+        /// <param name="id">The unique identifier of the tender to report on.</param>
+        [HttpGet]
+        public IActionResult tender_Report(int id)
+        {
+            // Find the tender by its ID.
+            var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
+            if (tender == null)
+                return NotFound(); // Return 404 if the tender does not exist.
+
+            // Retrieve all applications for this tender, including the related supplier (OVRS_User) data.
+            var applications = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => a.TenderId == id)
+                .ToList();
+
+            // Count the number of local and foreign suppliers based on the Supplier property.
+            int localCount = applications.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "local");
+            int foreignCount = applications.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "foreign");
+
+            // Create a view model containing the tender and the calculated statistics.
+            var viewModel = new TenderReportViewModel
+            {
+                Tender = tender,
+                LocalSupplierCount = localCount,
+                ForeignSupplierCount = foreignCount
+            };
+
+            // Pass the view model to the view for rendering.
+            return View(viewModel);
+        }
+
+        /// <summary>
+        /// Generates a PDF supplier report for a specific tender.
+        /// The PDF includes a list of all suppliers who applied, with their details and statistics.
+        /// </summary>
+        /// <param name="id">The unique identifier of the tender to generate the report for.</param>
+        [HttpGet]
+        public IActionResult GenerateTenderSupplierReport(int id)
+        {
+            // Find the tender by its ID.
+            var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
+            if (tender == null)
+                return NotFound(); // Return 404 if the tender does not exist.
+
+            // Retrieve all applications for this tender, including the related supplier (OVRS_User) data.
+            var applications = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => a.TenderId == id)
+                .ToList();
+
+            // Generate the PDF using the TenderReportPdfService.
+            var pdfBytes = _pdfService.GenerateSupplierReport(tender, applications);
+
+            // Return the PDF file as a download to the user.
+            return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
         }
     }
 
