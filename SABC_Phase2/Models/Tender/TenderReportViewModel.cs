@@ -29,5 +29,9 @@
         /// This is a computed property: the sum of local and foreign supplier counts.
         /// </summary>
         public int TotalResponses => LocalSupplierCount + ForeignSupplierCount;
+
+        // Add these properties if you want to display the date range in the PDF
+        public DateTime? ReportStartDate { get; set; }
+        public DateTime? ReportEndDate { get; set; }
     }
 }

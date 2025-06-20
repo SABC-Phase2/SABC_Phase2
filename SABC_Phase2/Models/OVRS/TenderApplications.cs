@@ -22,6 +22,9 @@ namespace SABC_Phase2.Models.OVRS
         [ForeignKey("OVRS_UserId")]
         public OVRS_User OVRS_User { get; set; }
 
+        public DateTime? DateApplied { get; set; } // this neeeds to automatically populate on date user created tender application
+
+
         // Exposed fields from Tender
         [NotMapped]
         public string TenderType => Tender?.TenderType;

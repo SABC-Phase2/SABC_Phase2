@@ -639,7 +639,7 @@ namespace SABC_Phase2.Controllers
         /// </summary>
         /// <param name="id">The unique identifier of the tender to generate the report for.</param>
         [HttpGet]
-        public IActionResult GenerateTenderSupplierReport(int id)
+        public IActionResult GenerateTenderSupplierReport(int id, DateTime? startDate = null, DateTime? endDate = null)
         {
             // Find the tender by its ID.
             var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
@@ -647,10 +647,19 @@ namespace SABC_Phase2.Controllers
                 return NotFound(); // Return 404 if the tender does not exist.
 
             // Retrieve all applications for this tender, including the related supplier (OVRS_User) data.
-            var applications = _context.Applied_For_Tenders
+            var query = _context.Applied_For_Tenders
                 .Include(a => a.OVRS_User)
-                .Where(a => a.TenderId == id)
-                .ToList();
+                .Where(a => a.TenderId == id);
+
+            // Apply date range filter if dates are provided
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                // Ensure endDate includes the entire day
+                var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
+                query = query.Where(a => a.DateApplied >= startDate && a.DateApplied <= endDateInclusive);
+            }
+
+            var applications = query.ToList();
 
             // Generate the PDF using the TenderReportPdfService.
             var pdfBytes = _pdfService.GenerateSupplierReport(tender, applications);

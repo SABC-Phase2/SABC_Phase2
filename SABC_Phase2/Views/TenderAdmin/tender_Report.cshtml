@@ -1,32 +1,24 @@
 ﻿@model SABC_Phase2.Models.Tender.TenderReportViewModel
-<!--
-    This Razor view uses the TenderReportViewModel as its model.
-    The model contains:
-      - Tender: the Tender entity for this report
-      - LocalSupplierCount: number of local suppliers who applied
-      - ForeignSupplierCount: number of foreign suppliers who applied
-      - TotalResponses: total number of applications (local + foreign)
--->
 
 <div style="margin: 30px 0 0 0;">
-    <!-- Breadcrumb navigation for user context -->
+    <!-- Breadcrumb navigation -->
     <div style="font-size: 0.95rem; color: #888; margin-bottom: 8px;">
         <span style="color: #222;">Dashboard</span> &gt; <span style="color: #00a651;">Reports</span>
     </div>
-    <!-- Main report card container with styling for background, border, and padding -->
+
+    <!-- Main report card -->
     <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.10); padding: 48px 0 60px 0; max-width: 900px; margin: 0 auto;">
-        <!-- Header row: back button and tender number -->
+        <!-- Header row -->
         <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 18px; margin-left: 60px;">
-            <!-- Back button: returns user to previous page -->
             <a href="javascript:history.back()" style="color: #00a651; font-size: 2rem; text-decoration: none;">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <!-- Tender number displayed as the main heading -->
             <h2 style="color: #00a651; font-weight: 600; font-size: 2rem; margin: 0; letter-spacing: 0.01em; border-bottom: 3px solid #00a651; padding-bottom: 6px;">
                 <h2>@Model.Tender.TenderNumber</h2>
             </h2>
         </div>
-        <!-- Table section: displays supplier counts -->
+
+        <!-- Table section -->
         <div style="display: flex; justify-content: center; margin-top: 40px;">
             <table class="report-table">
                 <thead>
@@ -36,17 +28,14 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Local supplier count from the model -->
                     <tr>
                         <td>Local Suppliers</td>
                         <td>@Model.LocalSupplierCount</td>
                     </tr>
-                    <!-- Foreign supplier count from the model -->
                     <tr>
                         <td>Foreign Suppliers</td>
                         <td>@Model.ForeignSupplierCount</td>
                     </tr>
-                    <!-- Total responses (local + foreign) -->
                     <tr>
                         <td>Total Responses</td>
                         <td>@Model.TotalResponses</td>
@@ -56,19 +45,47 @@
         </div>
     </div>
 </div>
-<!-- PDF generation button: links to the controller action to generate a PDF for this tender -->
+
+<!-- PDF generation button - now triggers modal -->
 <div style="display: flex; justify-content: center; margin-top: 48px;">
-    <a href="@Url.Action("GenerateTenderSupplierReport", "TenderAdmin", new { id = Model.Tender.Id })" target="_blank"
-       style="text-decoration: none;">
-        <button style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
-            Generate PDF <i class="fas fa-file-pdf"></i>
-        </button>
-    </a>
+    <button id="generatePdfBtn" style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
+        Generate PDF <i class="fas fa-file-pdf"></i>
+    </button>
 </div>
-<!-- Font Awesome for icons (arrow, PDF) -->
+
+<!-- Date Range Picker Modal -->
+<div id="dateRangeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Select Date Range</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="date-picker-container">
+                <div class="date-picker">
+                    <label for="startDate">From:</label>
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+                <div class="date-picker">
+                    <label for="endDate">To:</label>
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="generateReportBtn" class="btn-generate">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- Font Awesome for icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
+<!-- jQuery for modal functionality -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <style>
+    /* Existing table styles remain the same */
     .report-table {
         min-width: 400px;
         max-width: 480px;
@@ -78,43 +95,200 @@
         margin: 0 auto;
         box-shadow: 0 1px 6px rgba(0,0,0,0.04);
     }
-    .report-table th {
+
+        .report-table th {
+            background: #00a651;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 12px 24px;
+            text-align: left;
+            border-bottom: 3px solid #fff;
+        }
+
+            .report-table th:first-child {
+                border-radius: 6px 0 0 0;
+            }
+
+            .report-table th:last-child {
+                border-radius: 0 6px 0 0;
+                text-align: center;
+            }
+
+        .report-table td {
+            padding: 12px 24px;
+            font-size: 1rem;
+        }
+
+        .report-table tr:nth-child(even) td {
+            background: #f5f5f5;
+        }
+
+        .report-table tr:nth-child(odd) td {
+            background: #ededed;
+        }
+
+        .report-table td:last-child {
+            text-align: center;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .report-table td:first-child {
+            color: #888;
+            font-weight: 500;
+        }
+
+        .report-table tr:last-child td:first-child {
+            font-weight: 700;
+        }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 400px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+    .close {
+        color: #aaa;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+        .close:hover {
+            color: #333;
+        }
+
+    .date-picker-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .date-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .date-picker label {
+            font-weight: 500;
+            color: #555;
+        }
+
+    .date-input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .modal-footer {
+        margin-top: 30px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-generate {
         background: #00a651;
         color: #fff;
-        font-weight: 600;
-        font-size: 1.1rem;
-        padding: 12px 24px;
-        text-align: left;
-        border-bottom: 3px solid #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.2s;
     }
-    .report-table th:first-child {
-        border-radius: 6px 0 0 0;
-    }
-    .report-table th:last-child {
-        border-radius: 0 6px 0 0;
-        text-align: center;
-    }
-    .report-table td {
-        padding: 12px 24px;
-        font-size: 1rem;
-    }
-    .report-table tr:nth-child(even) td {
-        background: #f5f5f5;
-    }
-    .report-table tr:nth-child(odd) td {
-        background: #ededed;
-    }
-    .report-table td:last-child {
-        text-align: center;
-        font-weight: 600;
-        color: #444;
-    }
-    .report-table td:first-child {
-        color: #888;
-        font-weight: 500;
-    }
-    .report-table tr:last-child td:first-child {
-        font-weight: 700;
-    }
+
+        .btn-generate:hover {
+            background: #008f47;
+        }
 </style>
 
+<script>
+    $(document).ready(function() {
+        // Get the modal
+        var modal = document.getElementById("dateRangeModal");
+
+        // Get the button that opens the modal
+        var btn = document.getElementById("generatePdfBtn");
+
+        // Get the <span> element that closes the modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks the button, open the modal
+        btn.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Generate report button click handler
+        $("#generateReportBtn").click(function() {
+            var startDate = $("#startDate").val();
+            var endDate = $("#endDate").val();
+            var tenderId = @Model.Tender.Id;
+
+            if (!startDate || !endDate) {
+                alert("Please select both start and end dates.");
+                return;
+            }
+
+            // Convert dates to ISO format for the URL
+            var startDateIso = new Date(startDate).toISOString();
+            var endDateIso = new Date(endDate).toISOString();
+
+            // Generate the PDF URL with date range parameters
+            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' +
+                       '?id=' + tenderId +
+                       '&startDate=' + encodeURIComponent(startDateIso) +
+                       '&endDate=' + encodeURIComponent(endDateIso);
+
+            // Open the PDF in a new tab
+            window.open(url, '_blank');
+
+            // Close the modal
+            modal.style.display = "none";
+        });
+    });
+</script>
