@@ -9,17 +9,44 @@
     var displayTenders = closedTenders.Take(maxTenders).ToList();
 }
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+<!-- Add this modal HTML (similar to the PDF one but with different ID) -->
+<div id="newReportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4>Generate A Report</h4>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="date-picker-container">
+                <div class="date-picker">
+                    <label for="newReportStartDate">From:</label>
+                    <input type="date" id="newReportStartDate" class="date-input">
+                </div>
+                <div class="date-picker">
+                    <label for="newReportEndDate">To:</label>
+                    <input type="date" id="newReportEndDate" class="date-input">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="createReportBtn" class="btn-generate">Create Report</button>
+        </div>
+    </div>
+</div>
 
+<!-- Your existing report action bar -->
 <div class="report-action-bar">
     <div class="search-wrapper">
         <i class="fas fa-search"></i>
         <input type="text" class="search-input" placeholder="Search keyword" />
     </div>
-    <button class="new-tender-btn" onclick="window.location.href='@Url.Action("Create", "TenderAdmin")'">
-        <i class="fas fa-plus"></i> New Tender
+    <button class="new-tender-btn" id="newReportBtn">
+        <i class="fas fa-plus"></i> New Report
     </button>
 </div>
+
 
 <div class="card report-card">
     <div class="card-header">
@@ -271,4 +298,141 @@
         text-align: center;
         padding: 30px 0;
     }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 400px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+    .close {
+        color: #aaa;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+        .close:hover {
+            color: #333;
+        }
+
+    .date-picker-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .date-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .date-picker label {
+            font-weight: 500;
+            color: #555;
+        }
+
+    .date-input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .modal-footer {
+        margin-top: 30px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-generate {
+        background: #00a651;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
 </style>
+
+<script>
+    $(document).ready(function() {
+        var newReportModal = document.getElementById("newReportModal");
+        var newReportBtn = document.getElementById("newReportBtn");
+        var closeSpan = document.querySelector("#newReportModal .close");
+
+        if (newReportBtn) {
+            newReportBtn.onclick = function() {
+                if (newReportModal) {
+                    newReportModal.style.display = "block";
+                }
+            }
+        }
+        if (closeSpan) {
+            closeSpan.onclick = function() {
+                if (newReportModal) {
+                    newReportModal.style.display = "none";
+                }
+            }
+        }
+        window.onclick = function(event) {
+            if (event.target == newReportModal) {
+                newReportModal.style.display = "none";
+            }
+        }
+
+        $("#createReportBtn").click(function() {
+            var startDate = $("#newReportStartDate").val();
+            var endDate = $("#newReportEndDate").val();
+
+            if (!startDate || !endDate) {
+                alert("Please select both start and end dates.");
+                return;
+            }
+
+            // Convert to ISO for URL
+            var startDateIso = new Date(startDate).toISOString();
+            var endDateIso = new Date(endDate).toISOString();
+
+            // Call the new PDF endpoint
+            var url = '@Url.Action("GenerateClosedTendersSummaryReport", "TenderAdmin")' +
+                      '?startDate=' + encodeURIComponent(startDateIso) +
+                      '&endDate=' + encodeURIComponent(endDateIso);
+
+            window.open(url, '_blank');
+            newReportModal.style.display = "none";
+        });
+    });
+</script>

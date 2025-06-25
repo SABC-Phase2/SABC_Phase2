@@ -667,6 +667,55 @@ namespace SABC_Phase2.Controllers
             // Return the PDF file as a download to the user.
             return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
         }
+
+
+
+
+        [HttpGet]
+        public IActionResult GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
+        {
+            if (!startDate.HasValue || !endDate.HasValue)
+                return BadRequest("Start and end date required");
+
+            // Make endDate inclusive
+            var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
+
+            var tenders = _context.Tenders
+                .Where(t => t.Status != null && t.Status.ToLower().Contains("closed")
+                         && t.ClosingDate >= startDate && t.ClosingDate <= endDateInclusive)
+                .ToList();
+
+            // Get all tender IDs
+            var tenderIds = tenders.Select(t => t.Id).ToList();
+
+            // Get applications for these tenders
+            var allApps = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => tenderIds.Contains(a.TenderId))
+                .ToList();
+
+            var summaryList = tenders.Select(tender =>
+            {
+                var apps = allApps.Where(a => a.TenderId == tender.Id).ToList();
+                int local = apps.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "local");
+                int foreign = apps.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "foreign");
+                int total = local + foreign;
+                return new ClosedTenderSummaryRow
+                {
+                    TenderType = tender.TenderType ?? "-",
+                    ClosedTenderCount = 1, // each row is 1 tender, but you could group by type if needed
+                    LocalSuppliers = local,
+                    ForeignSuppliers = foreign,
+                    TotalApplicants = total
+                };
+            }).ToList();
+
+            // If you want to group by TenderType and sum, use .GroupBy() here instead
+
+            var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
+
+            return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
+        }
     }
 
 }
