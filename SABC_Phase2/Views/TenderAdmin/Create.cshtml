@@ -74,6 +74,14 @@
 
                 <div class="form-group">
                     <label asp-for="Status">Status <span class="text-danger">*</span></label>
+                    <select asp-for="Status" class="form-control custom-dropdown" disabled>
+                        <option value="Open Tender" selected>Open Tender</option>
+                    </select>
+                    <input type="hidden" asp-for="Status" value="Open Tender" />
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+                @* <div class="form-group">
+                    <label asp-for="Status">Status <span class="text-danger">*</span></label>
                     <select asp-for="Status" class="form-control custom-dropdown">
                         <option value="" disabled selected hidden>~Please select the status of the tender~</option>
                         <option value="Open Tender">Open Tender</option>
@@ -82,7 +90,7 @@
                         <option value="Cancelled Tender">Cancelled Tender</option>
                     </select>
                     <span asp-validation-for="Status" class="text-danger"></span>
-                </div>
+                </div> *@
 
                 <div class="form-group full-width">
                     <label asp-for="Title">Tender Title <span class="text-danger">*</span></label>
@@ -468,7 +476,7 @@
         }
 
 
-                function createTender() {
+            function createTender() {
             const form = document.querySelector("form");
 
             if (storedFiles.length === 0) {

@@ -28,6 +28,10 @@ builder.Services.AddHangfire(config =>
 // Register Hangfire's background job server
 builder.Services.AddHangfireServer();
 
+// Register your custom close publishing service for DI
+builder.Services.AddScoped<ITenderClosingService, TenderClosingService>();
+
+
 // Register your custom tender publishing service for DI
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
 
@@ -66,6 +70,13 @@ RecurringJob.AddOrUpdate<ITenderPublishingService>(
     "publish-scheduled-tenders",                        // Job ID
     service => service.PublishScheduledTendersAsync(),  // Job method
     Cron.Minutely);                                     // Schedule: every minute
+
+// This registers a recurring job that runs every 5 minute to publish open tenders to closed tenders.
+RecurringJob.AddOrUpdate<ITenderClosingService>(
+    "close-expired-tenders",
+    service => service.CloseExpiredTendersAsync(),
+    "*/5 * * * *" // every 5 minutes
+);
 
 // ---------------------------
 // Configure default route for MVC

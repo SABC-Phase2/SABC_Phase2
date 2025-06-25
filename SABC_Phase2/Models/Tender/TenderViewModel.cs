@@ -43,6 +43,9 @@ namespace SABC_Phase2.Models.Tender
         //public List<TenderDocumentViewModel> ExistingDocuments { get; set; }
         public List<TenderDocumentViewModel> ExistingDocuments { get; set; } = new List<TenderDocumentViewModel>();
 
+        // Add this line:
+        public string? AwardedTender { get; set; }
     }
+    
 }
 

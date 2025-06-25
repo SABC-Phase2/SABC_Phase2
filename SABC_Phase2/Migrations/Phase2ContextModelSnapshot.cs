@@ -69,6 +69,9 @@ namespace SABC_Phase2.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("DateApplied")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("OVRS_UserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -162,6 +165,9 @@ namespace SABC_Phase2.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AwardedTender")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ClosingDate")
                         .HasColumnType("datetime2");

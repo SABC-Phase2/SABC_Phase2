@@ -49,8 +49,17 @@
 
 
 <div class="card report-card">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h2>Closed Tenders</h2>
+
+        <div class="view-toggle-buttons">
+            <button id="gridViewBtn" class="view-toggle active" title="Grid View">
+                <i class="fas fa-th"></i>
+            </button>
+            <button id="listViewBtn" class="view-toggle" title="List View">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
     </div>
     <div class="card-body">
         @if (!displayTenders.Any())
@@ -154,10 +163,7 @@
         background: #fff;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-       
         margin-bottom: 60px;
-      
-
     }
 
     .card-header h2 {
@@ -232,23 +238,23 @@
         z-index: 1;
     }
 
-.tender-block-status {
-    position: absolute;
-    top: 18px;
-    right: -20px; /* Move to right edge */
-    background: #e74c3c;
-    color: #fff;
-    font-size: 1.05rem;
-    font-weight: 700;
-    border-radius: 22px 0 0 22px; /* Curve on left, straight on right */
-    padding: 7px 22px 7px 18px;
-    letter-spacing: 0.04em;
-    box-shadow: 0 2px 8px rgba(231,76,60,0.08);
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    height: 38px;
-}
+    .tender-block-status {
+        position: absolute;
+        top: 18px;
+        right: -20px; /* Move to right edge */
+        background: #e74c3c;
+        color: #fff;
+        font-size: 1.05rem;
+        font-weight: 700;
+        border-radius: 22px 0 0 22px; /* Curve on left, straight on right */
+        padding: 7px 22px 7px 18px;
+        letter-spacing: 0.04em;
+        box-shadow: 0 2px 8px rgba(231,76,60,0.08);
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        height: 38px;
+    }
 
     .tender-block-number {
         font-size: 1.18rem;
@@ -385,6 +391,70 @@
         font-weight: 600;
         cursor: pointer;
     }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .view-toggle-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .view-toggle {
+        background: #fff;
+        border: 1px solid #ccc;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        color: #444;
+    }
+
+        .view-toggle:hover {
+            background: #f3f3f3;
+        }
+
+        .view-toggle.active {
+            background-color: #00a651;
+            color: #fff;
+            border-color: #00a651;
+        }
+
+    .tender-blocks-container.list-view .tender-block-row {
+        flex-direction: column;
+    }
+
+    .tender-blocks-container.list-view .tender-block {
+        flex-direction: row;
+        align-items: center;
+        padding: 16px 20px;
+        gap: 20px;
+        min-height: auto;
+        justify-content: flex-start;
+    }
+
+    .tender-blocks-container.list-view .tender-block-logo-wrap {
+        width: auto;
+        margin-bottom: 0;
+        min-height: unset;
+    }
+
+    .tender-blocks-container.list-view .tender-block-thumbnail {
+        width: 70px;
+        height: 70px;
+    }
+
+    .tender-blocks-container.list-view .tender-block-status {
+        top: 0;
+        right: -10px;
+        height: auto;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+    }
 </style>
 
 <script>
@@ -433,6 +503,24 @@
 
             window.open(url, '_blank');
             newReportModal.style.display = "none";
+        });
+    });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const gridBtn = document.getElementById("gridViewBtn");
+        const listBtn = document.getElementById("listViewBtn");
+        const tenderContainer = document.querySelector(".tender-blocks-container");
+
+        gridBtn.addEventListener("click", function () {
+            tenderContainer.classList.remove("list-view");
+            gridBtn.classList.add("active");
+            listBtn.classList.remove("active");
+        });
+
+        listBtn.addEventListener("click", function () {
+            tenderContainer.classList.add("list-view");
+            listBtn.classList.add("active");
+            gridBtn.classList.remove("active");
         });
     });
 </script>

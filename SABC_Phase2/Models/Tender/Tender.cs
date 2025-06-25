@@ -39,7 +39,10 @@ namespace SABC_Phase2.Models.Tender
         public Guid? DraftId { get; set; }
         public ICollection<TenderDocument> Documents { get; set; }
 
-     
+        // NEW COLUMN
+        public string? AwardedTender { get; set; }
+
+
     }
 }
 

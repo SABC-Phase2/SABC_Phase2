@@ -1,24 +1,32 @@
 ﻿@{
+    // Set the banner text for the page (used in the layout or header)
     ViewData["BannerText"] = "Tenders";
 }
 
-@model SABC_Phase2.Models.Tender.TenderEditDto
+@* Strongly-typed model for editing tenders. *@
+@* This should be kept in sync with SABC_Phase2.Models.Tender.TenderEditDto *@
+@model TenderEditDto
 
 @{
+    // Set the page title visible in the browser/tab
     ViewBag.Title = "Edit Tender";
 }
 
+<!-- Breadcrumb navigation for user context and navigation hierarchy -->
 <div class="breadcrumb-custom">
     Dashboard <span class="breadcrumb-arrow">&#x2794;</span> Tenders <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Edit Tender</span>
 </div>
 
+<!-- Tab headers for switching between tender details and documents -->
 <div class="tab-header">
     <div id="tabDetails" class="tab-btn active" onclick="showTab('details')">Details</div>
     <div id="tabDocuments" class="tab-btn" onclick="showTab('documents')">Documents</div>
 </div>
 
 <div class="tab-container">
+    <!-- Begin Edit Tender Form -->
     <form asp-action="Edit" enctype="multipart/form-data" method="post" autocomplete="off">
+        <!-- Maintain DraftId and Id for edit context (hidden fields) -->
         @if (Model.DraftId != null)
         {
             <input type="hidden" name="DraftId" value="@Model.DraftId" />
@@ -27,11 +35,15 @@
         {
             <input type="hidden" name="Id" value="@Model.Id" />
         }
+
+        <!-- Tab: Tender Details -->
         <div id="details" class="tab-content active">
             <div class="form-row">
+                <!-- Tender Type (radio buttons) -->
                 <div class="form-group">
                     <label>Tender Type <span class="text-danger">*</span></label>
                     <div>
+                        <!-- Each radio button is checked if it matches the model value -->
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="TenderType" value="RFQ" required
                                    @(Model.TenderType == "RFQ" ? "checked" : "") />
@@ -55,85 +67,80 @@
                     </div>
                 </div>
 
+                <!-- Tender Number -->
                 <div class="form-group">
                     <label asp-for="TenderNumber">Tender number <span class="text-danger">*</span></label>
                     <input asp-for="TenderNumber" class="form-control" />
                     <span asp-validation-for="TenderNumber" class="text-danger"></span>
                 </div>
 
+                <!-- Closing Date -->
                 <div class="form-group">
                     <label asp-for="ClosingDate">Closing Date <span class="text-danger">*</span></label>
                     <input asp-for="ClosingDate" type="date" class="form-control" />
                     <span asp-validation-for="ClosingDate" class="text-danger"></span>
                 </div>
 
+                <!-- Closing Time -->
                 <div class="form-group">
                     <label asp-for="ClosingTime">Closing Time <span class="text-danger">*</span></label>
                     <input asp-for="ClosingTime" type="time" class="form-control" />
                     <span asp-validation-for="ClosingTime" class="text-danger"></span>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="Status">Status <span class="text-danger">*</span></label>
-                    <select asp-for="Status" class="form-control custom-dropdown">
-                        <option value="" disabled selected hidden>~Please select the status of the tender~</option>
-                        <option value="Open Tender">Open Tender</option>
-                        <option value="Closed Tender">Closed Tender</option>
-                        <option value="Awarded Tender">Awarded Tender</option>
-                        <option value="Cancelled Tender">Cancelled Tender</option>
-                    </select>
-                    <span asp-validation-for="Status" class="text-danger"></span>
+                <!-- Status Dropdown & Awarded Tender (side by side) -->
+                <div class="form-group" style="display: flex; align-items: flex-end; gap: 20px;">
+                    <!-- Status Dropdown -->
+                    <div style="flex: 1;">
+                        <label asp-for="Status">Status <span class="text-danger">*</span></label>
+                        <select asp-for="Status" class="form-control custom-dropdown" id="StatusDropdown">
+                            <option value="" disabled selected hidden>~Please select the status of the tender~</option>
+                            <option value="Open Tender">Open Tender</option>
+                            <option value="Closed Tender">Closed Tender</option>
+                            <option value="Awarded Tender">Awarded Tender</option>
+                            <option value="Cancelled Tender">Cancelled Tender</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+                    <!-- Awarded Tender Input, shown only if 'Awarded Tender' is selected -->
+                    <div id="AwardedTenderContainer" style="flex: 1; display: none;">
+                        <label id="AwardedTenderLabel" for="AwardedTenderNote" class="mb-1">Awarded To <span class="text-danger">*</span></label>
+                        <input asp-for="AwardedTender"
+                               id="AwardedTenderNote"
+                               class="form-control"
+                               placeholder="Enter award details or notes" />
+                        <span asp-validation-for="AwardedTender" class="text-danger"></span>
+                    </div>
                 </div>
 
+                <!-- Tender Title (full width) -->
                 <div class="form-group full-width">
                     <label asp-for="Title">Tender Title <span class="text-danger">*</span></label>
                     <input asp-for="Title" class="form-control" maxlength="100" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                 </div>
 
+                <!-- Tender Description (full width, textarea) -->
                 <div class="form-group full-width">
                     <label asp-for="Description">Tender Description <span class="text-danger">*</span></label>
                     <textarea asp-for="Description" class="form-control" rows="3" maxlength="200"></textarea>
                     <span asp-validation-for="Description" class="text-danger"></span>
                 </div>
-
-                <!-- Schedule Tender Section -->
-                <div class="form-group full-width">
-                    <div class="schedule-container">
-                        <div class="schedule-toggle" id="scheduleToggle">
-                            <input type="checkbox" id="IsScheduled" name="IsScheduled" value="false" />
-                            <span class="schedule-toggle-text">Schedule this tender for later publication</span>
-                        </div>
-                        <div class="schedule-fields" id="scheduleFields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="ScheduledDate">Scheduled Date</label>
-                                    <input type="date" id="ScheduledDate" name="ScheduledDate" class="form-control" />
-                                </div>
-                                <div class="form-group">
-                                    <label for="ScheduledTime">Scheduled Time</label>
-                                    <input type="time" id="ScheduledTime" name="ScheduledTime" class="form-control" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Save to Draft Button -->
-                <button type="button" class="action-btn cancel-btn mt-3" onclick="saveDraft()">Save to Draft</button>
             </div>
         </div>
 
-        <!-- Upload Documents Section -->
+        <!-- Tab: Upload Documents Section -->
         <div id="documents" class="tab-content">
             <label for="UploadedFiles" class="upload-label">Upload Documents</label>
             <div class="upload-label-underline"></div>
 
+            <!-- List of already uploaded/existing documents for this tender -->
             <div id="uploadedFilesContainer" class="mt-3">
                 @if (Model.ExistingDocuments != null && Model.ExistingDocuments.Any())
                 {
                     @foreach (var doc in Model.ExistingDocuments)
                     {
+                        <!-- Each existing document entry with option to view or mark for deletion -->
                         <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
                             <div>
                                 <strong>@doc.FileName</strong>
@@ -150,6 +157,7 @@
                 }
             </div>
 
+            <!-- File upload input for new supporting documents -->
             <div id="uploadInputGroup" class="d-flex align-items-center gap-2 mt-3">
                 <label class="supporting-label mb-0"><i class="fas fa-file-pdf text-danger me-1"></i> Supporting Document</label>
                 <label class="btn btn-success btn-sm d-flex align-items-center gap-1 mb-0">
@@ -161,6 +169,7 @@
     </form>
 </div>
 
+<!-- Form action buttons: Cancel and Save Changes -->
 <div class="action-buttons">
     <button type="button" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
     <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Save Changes <span class="arrow-icon"></span></button>
@@ -168,6 +177,10 @@
 
 @section Scripts {
     <script>
+        /**
+         * Handles tab switching between Details and Documents,
+         * Sets the appropriate tab content and styles.
+         */
         function showTab(tab) {
             document.getElementById("details").classList.remove("active");
             document.getElementById("documents").classList.remove("active");
@@ -178,7 +191,10 @@
             document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
         }
 
-        // Schedule Tender Toggle (same as Create)
+        /**
+         * Handles toggling of the scheduled tender fields.
+         * (Schedule not shown in this form, but handled for extensibility.)
+         */
         document.getElementById('scheduleToggle')?.addEventListener('click', function() {
             const checkbox = document.getElementById('IsScheduled');
             const scheduleFields = document.getElementById('scheduleFields');
@@ -186,19 +202,24 @@
             scheduleFields.classList.toggle('show');
         });
 
+        // File input and upload logic for new PDFs
         const fileInput = document.getElementById("UploadedFiles");
         const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
         const uploadInputGroup = document.getElementById("uploadInputGroup");
         const form = document.querySelector("form");
+        const storedFiles = []; // Array to hold client-side PDF uploads before submission
 
-        const storedFiles = [];
-
+        /**
+         * Handles PDF file selection and rendering to the list.
+         * Prevents duplicate files and ensures only PDFs are accepted.
+         */
         fileInput.addEventListener("change", function () {
             for (const file of fileInput.files) {
                 if (!file.name.endsWith(".pdf")) {
                     alert(`${file.name} is not a PDF.`);
                     continue;
                 }
+                // Prevent duplicates based on name and size
                 if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
                     continue;
                 }
@@ -209,13 +230,18 @@
                 storedFiles.push(fileInfo);
             }
             renderUploadedFiles();
-            fileInput.value = "";
+            fileInput.value = ""; // Reset input for next upload
         });
 
+        /**
+         * Renders both existing and newly selected files in the UI.
+         */
         function renderUploadedFiles() {
+            // Preserve server-side existing docs
             const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
             uploadedFilesContainer.innerHTML = "";
             existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
+            // Render newly added PDFs
             storedFiles.forEach((fileInfo, index) => {
                 const { file, uploadedAt } = fileInfo;
                 const fileRow = document.createElement("div");
@@ -233,6 +259,7 @@
                 fileDetails.appendChild(fileMeta);
                 const actions = document.createElement("div");
                 actions.className = "uploaded-file-actions d-flex";
+                // View PDF file
                 const viewBtn = document.createElement("button");
                 viewBtn.type = "button";
                 viewBtn.className = "btn btn-outline-primary btn-sm me-2";
@@ -241,6 +268,7 @@
                     const fileURL = URL.createObjectURL(file);
                     window.open(fileURL, "_blank");
                 };
+                // Remove from client-side list
                 const deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "btn btn-outline-danger btn-sm";
@@ -255,24 +283,33 @@
                 fileRow.appendChild(actions);
                 uploadedFilesContainer.appendChild(fileRow);
             });
+            // Maintain spacing for upload section
             if (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3")) {
                 uploadInputGroup.classList.add("mt-3");
             }
         }
 
+        /**
+         * Helper to format file sizes for display.
+        
+         */
         function formatFileSize(bytes) {
             if (bytes < 1024) return `${bytes} B`;
             else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
             else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
         }
 
+        /**
+         * Handles form submission via AJAX, including both form data and any client-side PDF uploads.
+         * On success, redirects to the server response URL. On failure, displays the updated page.
+         */
         function submitForm() {
             const continueBtn = document.getElementById("continueBtn");
             if (continueBtn.disabled) return;
             continueBtn.disabled = true;
             continueBtn.innerHTML = 'Saving... <span class="arrow-icon"></span>';
 
-            // No "at least one PDF" check for edit!
+            // Prepare form data including any new PDFs
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
@@ -298,8 +335,31 @@
                 continueBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
             });
         }
+
+        /**
+         * Shows or hides the "Awarded To" field next to the Status dropdown,
+         * depending on whether "Awarded Tender" is selected.
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusDropdown = document.getElementById('StatusDropdown');
+            const awardedContainer = document.getElementById('AwardedTenderContainer');
+
+            function toggleAwardedNote() {
+                if (statusDropdown.value === 'Awarded Tender') {
+                    awardedContainer.style.display = 'block';
+                } else {
+                    awardedContainer.style.display = 'none';
+                }
+            }
+
+            toggleAwardedNote(); // Initial check (for edit mode)
+            statusDropdown.addEventListener('change', toggleAwardedNote);
+        });
     </script>
 }
+
+<!-- (You can keep the same CSS as Create.cshtml) -->
+<!-- The CSS section is omitted here for brevity, but should be kept in the file as in your original -->
 
 <!-- (You can keep the same CSS as Create.cshtml) -->
 

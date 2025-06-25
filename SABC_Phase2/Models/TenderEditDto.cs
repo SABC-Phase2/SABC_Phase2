@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
+using SABC_Phase2.Models.Tender;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace SABC_Phase2.Models.Tender
+namespace SABC_Phase2.Models
 {
     public class TenderEditDto
     {
@@ -43,5 +44,7 @@ namespace SABC_Phase2.Models.Tender
         public bool IsScheduled { get; set; }
         public DateTime? ScheduledDate { get; set; }
         public TimeSpan? ScheduledTime { get; set; }
+
+        public string? AwardedTender { get; set; }
     }
 }
