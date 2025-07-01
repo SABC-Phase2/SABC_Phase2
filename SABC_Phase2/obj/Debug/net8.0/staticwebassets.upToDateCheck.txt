@@ -52,6 +52,8 @@ wwwroot\lib\Images\cropped_logoblack.png
 wwwroot\lib\Images\logo.png
 wwwroot\lib\Images\logoblack.png
 wwwroot\lib\Images\sabc-logo.png
+wwwroot\lib\Images\Tick-Box.png
+wwwroot\lib\Images\X-Box.png
 wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.js
 wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.min.js
 wwwroot\lib\jquery-validation-unobtrusive\LICENSE.txt

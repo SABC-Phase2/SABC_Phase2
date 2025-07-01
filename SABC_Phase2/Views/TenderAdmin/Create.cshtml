@@ -190,6 +190,75 @@
     <button type="button" id="continueBtn" class="action-btn preview-btn">Continue</button>
 </div>
 
+@* Modal popup for immediate tender creation (Success) *@
+<!-- Modal Popup for Successful Publish -->
+<div id="publishSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="publishSuccessModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="publishSuccessModalLabel" style="width:100%;text-align:center;">
+                    <span id="modalTenderNumber" style="font-weight:bold;"></span>
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Published Successfully</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="modalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Popup for Scheduled Tender Success -->
+<div id="scheduledSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="scheduledSuccessModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="scheduledSuccessModalLabel" style="width:100%;text-align:center;">
+                    <span id="scheduledModalTenderNumber" style="font-weight:bold;"></span>
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Tender Successfully Scheduled</p>
+                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
+                    Your Tender has been saved to
+                    <a href="#" id="scheduledTendersLink" style="color:#222; text-decoration:underline; font-weight:500;">Scheduled Tenders</a>
+                </div>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="scheduledModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Popup for Draft Save Success -->
+<div id="draftSavedModal" class="modal fade" tabindex="-1" aria-labelledby="draftSavedModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="draftSavedModalLabel" style="width:100%;text-align:center;">
+                    <span id="draftModalTenderNumber" style="font-weight:bold;"></span>
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Draft saved</p>
+                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
+                    Your draft has been saved to
+                    <a href="#" id="draftResponsesLink" style="color:#222; text-decoration:underline; font-weight:500;">draft responses</a>
+                </div>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="draftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -511,12 +580,13 @@
 
                 if (contentType && contentType.includes("application/json")) {
                     return response.json().then(data => {
-                        if (data.success) {
-                            window.location.href = data.redirectUrl || '/Tender/Index';
-                        } else {
-                            alert(data.message || "Form submission failed");
-                            resetDoneButton();
-                        }
+                              if (data.success) {
+            // Show the modal instead of redirecting
+            showPublishSuccessModal(data.tenderNumber, data.redirectUrl || '/Tender/Index');
+        } else {
+            alert(data.message || "Form submission failed");
+            resetDoneButton();
+        }
                     });
                 } else {
                     return response.text().then(html => {
@@ -578,22 +648,25 @@
                          'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
                      }
                  })
-                 .then(response => {
-                     if (response.redirected) {
-                         window.location.href = response.url;
-                     } else if (response.ok) {
-                         return response.json().then(data => {
-                             if (data.redirectUrl) {
-                                 window.location.href = data.redirectUrl;
-                             } else {
-                                 alert(data.message || "Tender scheduled successfully");
-                                 resetDoneButton();
-                             }
-                         }).catch(() => {
-                             alert("Tender scheduled successfully");
-                             resetDoneButton();
-                         });
-                     } else {
+                     .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.json().then(data => {
+                if (data.success) {
+                    // Show scheduled tender modal
+                    showScheduledSuccessModal(data.tenderNumber, data.redirectUrl, data.scheduledTendersUrl);
+                } else if (data.redirectUrl) {
+                    window.location.href = data.redirectUrl;
+                } else {
+                    alert(data.message || "Tender scheduled successfully");
+                    resetDoneButton();
+                }
+            }).catch(() => {
+                alert("Tender scheduled successfully");
+                resetDoneButton();
+            });
+        } else {
                          // Try to handle as JSON first
                          return response.json().catch(() => {
                              return response.text().then(html => {
@@ -623,7 +696,6 @@
                  });
              }
 
-
         function saveDraft() {
             const form = document.querySelector("form");
             const formData = new FormData(form);
@@ -646,8 +718,12 @@
                 return response.json();
             })
             .then(data => {
-                alert(data.message || "Draft saved.");
-                resetDoneButton();
+                if (data.success) {
+                    showDraftSavedModal(data.tenderNumber, data.draftIndexUrl, data.redirectUrl);
+                } else {
+                    alert(data.message || "Draft saved.");
+                    resetDoneButton();
+                }
             })
             .catch(error => {
                 alert("Error saving draft");
@@ -662,6 +738,68 @@
                 doneBtn.disabled = false;
                 doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
             }
+        }
+
+        // This Javascript is forms immediate tender createion and displays success Modal
+           function showPublishSuccessModal(tenderNumber, redirectUrl) {
+            // Set the tender number in the modal
+           document.getElementById('modalTenderNumber').innerText = tenderNumber ?? '';
+            document.getElementById('publishSuccessModal').classList.add('show');
+            document.getElementById('publishSuccessModal').style.display = 'flex';
+
+            // When close button is clicked, hide modal and redirect
+            document.getElementById('modalCloseBtn').onclick = function() {
+                document.getElementById('publishSuccessModal').classList.remove('show');
+                document.getElementById('publishSuccessModal').style.display = 'none';
+                window.location.href = redirectUrl;
+            };
+
+            // Optionally trap focus, disable background etc.
+        }
+          // This Javascript is for schedule tender createion and displays success Modal
+            function showScheduledSuccessModal(tenderNumber, redirectUrl, scheduledTendersUrl) {
+            document.getElementById('scheduledModalTenderNumber').innerText = tenderNumber ?? '';
+            document.getElementById('scheduledSuccessModal').classList.add('show');
+            document.getElementById('scheduledSuccessModal').style.display = 'flex';
+
+            // Set link to Scheduled Tenders
+            var schedLink = document.getElementById('scheduledTendersLink');
+            schedLink.href = scheduledTendersUrl;
+
+            // Make sure it redirects in same tab (not new tab)
+            schedLink.onclick = function(e) {
+                e.preventDefault();
+                window.location.href = scheduledTendersUrl;
+            };
+
+            // Close button logic
+            document.getElementById('scheduledModalCloseBtn').onclick = function() {
+                document.getElementById('scheduledSuccessModal').classList.remove('show');
+                document.getElementById('scheduledSuccessModal').style.display = 'none';
+                window.location.href = redirectUrl;
+            };
+        }
+
+        // This javascript is for success modal popup draft
+                function showDraftSavedModal(tenderNumber, draftIndexUrl, redirectUrl) {
+            document.getElementById('draftModalTenderNumber').innerText = tenderNumber ?? '';
+            document.getElementById('draftSavedModal').classList.add('show');
+            document.getElementById('draftSavedModal').style.display = 'flex';
+
+            // "draft responses" link logic
+            var draftLink = document.getElementById('draftResponsesLink');
+            draftLink.href = draftIndexUrl;
+            draftLink.onclick = function(e) {
+                e.preventDefault();
+                window.location.href = draftIndexUrl;
+            };
+
+            // Close button logic
+            document.getElementById('draftModalCloseBtn').onclick = function() {
+                document.getElementById('draftSavedModal').classList.remove('show');
+                document.getElementById('draftSavedModal').style.display = 'none';
+                window.location.href = redirectUrl;
+            };
         }
 
         // Initial state on page load
@@ -686,6 +824,8 @@
                 // If already on submit, do nothing
             };
         });
+
+
 
         // Re-initialize the file upload functionality if the page is refreshed or DOM is updated
         // This acts as a safety net to ensure file upload always works
@@ -1096,5 +1236,32 @@
         .submit-tab-content.active {
             display: block;
         }
+@*---------------------------------------------------------------------------------*@
+        @*Modal popup*@
+    <!-- Modal popup for publish now tender-->
+    /* Simple modal styling (if not using Bootstrap modal JS) */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 1050;
+        display: none;
+    }
+
+    .modal.show {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+    }
+
+@*---------------------------------------------------------------------------------*@
 </style>
 

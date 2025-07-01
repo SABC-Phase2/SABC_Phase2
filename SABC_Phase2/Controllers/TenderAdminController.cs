@@ -133,7 +133,13 @@ namespace SABC_Phase2.Controllers
                     delay);                                            // The delay before the job runs.
 
                 // Redirect to the main index after scheduling.
-                return RedirectToAction("Index");
+                return Json(new
+                {
+                    success = true,
+                    tenderNumber = scheduledTender.TenderNumber,
+                    redirectUrl = Url.Action("Index", "TenderAdmin"),
+                    scheduledTendersUrl = Url.Action("ScheduledIndex", "TenderAdmin")
+                });
             }
 
             // --- Immediate Tender Logic ---
@@ -206,7 +212,13 @@ namespace SABC_Phase2.Controllers
             }
 
             // Redirect to the tender index after successful creation.
-            return RedirectToAction("Index");
+            // For regular publish, return JSON for modal popup
+            return Json(new
+            {
+                success = true,
+                tenderNumber = tender.TenderNumber,
+                redirectUrl = Url.Action("Index", "TenderAdmin")
+            });
         }
 
         public IActionResult Index(int page = 1, int pageSize = 9)
@@ -328,7 +340,16 @@ namespace SABC_Phase2.Controllers
             await _context.SaveChangesAsync();
 
             // Return a JSON response indicating success, with the draft's unique ID
-            return Json(new { success = true, message = "Draft saved successfully.", draftId = draft.DraftId });
+            return Json(new
+            {
+                success = true,
+                message = "Draft saved successfully.",
+                draftId = draft.DraftId,
+                tenderNumber = draft.TenderNumber,
+                draftIndexUrl = Url.Action("DraftIndex", "TenderAdmin"),
+                editDraftUrl = Url.Action("EditDraft", "TenderAdmin", new { id = draft.DraftId }),
+                redirectUrl = Url.Action("Index", "TenderAdmin")
+            });
         }
 
 
@@ -509,7 +530,19 @@ namespace SABC_Phase2.Controllers
             // Persist all changes (tender updates, document deletions, and new uploads) to the database.
             await _context.SaveChangesAsync();
 
-            // Redirect the user to the main tender index page after a successful edit.
+            // Check for Awarded Tender modal logic
+            if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
+            {
+                return Json(new
+                {
+                    success = true,
+                    tenderNumber = tender.TenderNumber,
+                    redirectUrl = Url.Action("Index", "TenderAdmin"),
+                    awarded = true
+                });
+            }
+
+            // Default: redirect as usual
             return RedirectToAction("Index");
         }
 

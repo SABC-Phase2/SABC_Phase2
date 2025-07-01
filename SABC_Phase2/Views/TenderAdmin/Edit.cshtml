@@ -175,6 +175,26 @@
     <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Save Changes <span class="arrow-icon"></span></button>
 </div>
 
+<!-- Awarded Tender Modal -->
+<div id="awardedModal" class="modal fade" tabindex="-1" aria-labelledby="awardedModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="awardedModalLabel" style="width:100%;text-align:center;">
+                    <span id="awardedModalTenderNumber" style="font-weight:bold;"></span>
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Successfully Awarded the tender</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="awardedModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         /**
@@ -303,13 +323,12 @@
          * Handles form submission via AJAX, including both form data and any client-side PDF uploads.
          * On success, redirects to the server response URL. On failure, displays the updated page.
          */
-        function submitForm() {
+             function submitForm() {
             const continueBtn = document.getElementById("continueBtn");
             if (continueBtn.disabled) return;
             continueBtn.disabled = true;
             continueBtn.innerHTML = 'Saving... <span class="arrow-icon"></span>';
 
-            // Prepare form data including any new PDFs
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
@@ -317,14 +336,33 @@
 
             fetch(form.action, {
                 method: "POST",
-                body: formData
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
             })
             .then(response => {
                 if (response.redirected) {
                     window.location.href = response.url;
                 } else {
-                    return response.text().then(html => {
-                        document.body.innerHTML = html;
+                    // Try JSON first
+                    return response.json().then(data => {
+                        if (data.success && data.awarded) {
+                            // Show Awarded Modal
+                            showAwardedModal(data.tenderNumber, data.redirectUrl);
+                        } else if (data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            // fallback: show new HTML
+                            return response.text().then(html => {
+                                document.body.innerHTML = html;
+                            });
+                        }
+                    }).catch(() => {
+                        // fallback: show new HTML
+                        return response.text().then(html => {
+                            document.body.innerHTML = html;
+                        });
                     });
                 }
             })
@@ -334,6 +372,19 @@
                 continueBtn.disabled = false;
                 continueBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
             });
+        }
+
+        // Modal popup logic for Awarded Tender
+        function showAwardedModal(tenderNumber, redirectUrl) {
+            document.getElementById('awardedModalTenderNumber').innerText = tenderNumber ?? '';
+            document.getElementById('awardedModal').classList.add('show');
+            document.getElementById('awardedModal').style.display = 'flex';
+
+            document.getElementById('awardedModalCloseBtn').onclick = function() {
+                document.getElementById('awardedModal').classList.remove('show');
+                document.getElementById('awardedModal').style.display = 'none';
+                window.location.href = redirectUrl;
+            };
         }
 
         /**
