@@ -93,7 +93,10 @@ namespace SABC_Phase2.Controllers
             return View(tender);
         }
 
-
+        public IActionResult OVRS_Documents()
+        {
+            return View();
+        }
 
     }
 }
