@@ -1,0 +1,514 @@
+﻿@model List<SABC_Phase2.Models.Tender.Tender>
+
+@{
+    // Set the banner text for the page
+    ViewData["BannerText"] = "Tenders";
+
+    // Initialize pagination and item count variables, making null-safe checks for Model
+    int pageSize = ViewBag.PageSize ?? 9;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
+    int emptyRows = pageSize - (Model?.Count ?? 0);
+
+    var isOpenSection = (Context.Request.Query["status"].ToString().ToLower() == "open");
+}
+
+
+<!-- Include Font Awesome for icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+<!-- Breadcrumb navigation for user orientation -->
+<div class="breadcrumb-custom">
+    <span class="breadcrumb-active">Home</span>
+</div>
+
+<!-- Action bar with search, filter, and refresh options -->
+<div class="tender-action-bar">
+    <!-- Search bar for keyword filtering -->
+    <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="text" class="search-input" placeholder="Search keyword" />
+    </div>
+
+    <!-- Tender Type dropdown filter with placeholder -->
+    <select class="filter-dropdown" id="tenderTypeDropdown">
+        <option value="" disabled selected hidden>Tender Type</option>
+        <option value="rfq">RFQ</option>
+        <option value="rfp">RFP</option>
+        <option value="rfi">RFI</option>
+        <option value="rfo">RFO</option>
+    </select>
+
+    <!-- Refresh button to reload tenders -->
+    <button class="refresh-btn">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+</div>
+
+<!-- Main table container with scrollable content -->
+<div class="table-container">
+    <div class="table-scroll-container">
+        <table class="tender-table">
+            <thead>
+                <tr>
+                    <th>THUMBNAILS</th>
+                    <th>TITLES</th>
+                    <th>TENDER STATUS</th>
+                    <th>DATE PUBLISHED <i class="fas fa-sort"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Render each tender as a table row -->
+                @foreach (var tender in Model)
+                {
+                    if (isOpenSection)
+                    {
+                        <tr class="clickable-row"
+                            data-url="@Url.Action("View_Tender_Details", "OVRS_User", new { id = tender.Id })"
+                            style="cursor:pointer;">
+                            <!-- table cells -->
+                            <td>
+                                <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
+                            </td>
+                            <td>@tender.Title</td>
+                            <td>
+                                <span class="tender-status
+                            @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                                              tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                                              tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                                              tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                            @tender.Status
+                        </span>
+                    </td>
+                    <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
+                </tr>
+                                }
+                    else
+                    {
+                        <tr>
+                            <td>
+                                <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
+                            </td>
+                            <td>@tender.Title</td>
+                            <td>
+                                <span class="tender-status
+                            @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                                              tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                                              tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                                              tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                            @tender.Status
+                        </span>
+                    </td>
+                    <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
+                </tr>
+                                }
+                }
+              <!-- Render empty rows to maintain consistent table height for paging -->
+                @for (int i = 0; i < emptyRows; i++)
+                {
+                    <tr>
+                        <td colspan="4" style="background:transparent; border:none;"></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination control shown only if more than one page -->
+@if (totalPages > 1)
+{
+    <div class="pagination-container">
+        <ul class="pagination">
+            <!-- Previous page button, disabled on first page -->
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(currentPage - 1)" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            <!-- Page number links -->
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link" href="?page=@i">@i</a>
+                </li>
+            }
+            <!-- Next page button, disabled on last page -->
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(currentPage + 1)" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.clickable-row').forEach(function(row) {
+            row.addEventListener('click', function() {
+                var url = row.getAttribute('data-url');
+                if (url) window.location.href = url;
+            });
+        });
+    });
+</script>
+
+<!--
+    Styles for the OVRS User Index page.
+    These styles ensure a consistent, professional look and feel,
+    following enterprise UI/UX and accessibility best practices.
+-->
+<style>
+    /* Container for table with margin, padding, and shadow for separation */
+    .table-container {
+        margin-top: 35px;
+        margin-bottom: 120px;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 8px;
+        overflow-x: auto;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Table styling: spacing and font */
+    .tender-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        /* Table header with background and rounded corners */
+        .tender-table thead th {
+            background-color: #f5c012;
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 0;
+        }
+
+            .tender-table thead th:nth-child(2), /* TITLES */
+            .tender-table thead th:nth-child(4) { /* DATE PUBLISHED */
+                background-color: #333;
+            }
+
+            .tender-table thead th:first-child {
+                border-top-left-radius: 6px;
+            }
+
+            .tender-table thead th:last-child {
+                border-top-right-radius: 6px;
+                /* No background-color here */
+            }
+
+            .tender-table thead th:nth-child(4) i {
+                margin-left: 8px;
+                font-size: 0.9rem;
+            }
+
+        /* Table body rows and hover effect */
+        .tender-table tbody tr {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            transition: background 0.2s ease-in-out;
+        }
+
+            .tender-table tbody tr:hover {
+                background-color: #f1f1f1;
+            }
+
+        .tender-table td {
+            padding: 16px;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+    /* Thumbnail image styling */
+    .tender-thumbnail {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    /* Status and title cell styling */
+    .tender-title {
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    .tender-status {
+        font-weight: 600;
+        color: #00a651;
+    }
+
+    /* Table row separation */
+    .tender-table tbody tr:not(:last-child) {
+        border-bottom: 2px solid #333;
+    }
+
+    /* Action bar (search, filter, refresh) styling */
+    .tender-action-bar {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 25px 0;
+        margin-top: 45px;
+        flex-wrap: wrap;
+    }
+
+    /* Search bar styling */
+    .search-wrapper {
+        position: relative;
+        width: 250px;
+    }
+
+        .search-wrapper i {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 1rem;
+        }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 12px 12px 38px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+    }
+
+        .search-input::placeholder {
+            color: #ccc;
+        }
+
+    /* Filter dropdown styling */
+    .filter-dropdown {
+        padding: 12px 36px 12px 12px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+        min-width: 180px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF8,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ccc'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 10px;
+    }
+
+    /* Refresh button styling */
+    .refresh-btn {
+        background-color: #333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 14px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Breadcrumb style for navigation context */
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.00rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+        margin-top: 18px;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
+
+    .breadcrumb-active {
+        color: #1a7f37;
+        font-weight: 500;
+    }
+
+    /* Custom pagination styles */
+    .custom-pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .pagination-list {
+        list-style: none;
+        display: flex;
+        gap: 18px;
+        background: #fff;
+        padding: 10px 20px;
+        border-radius: 10px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Pagination button styling */
+    .page-item span {
+        cursor: pointer;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .page-item.active span {
+        background-color: #000;
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        text-align: center;
+        line-height: 16px;
+        transform: rotate(45deg);
+        position: relative;
+    }
+
+        .page-item.active span::before {
+            content: attr(data-page);
+            transform: rotate(-45deg);
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+    .page-item:not(.active):hover span {
+        text-decoration: underline;
+    }
+
+    .page-item.next span {
+        font-weight: 500;
+    }
+
+    /* Status color coding for quick recognition */
+    .tender-status-open {
+        color: #00a651;
+    }
+
+    .tender-status-closed {
+        color: #e74c3c;
+    }
+
+    .tender-status-awarded {
+        color: #f5c012;
+    }
+
+    .tender-status-cancelled {
+        color: #00bfff;
+    }
+
+    /* Scrollbar and sticky headers for table usability */
+    .table-scroll-container {
+        max-height: 700px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+
+    .tender-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .tender-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .tender-table tbody tr:first-child td {
+            border-top: none;
+        }
+
+    /* Custom scrollbar appearance */
+    .table-scroll-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+        .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+    /* Pagination container styling */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 5px;
+    }
+
+    .page-item {
+        margin: 0 2px;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .page-item.active .page-link {
+        background-color: #00a651;
+        color: white;
+        border-color: #00a651;
+    }
+
+    .page-item.disabled .page-link {
+        color: #ccc;
+        pointer-events: none;
+    }
+
+    .page-link:hover:not(.active) {
+        background-color: #f1f1f1;
+    }
+
+    .page-item:first-child .page-link,
+    .page-item:last-child .page-link {
+        border-radius: 50%;
+    }
+</style>
+
+

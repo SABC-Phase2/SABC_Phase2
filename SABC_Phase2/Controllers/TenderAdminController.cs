@@ -176,7 +176,8 @@ namespace SABC_Phase2.Controllers
                         tender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            FilePath = blobFileName,
+                            BlobName = blobFileName,    // <-- Set this!
+                            FilePath = blobFileName,    // (optional, keep for legacy or use as SAS URL at runtime)
                             TenderId = tender.Id
                         });
                     }
@@ -520,7 +521,8 @@ namespace SABC_Phase2.Controllers
                         tender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            FilePath = blobFileName,
+                            BlobName = blobFileName,    // <-- Store the full blob path used for upload
+                            FilePath = blobFileName,    // (optional) can keep for legacy, or use only as SAS URL at runtime
                             TenderId = tender.Id
                         });
                     }

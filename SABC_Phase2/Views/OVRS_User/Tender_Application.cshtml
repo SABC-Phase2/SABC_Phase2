@@ -1,0 +1,467 @@
+﻿@model SABC_Phase2.Models.Tender.Tender
+
+@{
+    ViewData["BannerText"] = "Tender Application";
+    ViewBag.Title = "Tender Application";
+}
+
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-custom" style="margin-top: 12px;">
+    Home <span class="breadcrumb-arrow">&#x2794;</span>
+    Tenders <span class="breadcrumb-arrow">&#x2794;</span>
+    Details of Tenders <span class="breadcrumb-arrow">&#x2794;</span>
+    <span class="breadcrumb-active">Tender Application</span>
+</div>
+
+<div class="tender-app-card">
+
+    <!-- Details Section -->
+    <div class="details-header">
+        <a class="back-arrow" href="javascript:history.back()">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <span class="details-title">Details of Tender</span>
+    
+    </div>
+    <div class="details-underline"></div>
+    <div class="tender-details-form">
+        <!-- First row: Tender Type and Tender Title -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tender Type</label>
+                <input type="text" class="form-control" readonly value="@Model.TenderType" />
+            </div>
+            <div class="form-group">
+                <label>Tender Title</label>
+                <input type="text" class="form-control" readonly value="@Model.Title" />
+            </div>
+        </div>
+        <!-- Second row: Tender Number and Email -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tender Number</label>
+                <input type="text" class="form-control" readonly value="@Model.TenderNumber" />
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-control" readonly value="user@acme.com" />
+            </div>
+        </div>
+        <!-- Third row: Company Name and Closing Date -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" class="form-control" readonly value="ACME Corporation" />
+            </div>
+            <div class="form-group">
+                <label>Closing Date &amp; Time</label>
+                <input type="text" class="form-control" readonly style="color:#d32f2f;"
+                       value="@Model.ClosingDate.ToString("dd MMMM yyyy")@(Model.ClosingTime.HasValue ? $" @ {Model.ClosingTime.Value:hh\\:mm}" : "")" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Documents Section (MATCHES CREATE STYLE) -->
+    <div class="upload-header">
+        <span class="upload-title">Upload Documents</span>
+        <div class="details-underline" style="margin-bottom:10px;"></div>
+        <div style="color:#d32f2f;font-size:0.95rem;font-weight:500;margin-bottom:10px;">
+            *This section has a maximum upload limit of 100MB!
+        </div>
+    </div>
+
+    <form asp-action="SubmitTenderApplication" enctype="multipart/form-data" method="post" autocomplete="off">
+        <input type="hidden" name="TenderId" value="@Model.Id" />
+
+        <!-- Uploaded/Existing Documents -->
+        <!-- Add a wrapper with max-height and overflow-y:auto for scrollable section -->
+        <div id="uploadedFilesScrollWrapper" style="max-height: 280px; overflow-y: auto;">
+            <div id="uploadedFilesContainer" class="mt-3">
+                @* If you support showing previously uploaded docs, loop here *@
+                @* Example:
+        @if (Model.Documents != null && Model.Documents.Any())
+        {
+            foreach (var doc in Model.Documents)
+            {
+                <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
+                    <div>
+                        <strong>@doc.FileName</strong>
+                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                            <a href="@doc.FilePath" target="_blank">View</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        *@
+            </div>
+        </div>
+
+        <!-- File upload input for new supporting documents -->
+        <div id="uploadInputGroup" class="d-flex align-items-center justify-content-between mt-3">
+            <label class="supporting-label mb-0">
+                <i class="fas fa-file-pdf text-danger me-1"></i> Supporting Document
+            </label>
+            <label class="btn btn-success btn-sm d-flex align-items-center gap-1 mb-0">
+                <i class="fas fa-upload"></i> Upload
+                <input type="file" id="UploadedFiles" name="UploadedFiles" multiple accept=".pdf" hidden />
+            </label>
+        </div>
+
+        <div class="app-action-buttons" style="margin-top: 36px;">
+            <button type="button" class="app-btn draft-btn" onclick="saveAsDraft()">Save as draft</button>
+            <button type="submit" class="app-btn submit-btn">Submit <span class="arrow-icon"></span></button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+        let storedFiles = [];
+        let fileInputInitialized = false;
+
+        function handleFileChange(event) {
+            let totalSize = storedFiles.reduce((sum, f) => sum + f.file.size, 0);
+            let filesAdded = false;
+            for (const file of this.files) {
+                if (!file.name.endsWith(".pdf")) {
+                    alert(`${file.name} is not a PDF.`);
+                    continue;
+                }
+                if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    continue;
+                }
+                if (totalSize + file.size > MAX_TOTAL_SIZE) {
+                    alert(`Cannot add "${file.name}". Upload limit of 100MB will be exceeded.`);
+                    continue;
+                }
+                storedFiles.push({ file: file, uploadedAt: new Date() });
+                totalSize += file.size;
+                filesAdded = true;
+            }
+            if (filesAdded) renderUploadedFiles();
+            this.value = ""; // Clear input
+        }
+
+        function initializeFileUpload() {
+            const fileInput = document.getElementById("UploadedFiles");
+            if (!fileInput) return;
+            if (!fileInputInitialized) {
+                fileInput.addEventListener("change", handleFileChange);
+                fileInputInitialized = true;
+            }
+        }
+
+        function renderUploadedFiles() {
+            const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
+            const uploadInputGroup = document.getElementById("uploadInputGroup");
+            // Keep server-side docs (if any)
+            const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
+            uploadedFilesContainer.innerHTML = "";
+            existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
+            // Client-side uploads
+            storedFiles.forEach((fileInfo, index) => {
+                const { file, uploadedAt } = fileInfo;
+                const fileRow = document.createElement("div");
+              fileRow.className = "uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                const fileDetails = document.createElement("div");
+                const fileName = document.createElement("strong");
+                fileName.textContent = file.name;
+                const fileMeta = document.createElement("div");
+                fileMeta.className = "text-muted small mt-1";
+                fileMeta.style.fontSize = "0.75rem";
+                const size = formatFileSize(file.size);
+                const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                fileMeta.textContent = `${size} • Uploaded at ${time}`;
+                fileDetails.appendChild(fileName);
+                fileDetails.appendChild(fileMeta);
+                const actions = document.createElement("div");
+                actions.className = "uploaded-file-actions d-flex";
+                // View PDF file
+                const viewBtn = document.createElement("button");
+                viewBtn.type = "button";
+                viewBtn.className = "btn btn-outline-primary btn-sm me-2";
+                viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                viewBtn.onclick = () => {
+                    const fileURL = URL.createObjectURL(file);
+                    window.open(fileURL, "_blank");
+                };
+                // Remove from client-side list
+                const deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
+                deleteBtn.className = "btn btn-outline-danger btn-sm";
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.onclick = () => {
+                    storedFiles.splice(index, 1);
+                    renderUploadedFiles();
+                };
+                actions.appendChild(viewBtn);
+                actions.appendChild(deleteBtn);
+                fileRow.appendChild(fileDetails);
+                fileRow.appendChild(actions);
+                uploadedFilesContainer.appendChild(fileRow);
+            });
+            if (uploadInputGroup && (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3"))) {
+                uploadInputGroup.classList.add("mt-3");
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function saveAsDraft() {
+            alert("Save as draft not implemented."); // Replace with AJAX call if needed
+        }
+
+        // Initialize upload functionality on page load
+        document.addEventListener("DOMContentLoaded", initializeFileUpload);
+        window.addEventListener('load', initializeFileUpload);
+    </script>
+}
+
+<style>
+    .tender-app-card {
+        background: #fff;
+        border-radius: 12px;
+        margin: 0 auto;
+        max-width: 780px;
+        margin-top: 24px;
+        padding: 38px 36px 26px 36px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.11);
+        position: relative;
+    }
+
+    .details-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .back-arrow {
+        color: #1a7f37;
+        font-size: 1.7rem;
+        text-decoration: none;
+        margin-right: 4px;
+    }
+
+    .details-title {
+        font-size: 1.45rem;
+        font-weight: 600;
+        color: #1a7f37;
+    }
+
+    .details-underline {
+        width: 100%;
+        height: 2px;
+        background: #1a7f37;
+        border-radius: 2px;
+        margin-left: 0;
+        margin-top: 8px;
+        margin-bottom: 18px;
+    }
+
+    .tender-details-form {
+        margin-top: 10px;
+        margin-bottom: 4px;
+    }
+
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px 18px;
+    }
+
+    .form-group {
+        flex: 1 1 45%;
+        margin-bottom: 18px;
+    }
+
+    .form-control[readonly] {
+        background: #f7f7f7;
+        color: #222;
+        font-weight: 500;
+        border: 1.2px solid #e5e7eb;
+    }
+
+    .upload-header {
+        margin-top: 18px;
+    }
+
+    .upload-title {
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #1a7f37;
+    }
+
+    .upload-documents-list {
+        margin-top: 12px;
+    }
+
+    .upload-doc-row {
+        display: flex;
+        align-items: center;
+        background: #f7f7f7;
+        border-radius: 7px;
+        padding: 9px 18px;
+        margin-bottom: 12px;
+        gap: 16px;
+        box-shadow: 0 2px 8px rgba(34,197,94,0.03);
+    }
+
+    .bid-row {
+        background: #fbe9e7;
+        border: 1px solid #ef5350;
+    }
+
+    .upload-icon {
+        width: 28px;
+        margin-right: 10px;
+    }
+
+    .upload-input {
+        border: none;
+        background: transparent;
+        font-weight: 500;
+        color: #1a7f37;
+        pointer-events: none;
+        font-size: 1.07rem;
+        width: 180px;
+    }
+
+    .upload-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .action-btn, .upload-label-action {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 14px;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 7px;
+        border: none;
+        background: #eee;
+        color: #222;
+        margin-right: 6px;
+        cursor: pointer;
+        transition: background 0.18s;
+        text-decoration: none;
+    }
+
+        .action-btn:hover, .upload-label-action:hover {
+            background: #e0f2f1;
+        }
+
+    .btn.btn-danger {
+        background: #e53935;
+        color: #fff;
+    }
+
+        .btn.btn-danger:hover {
+            background: #b71c1c;
+        }
+
+    .btn.btn-secondary {
+        background: #1976d2;
+        color: #fff;
+    }
+
+        .btn.btn-secondary:hover {
+            background: #004ba0;
+        }
+
+    .upload-label-action {
+        background: none;
+        color: #1a7f37;
+        font-weight: 600;
+        font-size: 1.01rem;
+        cursor: pointer;
+        border: none;
+        padding: 0 8px;
+    }
+
+    .upload-cloud {
+        font-size: 1.5rem;
+        color: #1a7f37;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+
+    .app-action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 36px;
+        margin-top: 36px;
+    }
+
+    .app-btn {
+        background: #1a7f37;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 15px 46px;
+        font-size: 1.18rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.18s;
+    }
+
+    .draft-btn {
+        background: #fff;
+        color: #1a7f37;
+        border: 2px solid #1a7f37;
+    }
+
+        .draft-btn:hover {
+            background: #e7fbe9;
+            color: #166534;
+        }
+
+    .submit-btn:hover {
+        background: #166534;
+    }
+
+    .arrow-icon {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-top: 3px solid white;
+        border-right: 3px solid white;
+        transform: rotate(45deg);
+        margin-left: 7px;
+    }
+
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.00rem;
+        font-weight: 500;
+        margin: 18px 0 12px 0;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
+
+    .breadcrumb-arrow {
+        margin: 0 0.5em;
+        font-size: 1.25em;
+        color: #bbb;
+        font-weight: 400;
+        user-select: none;
+    }
+
+    .breadcrumb-active {
+        color: #1a7f37;
+        font-weight: 500;
+    }
+
+
+</style>

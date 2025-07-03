@@ -42,5 +42,9 @@ namespace SABC_Phase2.Models.OVRS
         public string CompanyEmail => OVRS_User?.EmailAddress;
         [NotMapped]
         public string CompanyName => OVRS_User?.CompanyName;
+
+
+       
+       
     }
 }

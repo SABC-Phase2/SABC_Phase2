@@ -1,0 +1,258 @@
+﻿@model SABC_Phase2.Models.Tender.Tender
+
+@{
+    ViewData["Title"] = "Tender Details";
+}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-custom">
+    <span>Home</span>
+    <span>&gt;</span>
+    <span>Tenders</span>
+    <span>&gt;</span>
+    <span class="breadcrumb-active">Details of Tenders</span>
+</div>
+
+<!-- Main Card -->
+<div class="tender-details-card">
+    <!-- Details Section Header -->
+    <div class="details-header">
+        <a class="back-arrow" href="javascript:history.back()">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <span class="details-title">@Model.TenderNumber</span>
+    </div>
+    <div class="upload-label-underline"></div>
+    <br />
+    <div class="tender-main-info">
+        <div class="tender-title">
+            <b>@Model.TenderNumber: @Model.Title</b>
+        </div>
+        <br />
+        <div class="tender-meta">
+            <span>@Model.TenderType</span>,
+            <span>Published: @Model.DatePublished.ToString("dd MMM yyyy")</span>
+        </div>
+        <div class="tender-closing">
+            <span>
+                <b>CLOSING DATE & TIME</b>
+                @Model.ClosingDate.ToString("dd MMM yyyy")
+                @if (Model.ClosingTime.HasValue)
+                {
+                    @($" @ {Model.ClosingTime.Value:hh\\:mm}")
+                }
+            </span>
+        </div>
+    </div>
+
+    <div class="tender-description" style="margin-top: 22px;">
+        @Model.Description
+    </div>
+
+    <!-- Attachments -->
+    @if (Model.Documents != null && Model.Documents.Any())
+    {
+        <div class="tender-attachments">
+            <h4>Attachments</h4>
+            <table>
+                <tbody>
+                    @foreach (var doc in Model.Documents)
+                    {
+                        <tr>
+                            <td style="width:36px;">
+                                <img src="~/lib/Images/pdficon.png" style="width:32px;" />
+                            </td>
+                            <td>
+                                @doc.FileName
+                            </td>
+                            <td>
+                                <a href="@doc.FilePath" target="_blank" class="view-btn">View</a>
+                            </td>
+                            <td>
+                                <a href="@doc.FilePath" download class="download-btn">Download</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+   
+</div>
+<!-- Respond Button -->
+<div class="tender-respond-row">
+    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+</div>
+
+
+<style>
+
+
+    .upload-label-underline {
+        width: 100%;
+        height: 2px;
+        background: #1a7f37;
+        margin-bottom: 16px;
+        border-radius: 2px;
+    }
+
+    .tender-details-banner {
+        background: url('/lib/Images/banner.png'), linear-gradient(#f5c012, #f5c012);
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        height: 80px;
+        display: flex;
+        align-items: flex-end;
+        padding: 0 0 0 32px;
+    }
+
+    .details-title {
+        font-size: 1.45rem !important;
+        font-weight: 600 !important;
+        color: #1a7f37 !important;
+    }
+
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.00rem;
+        font-weight: 500;
+        margin: 18px 0 12px 0;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
+
+    .breadcrumb-active {
+        color: #1a7f37;
+        font-weight: 500;
+    }
+
+    .tender-details-card {
+        background: #fff;
+        border-radius: 10px;
+        margin: 0 auto;
+        max-width: 800px;
+        margin-top: 18px;
+        padding: 38px 34px 30px 34px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+        position: relative;
+    }
+
+    .back-arrow {
+        color: #1a7f37;
+        font-size: 1.5rem;
+        text-decoration: none;
+        margin-right: 10px; /* spacing between arrow and title */
+        display: flex;
+        align-items: center;
+    }
+
+    .details-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+
+    .tender-number {
+        color: #1a7f37;
+        font-size: 1.7rem;
+        margin-left: 42px;
+        font-weight: 500;
+        margin-top: 0;
+        margin-bottom: 14px;
+    }
+
+    .tender-main-info {
+        margin-left: 42px;
+    }
+
+    .tender-title {
+        font-size: 1.13rem;
+        margin-bottom: 7px;
+    }
+
+    .tender-meta {
+        color: #444;
+        font-size: 1.02rem;
+        margin-bottom: 5px;
+    }
+
+    .tender-closing {
+        color: #e74c3c;
+        font-weight: 500;
+        font-size: 1.04rem;
+    }
+
+    .tender-description {
+        margin-left: 42px;
+        color: #222;
+        font-size: 1.04rem;
+        margin-bottom: 22px;
+    }
+
+    .tender-attachments {
+        margin-left: 42px;
+        margin-top: 18px;
+    }
+
+        .tender-attachments h4 {
+            margin-bottom: 8px;
+            font-size: 1.07rem;
+        }
+
+        .tender-attachments table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tender-attachments td {
+            padding: 8px 12px 8px 0;
+            vertical-align: middle;
+        }
+
+    .view-btn, .download-btn {
+        background: #f5c012;
+        border: none;
+        border-radius: 5px;
+        color: #222;
+        font-weight: 600;
+        padding: 5px 12px;
+        margin-right: 5px;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+
+        .view-btn:hover, .download-btn:hover {
+            background: #1a7f37;
+            color: #fff;
+        }
+
+    .tender-respond-row {
+        display: flex;
+        justify-content: center;
+        margin-top: 28px;
+    }
+
+    .respond-btn {
+        background: #1a7f37;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 13px 44px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+        .respond-btn:hover {
+            background: #0e5222;
+        }
+</style>

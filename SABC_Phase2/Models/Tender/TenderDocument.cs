@@ -12,6 +12,9 @@ namespace SABC_Phase2.Models.Tender
         public string FileName { get; set; }
 
         [Required]
+        public string BlobName { get; set; } // <--- Add this property
+
+        [Required]
         public string FilePath { get; set; } // Local path or Azure blob URL
 
         public int TenderId { get; set; }
