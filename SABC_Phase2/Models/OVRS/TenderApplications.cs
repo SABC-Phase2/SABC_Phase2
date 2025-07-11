@@ -18,10 +18,12 @@ namespace SABC_Phase2.Models.OVRS
 
         // Foreign key to OVRS_User
         [Required]
-        public Guid OVRS_UserId { get; set; }
+        public int OVRS_UserId { get; set; }
         [ForeignKey("OVRS_UserId")]
         public OVRS_User OVRS_User { get; set; }
 
+        // Add this property
+        public Guid? DraftId { get; set; }
         public DateTime? DateApplied { get; set; } // this neeeds to automatically populate on date user created tender application
 
 
@@ -38,13 +40,14 @@ namespace SABC_Phase2.Models.OVRS
         public TimeSpan? ClosingTime => Tender?.ClosingTime;
 
         // Exposed fields from OVRS_User
-        [NotMapped]
-        public string CompanyEmail => OVRS_User?.EmailAddress;
-        [NotMapped]
-        public string CompanyName => OVRS_User?.CompanyName;
+        //[NotMapped]
+        //public string CompanyEmail => OVRS_User?.EmailAddress;
+        //[NotMapped]
+        //public string CompanyName => OVRS_User?.CompanyName;
 
 
-       
-       
+
+        public ICollection<ApplicationDocument> Documents { get; set; } = new List<ApplicationDocument>();
+
     }
 }

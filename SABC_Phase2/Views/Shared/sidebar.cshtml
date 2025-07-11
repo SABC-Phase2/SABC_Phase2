@@ -6,93 +6,177 @@
         <span class="label">Hide Menu</span>
     </div>
 
-    <div class="profile">
-        <i class="fas fa-user-circle fa-3x"></i>
-        <div class="info">
-            <span class="name">Truth Xiviti</span>
+<div class="profile profile-dropdown" id="profileDropdown">
+    <i class="fas fa-user-circle fa-3x"></i>
+    <div class="info">
+        @if (User.Identity.IsAuthenticated)
+        {
+            <span class="name">@User.Identity.Name</span>
             <br />
-            <span class="role">Administrator</span>
-        </div>
+            <span class="supplier-type">@User.FindFirst("SupplierType")?.Value</span>
+        }
+        else
+        {
+            <a href="@Url.Action("Login", "Account")" style="color:inherit;text-decoration:none;">
+                <span class="name">Sign In / Register</span>
+            </a>
+        }
     </div>
-
+    @if (User.Identity.IsAuthenticated)
+    {
+        <span class="profile-caret" onclick="toggleProfileDropdown(event)">
+            <i class="fas fa-chevron-down"></i>
+        </span>
+        <div class="profile-dropdown-menu" id="profileDropdownMenu">
+            <a href="@Url.Action("Profile", "Account")" class="dropdown-item">
+                <i class="fas fa-id-badge"></i> View Profile
+            </a>
+            <form action="@Url.Action("Logout", "Account")" method="post" style="margin:0;">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="dropdown-item" style="background:none;border:none;color:#f00;cursor:pointer;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </form>
+        </div>
+    }
+</div>
     <div class="menu">
-        <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
-            <i class="fas fa-users"></i>
-            <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
-                Tenders
-            </a>
-            <span class="chevron-toggle">
-                <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
-            </span>
-        </div>
+        @if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
+        {
+            <!-- Only show these to OVRS_User when authenticated -->
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+                <i class="fas fa-users"></i>
+                <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
+                    Tenders
+                </a>
+                <span class="chevron-toggle">
+                    <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
+                </span>
+            </div>
 
-        <div class="submenu visible">
-            <div class="menu-section sub-item">
-                <i class="fas fa-circle-dot green"></i>
-                <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
-                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    Open Tenders
+            <div class="submenu visible">
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Open Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Closed Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Cancelled Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Awarded Tenders
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <i class="fas fa-handshake" style="color: white;"></i>
+                <span class="label">Company Details</span>
+            </div>
+            <div class="menu-section">
+                <i class="fas fa-file-alt" style="color: white;"></i>
+                <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    My Documents
                 </a>
             </div>
-            <div class="menu-section sub-item">
-                <i class="fas fa-circle-dot green"></i>
-                <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
-                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    Closed Tenders
+            <div class="menu-section">
+                <i class="fas fa-question"></i>
+                <span class="label">Help</span>
+            </div>
+        }
+        else if (!User.Identity.IsAuthenticated)
+        {
+            <!-- Show ALL tabs when NOT authenticated -->
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+                <i class="fas fa-users"></i>
+                <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
+                    Tenders
+                </a>
+                <span class="chevron-toggle">
+                    <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
+                </span>
+            </div>
+
+            <div class="submenu visible">
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Open Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Closed Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Cancelled Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Awarded Tenders
+                    </a>
+                </div>
+            </div>
+            <div class="menu-section">
+                <i class="fas fa-file-alt"></i>
+                <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    Scheduled Tenders
                 </a>
             </div>
-            <div class="menu-section sub-item">
-                <i class="fas fa-circle-dot green"></i>
-                <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
-                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    Cancelled Tenders
+            <div class="menu-section">
+                <i class="fas fa-times"></i>
+                <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    Drafts
                 </a>
             </div>
-            <div class="menu-section sub-item">
-                <i class="fas fa-circle-dot green"></i>
-                <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
-                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    Awarded Tenders
+            <div class="menu-section">
+                <i class="fas fa-download"></i>
+                <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    Reports
                 </a>
             </div>
-        </div>
-        <div class="menu-section">
-            <i class="fas fa-file-alt"></i>
-            <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                Scheduled Tenders
-            </a>
-        </div>
-        <div class="menu-section">
-            <i class="fas fa-times"></i>
-            <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                Drafts
-            </a>
-        </div>
-        <div class="menu-section">
-            <i class="fas fa-download"></i>
-            <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                Reports
-            </a>
-        </div>
-
-        <div class="menu-section">
-            <i class="fas fa-handshake" style="color: white;"></i>
-            <span class="label">Company Details</span>
-        </div>
-        <div class="menu-section">
-            <i class="fas fa-file-alt" style="color: white;"></i>
-            <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                My Documents
-            </a>
-        </div>
-
-
-
-        <div class="menu-section">
-            <i class="fas fa-question"></i>
-            <span class="label">Help</span>
-        </div>
-     
+            <div class="menu-section">
+                <i class="fas fa-handshake" style="color: white;"></i>
+                <span class="label">Company Details</span>
+            </div>
+            <div class="menu-section">
+                <i class="fas fa-file-alt" style="color: white;"></i>
+                <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    My Documents
+                </a>
+            </div>
+            <div class="menu-section">
+                <i class="fas fa-question"></i>
+                <span class="label">Help</span>
+            </div>
+        }
+        <!-- If you want other roles to see no menu or a different menu, add more else if blocks. -->
     </div>
 </div>
 
@@ -188,11 +272,35 @@
         }
     }
 
+
+
+    @* toggleProfileDropdown toggle script *@
+    function toggleProfileDropdown(e) {
+    e.stopPropagation();
+    const profile = document.getElementById('profileDropdown');
+    const caret = profile.querySelector('.profile-caret');
+    profile.classList.toggle('open');
+    if (caret) caret.classList.toggle('open');
+    document.getElementById('profileDropdownMenu').style.display = profile.classList.contains('open') ? 'flex' : 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function (event) {
+    const profile = document.getElementById('profileDropdown');
+    if (profile && profile.classList.contains('open')) {
+        if (!profile.contains(event.target)) {
+            profile.classList.remove('open');
+            const caret = profile.querySelector('.profile-caret');
+            if (caret) caret.classList.remove('open');
+            document.getElementById('profileDropdownMenu').style.display = 'none';
+        }
+    }
+});
+
     window.addEventListener('scroll', adjustSidebarHeight);
     window.addEventListener('resize', adjustSidebarHeight);
     window.addEventListener('load', adjustSidebarHeight);
 </script>
-
 <style>
     .sidebar {
         background-color: #333;
@@ -374,4 +482,57 @@
     .sidebar.collapsed .submenu-icon {
         display: none !important;
     }
+
+    @*---------------------------------------------
+    Prfile section*@
+    .profile-dropdown {
+    position: relative;
+    cursor: pointer;
+    z-index: 10001;
+}
+.profile-caret {
+    margin-left: 10px;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: #ccc;
+    transition: transform 0.2s;
+}
+.profile-caret.open {
+    transform: rotate(180deg);
+}
+.profile-dropdown-menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 170px;
+    background: #222;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 7px 0;
+    z-index: 10002;
+    transition: all 0.2s;
+}
+.profile-dropdown-menu .dropdown-item {
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 15px;
+    gap: 8px;
+}
+.profile-dropdown-menu .dropdown-item:hover {
+    background: #444;
+    color: #fbbd08;
+}
+.profile-dropdown.open .profile-dropdown-menu {
+    display: flex;
+}
 </style>

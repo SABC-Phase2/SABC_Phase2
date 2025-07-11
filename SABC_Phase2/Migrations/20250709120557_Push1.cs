@@ -80,14 +80,10 @@ namespace SABC_Phase2.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MiddleName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    EmailAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Supplier = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LegacyUserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -165,7 +161,8 @@ namespace SABC_Phase2.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TenderId = table.Column<int>(type: "int", nullable: false),
-                    OVRS_UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OVRS_UserId = table.Column<int>(type: "int", nullable: false),
+                    DraftId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateApplied = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
@@ -184,6 +181,76 @@ namespace SABC_Phase2.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "TenderApplicationDrafts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DraftId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OVRS_UserId = table.Column<int>(type: "int", nullable: true),
+                    TenderId = table.Column<int>(type: "int", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenderApplicationDrafts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TenderApplicationDrafts_Users_OVRS_UserId",
+                        column: x => x.OVRS_UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ApplicationDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    BlobName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TenderApplicationId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApplicationDocuments_Applied_For_Tenders_TenderApplicationId",
+                        column: x => x.TenderApplicationId,
+                        principalTable: "Applied_For_Tenders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TenderApplicationDraftDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TenderApplicationDraftId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenderApplicationDraftDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TenderApplicationDraftDocuments_TenderApplicationDrafts_TenderApplicationDraftId",
+                        column: x => x.TenderApplicationDraftId,
+                        principalTable: "TenderApplicationDrafts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationDocuments_TenderApplicationId",
+                table: "ApplicationDocuments",
+                column: "TenderApplicationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Applied_For_Tenders_OVRS_UserId",
@@ -206,6 +273,16 @@ namespace SABC_Phase2.Migrations
                 column: "TenderDraftId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TenderApplicationDraftDocuments_TenderApplicationDraftId",
+                table: "TenderApplicationDraftDocuments",
+                column: "TenderApplicationDraftId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TenderApplicationDrafts_OVRS_UserId",
+                table: "TenderApplicationDrafts",
+                column: "OVRS_UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TenderDocuments_TenderId",
                 table: "TenderDocuments",
                 column: "TenderId");
@@ -215,7 +292,7 @@ namespace SABC_Phase2.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Applied_For_Tenders");
+                name: "ApplicationDocuments");
 
             migrationBuilder.DropTable(
                 name: "ScheduledTendersDocuments");
@@ -224,10 +301,13 @@ namespace SABC_Phase2.Migrations
                 name: "TenderAdminsDraftDocuments");
 
             migrationBuilder.DropTable(
+                name: "TenderApplicationDraftDocuments");
+
+            migrationBuilder.DropTable(
                 name: "TenderDocuments");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Applied_For_Tenders");
 
             migrationBuilder.DropTable(
                 name: "ScheduledTenders");
@@ -236,7 +316,13 @@ namespace SABC_Phase2.Migrations
                 name: "TenderAdminsDraft");
 
             migrationBuilder.DropTable(
+                name: "TenderApplicationDrafts");
+
+            migrationBuilder.DropTable(
                 name: "Tenders");
+
+            migrationBuilder.DropTable(
+                name: "Users");
         }
     }
 }

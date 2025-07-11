@@ -19,6 +19,11 @@ namespace SABC_Phase2.Data
         public DbSet<ScheduledTenderDocument> ScheduledTendersDocuments { get; set; }
         public DbSet<TenderDraft> TenderAdminsDraft { get; set; }
         public DbSet<TenderDraftDocument> TenderAdminsDraftDocuments { get; set; }
+
+        public DbSet<ApplicationDocument> ApplicationDocuments { get; set; }
+
+        public DbSet<TenderApplicationDraft> TenderApplicationDrafts { get; set; }
+        public DbSet<TenderApplicationDraftDocument> TenderApplicationDraftDocuments { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<TenderDocument>()

@@ -1,0 +1,697 @@
+﻿@model List<SABC_Phase2.Models.OVRS.SubmissionViewModel>
+@using SABC_Phase2.Models.OVRS
+@{
+    var drafts = ViewBag.DraftTiles as List<DraftTileViewModel>; // Passed from controller
+}
+
+<!-- Breadcrumb -->
+<div class="container-fluid" style="margin-top: 10px;">
+    <div class="row">
+        <div class="col-12">
+            <a href="@Url.Action("Index", "Home")" style="color:#17994d; text-decoration:none;">Home</a>
+            <span style="color:#888;"> &gt; </span>
+            <a href="#" style="color:#17994d; text-decoration:none;">My Documents</a>
+        </div>
+    </div>
+</div>
+
+<!-- Submissions Section (Toggle + Card) -->
+<div class="submission-section">
+    <!-- Toggle Header -->
+    <div class="submission-toggle" id="submissionToggle">
+        <span class="submission-title">Submissions</span>
+        <span class="toggle-arrow" id="toggleArrow">&#9660;</span>
+    </div>
+
+    <!-- Card appears below toggle, styled as separate element -->
+    <div class="submission-card" id="submissionCard" style="display: none;">
+        <!-- Submissions Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered submissions-table" style="margin-bottom: 0;">
+                <thead style="background: #17994d; color: #fff;">
+                    <tr>
+                        <th style="vertical-align: middle;">Tender Number</th>
+                        <th style="vertical-align: middle;">Date Submitted</th>
+                        <th style="vertical-align: middle;">Time Submitted</th>
+                        <th style="vertical-align: middle;">Status</th>
+                        <th style="vertical-align: middle;">Closing Date &amp; Time</th>
+                        <th style="vertical-align: middle;">Update</th>
+                    </tr>
+                </thead>
+   <tbody>
+    @if (Model != null && Model.Any())
+    {
+        foreach (var row in Model)
+        {
+            <tr>
+                <td>
+                    <a href="@Url.Action("Details", "Tenders", new { id = row.TenderId })">@row.TenderNumber</a>
+                </td>
+                <td>@row.DateSubmitted</td>
+                <td>@row.TimeSubmitted</td>
+                <td>
+                    <span class="@(GetStatusClass(row.Status))">@row.Status</span>
+                </td>
+                <td>@row.ClosingDateTime</td>
+                                <td>
+                                    @if (row.Status == "Open Tender")
+                                    {
+                                        <a href="@Url.Action("Edit_OVRS_Submissions", "OVRS_User", new { id = row.ApplicationId })" class="btn-edit">Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn-edit disabled" tabindex="-1" aria-disabled="true" style="pointer-events:none;opacity:0.6;">Edit</a>
+                                    }
+                                </td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr>
+            <td colspan="6">No submissions available.</td>
+        </tr>
+    }
+</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Drafts Section (Toggle + Card), styled in green -->
+<div class="drafts-section">
+    <!-- Toggle Header -->
+    <div class="drafts-toggle" id="draftsToggle">
+        <span class="drafts-title">Drafts</span>
+        <span class="toggle-arrow" id="draftsArrow">&#9660;</span>
+    </div>
+
+    <div class="drafts-card" id="draftsCard" style="display: none;">
+        <div class="drafts-header-row">
+            <h2 class="drafts-header-title">Draft Responses <span id="draftsTotal" style="font-size:1rem;font-weight:normal;color:#555;margin-left:8px;">@((drafts != null) ? $"Total: {drafts.Count}" : "")</span></h2>
+            <div class="view-toggle-buttons">
+                <button id="gridViewBtn" class="view-toggle active" title="Grid View">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button id="listViewBtn" class="view-toggle" title="List View">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+        <div class="details-underline"></div>
+        <br />
+
+        @if (drafts != null && drafts.Any())
+        {
+            <!-- Grid View (default) -->
+            <div class="draft-carousel" id="draftGridView" style="display: flex; gap: 24px; overflow-x: auto; padding-bottom: 8px;">
+                @foreach (var draft in drafts)
+                {
+                    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" style="text-decoration:none; color:inherit;">
+                        <div class="draft-tile-card">
+                            <div class="draft-card-logo">
+                                <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
+                            </div>
+                            <span class="badge @GetStatusClass(draft.Status)">
+                                @(draft.Status?.ToUpperInvariant() ?? "DRAFT")
+                            </span>
+                            <div class="draft-card-content">
+                                <div class="draft-tender-number">@draft.TenderNumber</div>
+                                <div class="draft-tender-title">@draft.TenderTitle</div>
+                                <div class="draft-closing-date">CLOSING DATE: @(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")</div>
+                                <div class="draft-closing-time">TIME: @(draft.ClosingTime.HasValue ? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")</div>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+
+            <!-- List View (hidden by default) -->
+            <div class="draft-list-view" id="draftListView" style="display: none;">
+                @foreach (var draft in drafts)
+                {
+                    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" class="draft-list-row">
+                        <div class="draft-list-logo">
+                            <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
+                        </div>
+                        <div class="draft-list-details">
+                            <div class="draft-list-number-desc">
+                                <span class="draft-list-tender-number">@draft.TenderNumber</span>
+                                <span class="draft-list-tender-desc">: @draft.TenderTitle</span>
+                            </div>
+                            <div class="draft-list-meta">
+                                <span class="draft-list-closing-date">
+                                    @* <span class="dot"></span> *@
+                                    CLOSING DATE: <span style="color:#d32f2f;">@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                                </span>
+                                <span class="draft-list-closing-time">
+                                    <span class="dot"></span>
+                                    TIME: <span style="color:#d32f2f;">@(draft.ClosingTime.HasValue ? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")</span>
+                                </span>
+                                <span class="draft-list-status">
+                                    <span class="dot"></span>
+                                    Status:
+                                    <span class="status-badge @GetStatusClass(draft.Status)" style="font-weight:600;">
+                                        @(draft.Status?.ToUpperInvariant() ?? "DRAFT")
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="color:#555; font-size:1.1rem; padding: 24px 0 0 8px;">
+                No draft responses available.
+            </div>
+        }
+    </div>
+</div>
+
+
+@functions {
+    public string GetStatusClass(string status)
+    {
+        switch ((status ?? "").ToLowerInvariant())
+        {
+            case "open tender":
+            case "open":
+                return "status-open";
+            case "closed tender":
+            case "closed":
+                return "status-closed";
+            case "cancelled tender":
+            case "cancelled":
+                return "status-cancelled";
+            case "awarded tender":
+            case "awarded":
+                return "status-awarded";
+            default:
+                return "";
+        }
+    }
+}
+
+<script>
+    // Helper to get query parameter
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+
+    // Section toggling logic
+    function openSection(section) {
+        if (section === 'drafts') {
+            // Open drafts, close submissions
+            draftsCard.style.display = 'block';
+            draftsArrow.style.transform = 'rotate(180deg)';
+            card.style.display = 'none';
+            arrow.style.transform = 'rotate(0deg)';
+        } else {
+            // Open submissions (default), close drafts
+            card.style.display = 'block';
+            arrow.style.transform = 'rotate(180deg)';
+            draftsCard.style.display = 'none';
+            draftsArrow.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    // Existing queries for toggles
+    const toggle = document.getElementById('submissionToggle');
+    const card = document.getElementById('submissionCard');
+    const arrow = document.getElementById('toggleArrow');
+
+    if (toggle && card && arrow) {
+        toggle.addEventListener('click', function() {
+            const isOpen = card.style.display === 'block';
+            card.style.display = isOpen ? 'none' : 'block';
+            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        });
+    }
+
+    const draftsToggle = document.getElementById('draftsToggle');
+    const draftsCard = document.getElementById('draftsCard');
+    const draftsArrow = document.getElementById('draftsArrow');
+
+    if (draftsToggle && draftsCard && draftsArrow) {
+        draftsToggle.addEventListener('click', function() {
+            const isOpen = draftsCard.style.display === 'block';
+            draftsCard.style.display = isOpen ? 'none' : 'block';
+            draftsArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        });
+    }
+
+    // On page load, open correct section
+    document.addEventListener('DOMContentLoaded', function() {
+        const section = getQueryParam('section');
+        openSection(section);
+    });
+
+    // --- List/Grid Toggle logic for Drafts ---
+    const gridViewBtn = document.getElementById('gridViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    const draftGridView = document.getElementById('draftGridView');
+    const draftListView = document.getElementById('draftListView');
+
+    if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
+        gridViewBtn.addEventListener('click', function () {
+            gridViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+            draftGridView.style.display = 'flex';
+            draftListView.style.display = 'none';
+        });
+
+        listViewBtn.addEventListener('click', function () {
+            listViewBtn.classList.add('active');
+            gridViewBtn.classList.remove('active');
+            draftGridView.style.display = 'none';
+            draftListView.style.display = 'block';
+        });
+    }
+</script>
+
+
+<style>
+    @*Disable edit button css*@
+    .btn-edit.disabled {
+        pointer-events: none;
+        opacity: 0.6;
+        cursor: not-allowed;
+        text-decoration: none;
+    }
+
+    /* ----------------------------------------------- */
+    /* This section deals with styling draft tiles */
+    .status-open {
+        background-color: #17994d; /* Green */
+    }
+
+    .status-closed {
+        background-color: #fbc02d; /* Yellow */
+        color: #000;
+    }
+
+    .status-awarded {
+        background-color: #0288d1; /* Blue */
+    }
+
+    .status-cancelled {
+        background-color: #888;
+    }
+
+    /* This deal with hover over draft tiles */
+    .draft-tile-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        width: 220px;
+        min-width: 220px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        border: 1.5px solid #b7e6c8;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.2s ease;
+    }
+
+        .draft-tile-card:hover {
+            transform: translateY(-4px);
+        }
+
+    .draft-card-logo {
+        width: 80px; /* was 60px */
+        height: 80px; /* was 60px */
+        margin-top: 28px;
+        margin-bottom: 10px;
+        background: transparent;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+        .draft-card-logo img {
+            width: 70px; /* was 48px */
+            height: 70px; /* was 48px */
+        }
+
+    .badge {
+        position: absolute;
+        top: 12px;
+        right: 0;
+        font-weight: 600;
+        padding: 4px 14px 4px 12px;
+        font-size: 0.85rem;
+        color: #fff;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-top-left-radius: 14px;
+        border-bottom-left-radius: 14px;
+        display: inline-block;
+        height: auto;
+        text-align: center;
+    }
+
+    .draft-card-content {
+        text-align: center;
+        width: 100%;
+    }
+
+    .draft-tender-number {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #17994d;
+    }
+
+    .draft-tender-title {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 10px;
+        min-height: 44px;
+    }
+
+    .draft-closing-date,
+    .draft-closing-time {
+        color: #d32f2f;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    /* ----------------------------------------------------------------? */
+
+    .drafts-section {
+        width: 90%;
+        max-width: 1100px;
+        margin: 30px auto 0 auto;
+    }
+
+    .drafts-toggle {
+        background: #17994d;
+        color: #fff;
+        border-radius: 7px 7px 7px 7px;
+        box-shadow: 0 2px 8px rgba(30,30,30,0.05);
+        padding: 18px 24px;
+        font-size: 1.45rem;
+        font-weight: bold;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        border: 2px solid #b7e6c8;
+        transition: background 0.2s;
+    }
+
+        .drafts-toggle:hover {
+            background: #20b95f;
+        }
+
+    .drafts-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    .drafts-card {
+        background: #fff;
+        border-radius: 8px;
+        margin-top: 15px;
+        box-shadow: 0 2px 12px rgba(30,30,30,0.13);
+        border: 1.5px solid #b7e6c8;
+        padding: 24px 28px;
+        font-size: 1.07rem;
+        color: #222;
+        min-height: 70px;
+    }
+
+    .drafts-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0;
+    }
+
+    .drafts-header-title {
+        font-size: 1.45rem;
+        font-weight: bold;
+        color: #17994d;
+        margin: 0;
+    }
+
+    .view-toggle-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .view-toggle {
+        background: none;
+        border: none;
+        color: #17994d;
+        font-size: 1.35rem;
+        padding: 6px 10px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background 0.18s;
+    }
+
+        .view-toggle.active,
+        .view-toggle:hover {
+            background: #e7f7ed;
+            color: #17994d;
+        }
+
+    .details-underline {
+        width: 100%;
+        height: 4px;
+        background: #17994d;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        margin-top: 4px;
+    }
+    @@media (max-width: 600px) {
+        .drafts-section
+
+    {
+        width: 99%;
+        padding: 0;
+    }
+
+    .drafts-toggle {
+        padding: 15px 9px;
+        font-size: 1.03rem;
+    }
+
+    .drafts-card {
+        padding: 13px 7px;
+    }
+
+    }
+
+    .submission-section {
+        width: 90%;
+        max-width: 1100px;
+        margin: 30px auto 0 auto;
+    }
+
+    .submission-toggle {
+        background: #252525;
+        color: #fff;
+        border-radius: 7px 7px 7px 7px;
+        box-shadow: 0 2px 8px rgba(30,30,30,0.05);
+        padding: 18px 24px;
+        font-size: 1.45rem;
+        font-weight: bold;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        border: 2px solid #b7c8e6;
+        transition: background 0.2s;
+    }
+
+        .submission-toggle:hover {
+            background: #353535;
+        }
+
+    .submission-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    .toggle-arrow {
+        font-size: 1.5rem;
+        transition: transform 0.2s;
+        margin-left: 16px;
+        pointer-events: none;
+    }
+
+    .submission-card {
+        background: #fff;
+        border-radius: 8px;
+        margin-top: 15px;
+        box-shadow: 0 2px 12px rgba(30,30,30,0.13);
+        border: 1.5px solid #c5c5c5;
+        padding: 24px 28px;
+        font-size: 1.07rem;
+        color: #222;
+        min-height: 70px;
+    }
+    @@media (max-width: 600px) {
+        .submission-section
+
+    {
+        width: 99%;
+        padding: 0;
+    }
+
+    .submission-toggle {
+        padding: 15px 9px;
+        font-size: 1.03rem;
+    }
+
+    .submission-card {
+        padding: 13px 7px;
+    }
+
+    }
+
+
+/*List View css for Drafts */
+
+/* Container for the entire list view; sets vertical stacking, spacing, and scroll for overflow */
+.draft-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;            /* Space between rows */
+    margin-top: 10px;
+    max-height: 450px;    /* Limits height and allows scrolling */
+    overflow-y: auto;
+    padding-right: 12px;
+}
+
+/* Individual row in the list (entire draft entry) */
+.draft-list-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;                   /* Gap between logo and details */
+    background: #fff;
+    border-radius: 6px;          /* Rounded corners (can be 0 for flat look) */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);   /* Subtle shadow */
+    border: 1px solid #e1eae3;   /* Light border around row */
+    padding: 14px 16px;          /* Inner space */
+    text-decoration: none;       /* Remove underline for links */
+    color: #222;
+    transition: box-shadow 0.15s;
+}
+/* Hover effect for row: stronger shadow and background color */
+.draft-list-row:hover {
+    box-shadow: 0 3px 10px rgba(30,30,30,0.15);
+    background: #f7fdf9;
+}
+
+/* Logo on the left of each row */
+.draft-list-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;      /* Circular logo */
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+/* Logo image styling */
+.draft-list-logo img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+}
+
+/* Container for details on the right */
+.draft-list-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tender number and title styling */
+.draft-list-number-desc {
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: #17994d;
+    margin-bottom: 6px;
+}
+.draft-list-tender-number { font-weight: 700; color: #17994d;}
+.draft-list-tender-desc { font-weight: 500; color: #222; }
+
+/* Row of meta info (date, time, status) */
+.draft-list-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;                  /* Space between meta items */
+    font-size: 1.01rem;
+    align-items: center;
+    margin-left: 2px;
+    margin-top: 0px;
+}
+
+/* Colored dots for visual labels */
+.draft-list-meta .dot {
+    height: 9px;
+    width: 9px;
+    background: #d32f2f;   /* Red dot */
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.draft-list-status .dot {
+    background: #17994d;   /* Green dot for status */
+}
+
+/* Badge for status (OPEN, CLOSED, etc) */
+.status-badge {
+    display: inline-block;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 1rem;
+    margin-left: 4px;
+    color: #fff;
+    vertical-align: middle;
+}
+.status-open { background-color: #17994d !important; }
+.status-closed { background-color: #fbc02d !important; color: #000 !important; }
+.status-awarded { background-color: #0288d1 !important; }
+.status-cancelled { background-color: #888 !important; }
+
+/* --- Prevent blue link color on hover for labels --- */
+.draft-list-row,
+.draft-list-row:hover {
+    color: #222 !important; /* Ensure text color stays the same on hover */
+}
+
+/* Make "Closing Date" and "Time" labels and values red */
+.draft-list-closing-date,
+.draft-list-closing-time {
+    color: #d32f2f !important;
+}
+.draft-list-row:hover .draft-list-closing-date,
+.draft-list-row:hover .draft-list-closing-time {
+    color: #d32f2f !important;
+}
+
+/* Ensure status label stays default color on hover */
+.draft-list-status {
+    color: #222 !important;
+}
+.draft-list-row:hover .draft-list-status {
+    color: #222 !important;
+}
+</style>
+

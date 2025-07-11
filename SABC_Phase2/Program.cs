@@ -3,6 +3,7 @@ using SABC_Phase2.Data;
 using Hangfire;
 using SABC_Phase2.Services;
 using QuestPDF.Infrastructure; // Add this at the top
+using Microsoft.AspNetCore.Authentication.Cookies; // <-- Add this
 
 // Set the QuestPDF license type before building the app
 QuestPDF.Settings.License = LicenseType.Community;
@@ -10,9 +11,9 @@ QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------------------------
+// --------------------------------
 // Add services to the container
-// ---------------------------
+// --------------------------------
 
 // MVC Controllers and Razor Views
 builder.Services.AddControllersWithViews();
@@ -20,6 +21,10 @@ builder.Services.AddControllersWithViews();
 // EF Core with SQL Server using connection string from appsettings.json
 builder.Services.AddDbContext<Phase2Context>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Phase2ContextConnection")));
+
+// EF Core with SQL Server using connection string from appsettings.json  for Phase 1 Legacy DB
+builder.Services.AddDbContext<LegacyDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("LegacyDb")));
 
 // Hangfire: Configure background job storage using SQL Server
 builder.Services.AddHangfire(config =>
@@ -36,11 +41,23 @@ builder.Services.AddScoped<ITenderClosingService, TenderClosingService>();
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
 
 builder.Services.AddTransient<TenderReportPdfService>();
+
+// --------- Add this block for authentication ---------
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+    });
+// ----------------------------------------------------
+
+builder.Services.AddScoped<EmailService>();
+
 var app = builder.Build();
 
-// ---------------------------
+// -------------------------------------
 // Configure the HTTP request pipeline
-// ---------------------------
+// -------------------------------------
 
 if (!app.Environment.IsDevelopment())
 {
@@ -53,6 +70,8 @@ app.UseHttpsRedirection();   // Redirect HTTP to HTTPS
 app.UseStaticFiles();        // Serve static files from wwwroot
 
 app.UseRouting();
+
+app.UseAuthentication(); // <-- Add this line
 app.UseAuthorization();
 
 // ---------------------------
