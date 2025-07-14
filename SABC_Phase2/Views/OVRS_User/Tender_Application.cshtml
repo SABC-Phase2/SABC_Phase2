@@ -122,9 +122,10 @@
         </div>
     </form>
 </div>
+
 @section Scripts {
     <script>
-        const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+        const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
         let storedFiles = [];
 
         const fileInput = document.getElementById("UploadedFiles");
@@ -158,16 +159,14 @@
                 totalSize += file.size;
             }
             renderUploadedFiles();
-            fileInput.value = ""; // Reset for next upload
+            fileInput.value = "";
+            // NO autosave here!
         });
 
-        // Render preview for new files
         function renderUploadedFiles() {
-            // Keep server-side docs
             const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
             uploadedFilesContainer.innerHTML = "";
             existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
-            // Render client-side PDFs
             storedFiles.forEach((fileInfo, index) => {
                 const { file, uploadedAt } = fileInfo;
                 const fileRow = document.createElement("div");
@@ -185,7 +184,6 @@
                 fileDetails.appendChild(fileMeta);
                 const actions = document.createElement("div");
                 actions.className = "uploaded-file-actions d-flex";
-                // View PDF file
                 const viewBtn = document.createElement("button");
                 viewBtn.type = "button";
                 viewBtn.className = "btn btn-outline-primary btn-sm me-2";
@@ -194,7 +192,6 @@
                     const fileURL = URL.createObjectURL(file);
                     window.open(fileURL, "_blank");
                 };
-                // Remove PDF
                 const deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "btn btn-outline-danger btn-sm";
@@ -202,6 +199,7 @@
                 deleteBtn.onclick = () => {
                     storedFiles.splice(index, 1);
                     renderUploadedFiles();
+                    // NO autosave here!
                 };
                 actions.appendChild(viewBtn);
                 actions.appendChild(deleteBtn);
@@ -211,9 +209,7 @@
             });
         }
 
-        // AJAX submit the form and PDFs
         submitBtn.addEventListener("click", function (e) {
-            // Gather form data and PDFs
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
@@ -239,7 +235,6 @@
                         }
                     });
                 } else {
-                    // fallback: show new HTML
                     return response.text().then(html => {
                         document.body.innerHTML = html;
                     });
@@ -252,99 +247,100 @@
             });
         });
 
-         /**
-         * saveAsDraft
-         * -----------
-         * Handles the client-side logic for saving a tender application as a draft.
-         * This function gathers all form fields and uploaded documents, packages them via FormData,
-         * and sends them using AJAX (fetch) to the server-side endpoint for persistence.
-         *
-         * Key Enterprise Features:
-         * - Ensures all user input and uploaded files are sent, even if the draft already exists (supports updates).
-         * - Handles creation vs. update by checking for an existing DraftId and appending it if found.
-         * - On successful save, updates or injects the DraftId in the form for future saves (enables true draft resumption).
-         * - Provides user feedback on success or failure (can be replaced with enterprise modal/toast in production).
-         * - All errors are logged to the console for developer troubleshooting.
-         */
-        function saveAsDraft() {
-            // Reference to the main tender application form element
+        function saveAsDraft(isAuto = false) {
             const form = document.getElementById("tenderAppForm");
-            // Create a FormData object that automatically gathers all form fields
             const formData = new FormData(form);
-
-            // Attach any files uploaded by the user (storedFiles is managed by the file upload UI logic)
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
             });
 
-            // If this is an update to an existing draft, include the DraftId so the backend can identify it
             const draftIdField = form.querySelector("input[name='DraftId']");
             if (draftIdField && draftIdField.value) {
                 formData.append("DraftId", draftIdField.value);
             }
 
-            // Send the draft data to the backend using AJAX
-            fetch('/OVRS_User/SaveTenderApplicationDraft', {
-                method: "POST",
-                body: formData,
-                headers: {} // Optionally add CSRF tokens or other headers as required by the enterprise framework
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // User feedback for successful save (replace with modal/toast in production if desired)
-                    alert("Draft saved successfully!");
-                    // If a new DraftId was returned and isn't already present in the form, inject it for subsequent saves (enables edit-in-place)
-                    if (data.draftId && !draftIdField) {
-                        let input = document.createElement("input");
-                        input.type = "hidden";
-                        input.name = "DraftId";
-                        input.value = data.draftId;
-                        form.appendChild(input);
-                    } else if (data.draftId) {
-                        draftIdField.value = data.draftId;
-                    }
-                } else {
-                    // Display server-side error message or generic failure notice
-                    alert(data.message || "Failed to save draft.");
+            let completed = false;
+            if (isAuto && window.event && window.event.type === "beforeunload") {
+                try {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", '/OVRS_User/SaveTenderApplicationDraft', false);
+                    xhr.send(formData);
+                    completed = true;
+                } catch (err) {
+                    // Ignore, fallback below
                 }
-            })
-            .catch(error => {
-                // General error handler for network or unexpected errors
-                alert("Error saving draft.");
-                console.error(error);
-            });
+            }
+            if (!completed) {
+                fetch('/OVRS_User/SaveTenderApplicationDraft', {
+                    method: "POST",
+                    body: formData,
+                    headers: {}
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (!isAuto) alert("Draft saved successfully!");
+                        if (data.draftId && !draftIdField) {
+                            let input = document.createElement("input");
+                            input.type = "hidden";
+                            input.name = "DraftId";
+                            input.value = data.draftId;
+                            form.appendChild(input);
+                        } else if (data.draftId) {
+                            draftIdField.value = data.draftId;
+                        }
+                    } else {
+                        if (!isAuto) alert(data.message || "Failed to save draft.");
+                    }
+                })
+                .catch(error => {
+                    if (!isAuto) alert("Error saving draft.");
+                    console.error(error);
+                });
+            }
         }
 
-        // Attach a click event handler to all elements with the class 'delete-doc-link' (even those dynamically added)
         $(document).on('click', '.delete-doc-link', function (e) {
-            e.preventDefault(); // Prevent the default link behavior (navigation)
-            var docId = $(this).data('doc-id'); // Get the document ID from the data attribute
-            // Ask the user to confirm deletion
+            e.preventDefault();
+            var docId = $(this).data('doc-id');
             if (confirm("Are you sure you want to delete this document?")) {
-                // Send an AJAX POST request to the server to delete the document
                 $.ajax({
-                    url: '/OVRS_User/DeleteDocument/' + docId, // Target the correct endpoint in your controller
-                    type: 'POST', // Use POST for delete action
+                    url: '/OVRS_User/DeleteDocument/' + docId,
+                    type: 'POST',
                     success: function (data) {
                         if (data.success) {
-                            // On success, remove the document's HTML entry from the page
                             $('div[data-doc-id="' + docId + '"]').remove();
+                            // NO autosave here!
                         } else {
-                            // If the server returns an error, show an alert
                             alert(data.message || "Failed to delete document.");
                         }
                     },
                     error: function () {
-                        // If the AJAX request fails (e.g., network/server error), show a generic error
                         alert("Error deleting document.");
                     }
                 });
             }
         });
+
+        // NO autoSaveTimeout, NO scheduleDraftAutoSave, NO input/change event listeners
+
+        window.addEventListener('beforeunload', function (e) {
+            if (storedFiles.length > 0 || form.checkValidity()) {
+                window.event = e;
+                saveAsDraft(true);
+            }
+        });
+
+        // Optional: Explicit "Save Draft" button handler
+        const saveDraftBtn = document.getElementById("saveDraftBtn");
+        if (saveDraftBtn) {
+            saveDraftBtn.addEventListener('click', function(e){
+                e.preventDefault();
+                saveAsDraft(false);
+            });
+        }
     </script>
 }
-
 
 <style>
     .tender-app-card {
