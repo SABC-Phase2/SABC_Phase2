@@ -24,7 +24,7 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Login(string username, string password)
+        public async Task<IActionResult> Login(string email, string password)
         {
             var legacyConnString = _config.GetConnectionString("LegacyDb");
             var defaultConnString = _config.GetConnectionString("DefaultConn");
@@ -32,23 +32,22 @@ namespace SABC_Phase2.Controllers
             int? legacyUserId = null;
             string legalName = null;
             string role = "OVRS_User";
-            string supplierType = null; // <-- Add this
+            string supplierType = null;
 
             using (SqlConnection legacyConn = new SqlConnection(legacyConnString))
             {
                 await legacyConn.OpenAsync();
 
-                // Get supplier by csdNumber
+                // Get supplier by email
                 using (SqlCommand cmd = new SqlCommand(
-                    "SELECT user_id, legalname, [local/foreigner] FROM tbl_suppliers WHERE csdNumber = @csdNumber", legacyConn)) // <-- Add [local/foreigner]
+                    "SELECT user_id, legalname, [local/foreigner], email FROM tbl_suppliers WHERE email = @Email", legacyConn))
                 {
-                    cmd.Parameters.AddWithValue("@csdNumber", username);
+                    cmd.Parameters.AddWithValue("@Email", email);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
                         {
-                            // Read user_id as int
                             object userIdObj = reader["user_id"];
                             if (userIdObj != DBNull.Value && userIdObj != null)
                             {
@@ -56,7 +55,6 @@ namespace SABC_Phase2.Controllers
                             }
                             legalName = reader["legalname"] as string;
 
-                            // Get local/foreigner and translate to string
                             var localForeign = reader["local/foreigner"] as int? ?? Convert.ToInt32(reader["local/foreigner"]);
                             supplierType = localForeign == 1 ? "Local Supplier" : localForeign == 2 ? "Foreign Supplier" : "Unknown Supplier";
                         }
@@ -65,7 +63,7 @@ namespace SABC_Phase2.Controllers
 
                 if (legacyUserId == null)
                 {
-                    ViewBag.Error = "Invalid username or password";
+                    ViewBag.Error = "Invalid email or password";
                     return View();
                 }
 
@@ -94,22 +92,21 @@ namespace SABC_Phase2.Controllers
 
                 if (!passwordMatch)
                 {
-                    ViewBag.Error = "Invalid username or password";
+                    ViewBag.Error = "Invalid email or password";
                     return View();
                 }
             }
 
             // 2. Insert or update user in SABC_Phase2.dbo.Users with role OVRS_User
-            // Assumes you have a [LegacyUserId] column in dbo.Users for mapping (recommended)
             using (SqlConnection defaultConn = new SqlConnection(defaultConnString))
             {
                 await defaultConn.OpenAsync();
 
                 using (SqlCommand cmd = new SqlCommand(
                     @"IF EXISTS (SELECT 1 FROM dbo.Users WHERE LegacyUserId = @LegacyUserId)
-                        UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
-                    ELSE
-                        INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
+                UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
+            ELSE
+                INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
                 {
                     cmd.Parameters.Add("@LegacyUserId", SqlDbType.Int).Value = legacyUserId.Value;
                     cmd.Parameters.AddWithValue("@Role", role);
@@ -133,12 +130,12 @@ namespace SABC_Phase2.Controllers
 
             // 4. Set up the claims and sign in
             var claims = new List<Claim>
-            {
-               new Claim(ClaimTypes.Name, legalName ?? username),
-               new Claim(ClaimTypes.Role, role),
-               new Claim("UserId", newUserId.ToString()),
-               new Claim("SupplierType", supplierType ?? "Unknown Supplier") // <-- Add this
-            };
+    {
+       new Claim(ClaimTypes.Name, legalName ?? email),
+       new Claim(ClaimTypes.Role, role),
+       new Claim("UserId", newUserId.ToString()),
+       new Claim("SupplierType", supplierType ?? "Unknown Supplier")
+    };
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 

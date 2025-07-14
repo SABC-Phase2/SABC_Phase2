@@ -154,7 +154,7 @@ namespace SABC_Phase2.Controllers
                 if (supplier != null)
                 {
                     companyEmail = supplier.Email;
-                    companyName = supplier.LegalName;
+                    companyName = supplier.TradingName;
                 }
             }
 
@@ -193,7 +193,7 @@ namespace SABC_Phase2.Controllers
                     if (supplier != null)
                     {
                         companyEmail = supplier.Email;
-                        companyName = supplier.LegalName;
+                        companyName = supplier.TradingName;
                     }
                 }
             }

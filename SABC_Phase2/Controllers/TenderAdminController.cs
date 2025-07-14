@@ -6,6 +6,8 @@ using SABC_Phase2.Models;
 using SABC_Phase2.Models.Tender;
 using SABC_Phase2.Services;
 
+
+
 namespace SABC_Phase2.Controllers
 {
     /// <summary>
@@ -14,7 +16,9 @@ namespace SABC_Phase2.Controllers
     /// </summary>
     public class TenderAdminController : Controller
     {
+        // Dependency-injected database context for EF Core operations.
         private readonly Phase2Context _context;
+        private readonly LegacyDbContext _legacyContext;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
 
@@ -24,11 +28,12 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController( Phase2Context context, IConfiguration configuration,IWebHostEnvironment env, TenderReportPdfService pdfService)
+        public TenderAdminController( Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration,IWebHostEnvironment env, TenderReportPdfService pdfService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
             _context = context;
+            _legacyContext = legacyContext;
 
             // Assign the injected configuration object to a private field.
             // This allows access to application settings (e.g., connection strings, custom config values).
@@ -719,9 +724,6 @@ namespace SABC_Phase2.Controllers
 
 
         //---------------------------------------------------------------------------------------------------
-        //ReportsIndex()
-
-        //---------------------------------------------------------------------------------------------------
         // Reports and Supplier Report Actions
         //---------------------------------------------------------------------------------------------------
 
@@ -738,144 +740,194 @@ namespace SABC_Phase2.Controllers
             return View(tenders);
         }
 
+        [HttpGet]
+        public IActionResult tender_Report(int id)
+        {
+            // Retrieve the tender record by its ID from the database
+            var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
 
-        //[HttpGet]
-        //public IActionResult tender_Report(int id)
-        //{
-        //    // Find the tender by its ID.
-        //    var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
-        //    if (tender == null)
-        //        return NotFound(); // Return 404 if the tender does not exist.
+            // If no tender is found, return a 404 Not Found response
+            if (tender == null)
+                return NotFound();
 
-        //    // Retrieve all applications for this tender, including the related supplier (OVRS_User) data.
-        //    var applications = _context.Applied_For_Tenders
-        //        .Include(a => a.OVRS_User)
-        //        .Where(a => a.TenderId == id)
-        //        .ToList();
+            // Load all applications for this tender, including related OVRS_User info
+            var applications = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => a.TenderId == id)
+                .ToList();
 
-        //    // Count the number of local and foreign suppliers based on the Supplier property.
-        //    int localCount = applications.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "local");
-        //    int foreignCount = applications.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "foreign");
+            // Build a dictionary of supplier info from the legacy database
+            // - AsNoTracking: disables EF tracking for performance when reading
+            // - ToList: brings all records into memory so GroupBy works
+            // - GroupBy: groups suppliers by user ID to avoid duplicates
+            // - ToDictionary: creates a dictionary with user ID as key and first supplier record as value
+            var supplierDict = _legacyContext.TblSuppliers
+                .AsNoTracking()
+                .ToList()
+                .GroupBy(s => s.UserId)
+                .ToDictionary(g => g.Key, g => g.First());
 
-        //    // Create a view model containing the tender and the calculated statistics.
-        //    var viewModel = new TenderReportViewModel
-        //    {
-        //        Tender = tender,
-        //        LocalSupplierCount = localCount,
-        //        ForeignSupplierCount = foreignCount
-        //    };
+            int localCount = 0;   // Track local suppliers
+            int foreignCount = 0; // Track foreign suppliers
 
-        //    // Pass the view model to the view for rendering.
-        //    return View(viewModel);
-        //}
+            // Count the number of local and foreign suppliers for this tender
+            foreach (var app in applications)
+            {
+                var user = app.OVRS_User;
+                // Only count if the application has an OVRS_User and a valid LegacyUserId
+                if (user != null && user.LegacyUserId.HasValue && supplierDict.TryGetValue(user.LegacyUserId.Value, out var supplier))
+                {
+                    // Supplier type: 1 = Local, 2 = Foreign
+                    if (supplier.LocalForeigner == 1)
+                        localCount++;
+                    else if (supplier.LocalForeigner == 2)
+                        foreignCount++;
+                }
+            }
 
+            // Create a view model for the tender report, including supplier counts
+            var viewModel = new TenderReportViewModel
+            {
+                Tender = tender,
+                LocalSupplierCount = localCount,
+                ForeignSupplierCount = foreignCount
+            };
 
-        //[HttpGet]
-        //public IActionResult GenerateTenderSupplierReport(int id, DateTime? startDate = null, DateTime? endDate = null)
-        //{
-        //    // Attempt to retrieve the tender with the specified ID from the database.
-        //    var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
+            // Return the view, passing the view model for rendering
+            return View(viewModel);
+        }
 
-        //    // If the tender does not exist, return a 404 Not Found response.
-        //    if (tender == null)
-        //        return NotFound();
+        [HttpGet]
+        public IActionResult GenerateTenderSupplierReport(int id, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            // Retrieve the tender record by its ID from the database
+            var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
+            if (tender == null)
+                return NotFound();
 
-        //    // Prepare a query to fetch all applications for this tender, including related supplier (OVRS_User) information.
-        //    var query = _context.Applied_For_Tenders
-        //        .Include(a => a.OVRS_User) // Eagerly load supplier/user data for each application
-        //        .Where(a => a.TenderId == id); // Filter by the specified tender ID
+            // Prepare a query for all applications for this tender, including OVRS_User info
+            var query = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => a.TenderId == id);
 
-        //    // If both start and end dates are provided, filter applications by the specified date range.
-        //    if (startDate.HasValue && endDate.HasValue)
-        //    {
-        //        // Adjust endDate to include the entire day (up to the last tick).
-        //        var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
-        //        query = query.Where(a => a.DateApplied >= startDate && a.DateApplied <= endDateInclusive);
-        //    }
+            // If a date range is specified, filter applications by DateApplied
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                // Make endDate inclusive (end of day)
+                var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
+                query = query.Where(a => a.DateApplied >= startDate && a.DateApplied <= endDateInclusive);
+            }
+            var applications = query.ToList();
 
-        //    // Execute the query and materialize the results as a list.
-        //    var applications = query.ToList();
+            // Load supplier info from the legacy DB into a dictionary, avoiding duplicates
+            var supplierDict = _legacyContext.TblSuppliers
+                .AsNoTracking()
+                .ToList()
+                .GroupBy(s => s.UserId)
+                .ToDictionary(g => g.Key, g => g.First());
 
-        //    // Use the PDF service to generate a supplier report for the tender from the list of applications.
-        //    // This returns the PDF as a byte array.
-        //    var pdfBytes = _pdfService.GenerateSupplierReport(tender, applications);
+            // Build list of supplier PDF view models for each application
+            var pdfInfos = applications.Select(app =>
+            {
+                var user = app.OVRS_User;
+                string companyName = "-";
+                string supplierType = "-";
+                // Lookup supplier details using LegacyUserId
+                if (user != null && user.LegacyUserId.HasValue && supplierDict.TryGetValue(user.LegacyUserId.Value, out var supplier))
+                {
+                    // Prefer TradingName, fallback to LegalName
+                    companyName = supplier.TradingName ?? supplier.LegalName ?? "-";
+                    // Map supplier type code to string
+                    supplierType = (supplier.LocalForeigner == 1) ? "Local" :
+                                   (supplier.LocalForeigner == 2) ? "Foreign" : "-";
+                }
+                return new OVRS_UserPdfInfoViewModel
+                {
+                    Id = user?.Id ?? 0,
+                    LegacyUserId = user?.LegacyUserId ?? 0,
+                    CompanyName = companyName,
+                    SupplierType = supplierType
+                };
+            }).ToList();
 
-        //    // Return the generated PDF file as a downloadable file to the user.
-        //    // - The MIME type "application/pdf" indicates a PDF document.
-        //    // - The filename includes the tender number for clarity.
-        //    return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
-        //}
+            // Generate the supplier report PDF from the list
+            var pdfBytes = _pdfService.GenerateSupplierReport(tender, pdfInfos);
 
+            // Return the PDF file as a download, naming it with the tender number
+            return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
+        }
 
+        [HttpGet]
+        public IActionResult GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
+        {
+            // Validate that both start and end dates are provided
+            if (!startDate.HasValue || !endDate.HasValue)
+                return BadRequest("Start and end date required");
 
+            // Make endDate inclusive (end of day)
+            var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
 
-        //[HttpGet]
-        //public IActionResult GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
-        //{
-        //    // Validate input: Ensure both startDate and endDate are provided.
-        //    // If not, return a 400 Bad Request response with a descriptive error message.
-        //    if (!startDate.HasValue || !endDate.HasValue)
-        //        return BadRequest("Start and end date required");
+            // Get all tenders that are closed and in the specified date range
+            var tenders = _context.Tenders
+                .Where(t => t.Status != null && t.Status.ToLower().Contains("closed")
+                         && t.ClosingDate >= startDate && t.ClosingDate <= endDateInclusive)
+                .ToList();
 
-        //    // Adjust endDate to be inclusive by moving to the last tick of the specified day.
-        //    // This ensures tenders closing on endDate are included in the results.
-        //    var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
+            // Get all tender IDs for the closed tenders
+            var tenderIds = tenders.Select(t => t.Id).ToList();
 
-        //    // Query: Retrieve all tenders that:
-        //    // - Have a non-null Status containing the word "closed" (case-insensitive)
-        //    // - Have a ClosingDate within the provided date range (inclusive)
-        //    var tenders = _context.Tenders
-        //        .Where(t => t.Status != null && t.Status.ToLower().Contains("closed")
-        //                 && t.ClosingDate >= startDate && t.ClosingDate <= endDateInclusive)
-        //        .ToList();
+            // Get all applications for those tenders, including OVRS_User info
+            var allApps = _context.Applied_For_Tenders
+                .Include(a => a.OVRS_User)
+                .Where(a => tenderIds.Contains(a.TenderId))
+                .ToList();
 
-        //    // Collect all tender IDs from the filtered tenders for use in the applications query.
-        //    var tenderIds = tenders.Select(t => t.Id).ToList();
+            // Build supplier dictionary from legacy DB (avoid duplicate keys)
+            var supplierDict = _legacyContext.TblSuppliers
+                .AsNoTracking()
+                .ToList()
+                .GroupBy(s => s.UserId)
+                .ToDictionary(g => g.Key, g => g.First());
 
-        //    // Query: Fetch all applications for the filtered tenders.
-        //    // - Include the related OVRS_User (supplier) data for each application.
-        //    var allApps = _context.Applied_For_Tenders
-        //        .Include(a => a.OVRS_User)
-        //        .Where(a => tenderIds.Contains(a.TenderId))
-        //        .ToList();
+            // For each tender, build a summary row counting local/foreign suppliers
+            var summaryList = tenders.Select(tender =>
+            {
+                // Get all applications for this tender
+                var apps = allApps.Where(a => a.TenderId == tender.Id).ToList();
 
-        //    // Construct a summary row for each tender:
-        //    // - Count local and foreign suppliers, and total applicants per tender.
-        //    // - Each summary row corresponds to a single closed tender.
-        //    var summaryList = tenders.Select(tender =>
-        //    {
-        //        // Applications related to the current tender.
-        //        var apps = allApps.Where(a => a.TenderId == tender.Id).ToList();
+                int local = 0;   // Local supplier count
+                int foreign = 0; // Foreign supplier count
+                                 // For each application, look up supplier info and increment counters
+                foreach (var app in apps)
+                {
+                    var user = app.OVRS_User;
+                    if (user != null && user.LegacyUserId.HasValue && supplierDict.TryGetValue(user.LegacyUserId.Value, out var supplier))
+                    {
+                        if (supplier.LocalForeigner == 1)
+                            local++;
+                        else if (supplier.LocalForeigner == 2)
+                            foreign++;
+                    }
+                }
+                int total = local + foreign;
 
-        //        // Count local suppliers: Supplier type is "local" (case-insensitive).
-        //        int local = apps.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "local");
+                // Create the summary row for this tender
+                return new ClosedTenderSummaryRow
+                {
+                    TenderType = tender.TenderType ?? "-",
+                    ClosedTenderCount = 1,
+                    LocalSuppliers = local,
+                    ForeignSuppliers = foreign,
+                    TotalApplicants = total
+                };
+            }).ToList();
 
-        //        // Count foreign suppliers: Supplier type is "foreign" (case-insensitive).
-        //        int foreign = apps.Count(a => (a.OVRS_User?.Supplier ?? "").ToLower() == "foreign");
+            // Generate the summary PDF report for closed tenders
+            var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
 
-        //        // Total number of applicants for this tender.
-        //        int total = local + foreign;
-
-        //        // Create a summary row for this tender.
-        //        return new ClosedTenderSummaryRow
-        //        {
-        //            TenderType = tender.TenderType ?? "-",  // Tender type or "-" if null.
-        //            ClosedTenderCount = 1,                  // Each row represents one tender.
-        //            LocalSuppliers = local,                 // Number of local suppliers.
-        //            ForeignSuppliers = foreign,             // Number of foreign suppliers.
-        //            TotalApplicants = total                 // Total applicants for the tender.
-        //        };
-        //    }).ToList();
-
-        //    // NOTE: If you want to summarize by TenderType, you could group and sum here using .GroupBy().
-
-        //    // Generate a PDF summary report using the list of summary rows and the date range.
-        //    var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
-
-        //    // Return the generated PDF file as a downloadable file to the user.
-        //    // The file name includes the start and end dates for clarity.
-        //    return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
-        //}
+            // Return the PDF file as a download, naming it with the date range
+            return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
+        }
     }
 
 }
