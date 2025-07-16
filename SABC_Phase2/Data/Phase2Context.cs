@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Models.Tender;
 using SABC_Phase2.Models.OVRS;
+using SABC_Phase2.Models.Administrator;
 
 namespace SABC_Phase2.Data
 {
@@ -24,6 +25,13 @@ namespace SABC_Phase2.Data
 
         public DbSet<TenderApplicationDraft> TenderApplicationDrafts { get; set; }
         public DbSet<TenderApplicationDraftDocument> TenderApplicationDraftDocuments { get; set; }
+
+
+//--------------------------------------------------------------------------------------------------------
+        // Adminstrator dummy data
+        public DbSet<Administrator> Administrators { get; set; }
+//--------------------------------------------------------------------------------------------------------
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<TenderDocument>()

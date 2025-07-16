@@ -1,45 +1,178 @@
 ﻿@{
+
     Layout = null;
+
 }
 
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8" />
     <title>Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        .login-container {
-            width: 350px;
-            margin: 120px auto;
-            padding: 30px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
         }
 
-            .login-container input {
-                width: 100%;
-                margin-bottom: 15px;
-                padding: 8px;
+        .wrapper {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: url('/lib/Images/SABC Artwork 1.jpg');
+            background-size: cover;
+        }
+
+        .login-container {
+            background-color: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 30px 60px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: -20px;
+        }
+
+            .login-container img.logo {
+                width: 140px;
+                margin-bottom: 10px;
             }
+
+            .login-container input {
+                width: 80%;
+                height: 26px;
+                padding: 12px 16px 12px;
+                margin: 12px 0;
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                background-color: rgba(255,255,255,0.8);
+                font-size: 16px;
+            }
+
+                .login-container input:focus {
+                    outline: none;
+                    border-color: #4CAF50;
+                    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+                }
 
             .login-container button {
                 width: 100%;
-                padding: 10px;
+                background-color: #4CAF50;
+                color: white;
+                padding: 12px;
+                border: none;
+                border-radius: 25px;
+                font-size: 16px;
+                cursor: pointer;
+                margin-top: 20px;
+                transition: background-color 0.3s;
             }
+
+                .login-container button:hover {
+                    background-color: #45a049;
+                }
+
+            .login-container .forgot-password,
+            .login-container .register-text {
+                margin-top: 10px;
+                font-size: 14px;
+                color: #fff;
+            }
+
+                .login-container .register-text a,
+                .login-container .forgot-password a {
+                    color: #add8e6;
+                    text-decoration: underline;
+                }
+
+        .text-danger {
+            color: red;
+            font-size: 14px;
+        }
+
+        footer {
+            background-color: #f8f9fa;
+            text-align: center;
+            color: #333;
+            font-size: 12px;
+            width: 100%;
+        }
+
+        @@media (max-width: 768px) {
+
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .main-content {
+                padding: 80px 10px;
+            }
+        }
+
+        @@media (max-width: 480px) {
+
+            .login-container {
+                padding: 25px 15px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>Sign In</h2>
-        @if (!string.IsNullOrEmpty(ViewBag.Error))
-        {
-            <div style="color:red;">@ViewBag.Error</div>
-        }
-        <form method="post">
-            <input type="text" name="email" placeholder="Email" required /><br />
-            <input type="password" name="password" placeholder="Password" required /><br />
-            <button type="submit">Login</button>
-        </form>
+    <div class="wrapper">
+        <div class="main-content">
+            <div class="login-container">
+                <img src="/lib/Images/sabc-logo.png" alt="SABC Logo" class="logo" />
+
+                <h2 style="color: white; font-size: 28px; margin-bottom: 20px; font-weight: bold;">Sign In</h2>
+
+                @if (!string.IsNullOrEmpty(ViewBag.Error))
+
+                {
+                    <div class="text-danger">@ViewBag.Error</div>
+
+                }
+
+                <form method="post">
+                    <input type="text" name="email" placeholder="Email" required />
+                    <input type="password" name="password" placeholder="Password" required />
+
+                    <div class="forgot-password">
+                        <a href="#">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit">Sign In</button>
+
+                    <div class="register-text">
+
+                        Don’t have an account? <a href="https://etender.sabc.co.za/WebPages/Suppliers/supplier_create_update_new.aspx">Register Now</a>
+                    </div>
+                 
+                </form>
+                <!-- Admin login link -->
+                <p style="text-align:center;">
+                    <a href="@Url.Action("AdminLogin", "Account")">Admin Login</a>
+                </p>
+            </div>
+        </div>
     </div>
 </body>
 </html>
+
+
+
+
+

@@ -686,5 +686,16 @@ namespace SABC_Phase2.Controllers
             // Replace the response line in your UpdateTenderSubmission POST method with:
             return Json(new { success = true, redirectUrl = Url.Action("OVRS_Submissions_Drafts", "OVRS_User") });
         }
+
+
+       
+        public async Task<IActionResult> AllTenders()
+        {
+            var tenders = await _context.Tenders
+        .OrderByDescending(t => t.DatePublished)
+        .ToListAsync();
+
+            return View(tenders);
+        }
     }
 }

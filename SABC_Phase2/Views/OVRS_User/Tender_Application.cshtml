@@ -123,6 +123,100 @@
     </form>
 </div>
 
+<!-- Modal Popups -->
+<div id="applicationSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="applicationSuccessModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="applicationSuccessModalLabel" style="width:100%;text-align:center; color:#1a7f37;">
+
+                    Application Submitted
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 74px; height: 74px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.35rem; font-weight:600; color:#1a7f37;">Your tender application was submitted successfully!</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="applicationSuccessModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="submissionErrorModal" class="modal fade" tabindex="-1" aria-labelledby="submissionErrorModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="submissionErrorModalLabel" style="width:100%;text-align:center; color:#e11d48;">
+
+                    Submission Error
+                </h5>
+            </div>
+            <div class="modal-body">
+                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
+                <p style="font-size:1.15rem; font-weight:500; color:#1a7f37; margin-top:12px;">
+
+                    Please upload a document to submit your response.
+                </p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="submissionErrorModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Popup for Draft Save Success (OVRS User) -->
+<div id="ovrsDraftSavedModal" class="modal fade" tabindex="-1" aria-labelledby="ovrsDraftSavedModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="ovrsDraftSavedModalLabel" style="width:100%;text-align:center;">
+                    <span id="ovrsDraftModalTenderNumber" style="font-weight:bold;"></span>
+                </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Draft saved</p>
+                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
+
+                    Your draft has been saved to
+                    <a href="#" id="ovrsDraftResponsesLink" style="color:#222; text-decoration:underline; font-weight:500;">draft responses</a>
+                </div>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="ovrsDraftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tenderClosedModal" class="modal fade" tabindex="-1" aria-labelledby="tenderClosedModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="tenderClosedModalLabel" style="width:100%;text-align:center; color:#e11d48;">
+
+                    Submission Error
+                </h5>
+            </div>
+            <div class="modal-body">
+                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
+                <p style="font-size:1.15rem; font-weight:500; color:#1a7f37; margin-top:12px;">
+
+                    Unfortunately, you have missed the deadline.
+                </p>
+                <div id="tenderClosedDateTime" style="font-size:1.05rem; color:#222; margin-top:8px;"></div>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="tenderClosedModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
     <script>
         const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
@@ -209,7 +303,16 @@
             });
         }
 
-        submitBtn.addEventListener("click", function (e) {
+          submitBtn.addEventListener("click", function (e) {
+            // Check if any files are uploaded (either new or existing)
+            const hasNewFiles = storedFiles.length > 0;
+            const hasExistingDocs = document.querySelectorAll('.existing-doc').length > 0;
+            if (!hasNewFiles && !hasExistingDocs) {
+                showSubmissionErrorModal();
+                return;
+            }
+
+            // ...rest of your existing submit logic...
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
@@ -224,16 +327,18 @@
                 headers: {}
             })
             .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else if (response.headers.get("content-type")?.includes("application/json")) {
+                if (response.headers.get("content-type")?.includes("application/json")) {
                     return response.json().then(data => {
-                        if (data.success && data.redirectUrl) {
-                            window.location.href = data.redirectUrl;
+                        if (data.success) {
+                            showApplicationSuccessModal();
                         } else {
-                            alert("Submission succeeded, but no redirect URL provided.");
+                            alert(data.message || "Submission failed.");
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Submit <span class="arrow-icon"></span>';
                         }
                     });
+                } else if (response.redirected) {
+                    window.location.href = response.url;
                 } else {
                     return response.text().then(html => {
                         document.body.innerHTML = html;
@@ -247,6 +352,49 @@
             });
         });
 
+        function showApplicationSuccessModal() {
+            const modal = document.getElementById('applicationSuccessModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            document.getElementById('applicationSuccessModalCloseBtn').onclick = function() {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                window.location.href = '/OVRS_User/Index'; // Or another relevant page
+            };
+        }
+                function showSubmissionErrorModal() {
+            const modal = document.getElementById('submissionErrorModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            document.getElementById('submissionErrorModalCloseBtn').onclick = function() {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            };
+        }
+
+        function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
+            document.getElementById('ovrsDraftModalTenderNumber').innerText = tenderNumber || '';
+            document.getElementById('ovrsDraftResponsesLink').href = draftResponsesUrl || '#';
+            document.getElementById('ovrsDraftSavedModal').classList.add('show');
+            document.getElementById('ovrsDraftSavedModal').style.display = 'flex';
+            document.getElementById('ovrsDraftModalCloseBtn').onclick = function() {
+                document.getElementById('ovrsDraftSavedModal').classList.remove('show');
+                document.getElementById('ovrsDraftSavedModal').style.display = 'none';
+            };
+        }
+
+                function showTenderClosedModal(closingDateTime) {
+            document.getElementById('tenderClosedDateTime').innerText = closingDateTime
+                ? `Closed on: ${closingDateTime}`
+                : '';
+            const modal = document.getElementById('tenderClosedModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            document.getElementById('tenderClosedModalCloseBtn').onclick = function() {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            };
+        }
         function saveAsDraft(isAuto = false) {
             const form = document.getElementById("tenderAppForm");
             const formData = new FormData(form);
@@ -279,7 +427,12 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        if (!isAuto) alert("Draft saved successfully!");
+                        if (!isAuto) {
+                            // Use the tender number and draft responses URL if available
+                            const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
+                            const draftResponsesUrl = "/OVRS_User/OVRS_Submissions_Drafts";
+                            showOvrDraftSavedModal(tenderNumber, draftResponsesUrl);
+                        }
                         if (data.draftId && !draftIdField) {
                             let input = document.createElement("input");
                             input.type = "hidden";
@@ -340,9 +493,28 @@
             });
         }
     </script>
-}
+    }
+
 
 <style>
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.5); /* Dull/dim background */
+
+        z-index: 1050;
+        display: none;
+    }
+
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
     .tender-app-card {
         background: #fff;
         border-radius: 12px;
@@ -581,5 +753,17 @@
         font-weight: 500;
     }
 
+    .cancel-btn {
+        background-color: white;
+        color: #1a7f37;
+        border: 1.5px solid #1a7f37;
+        box-shadow: 0 8px 24px -6px rgba(34,197,94,0.18), 0 2px 8px rgba(0,0,0,0.10);
+    }
 
+        .cancel-btn:hover {
+            background-color: #f6fff8;
+            color: #15803d;
+            box-shadow: 0 12px 32px -8px rgba(34,197,94,0.22), 0 4px 12px rgba(0,0,0,0.12);
+        }
 </style>
+

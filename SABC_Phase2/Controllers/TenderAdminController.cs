@@ -1,4 +1,5 @@
 ﻿using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Data;
@@ -54,7 +55,9 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult Create()
         {
+            
             return View(new TenderViewModel());
+
         }
 
         // POST: /TenderAdmin/Create
@@ -62,16 +65,20 @@ namespace SABC_Phase2.Controllers
         /// POST: Handles Tender creation logic.
         /// Supports both immediate and scheduled publishing.
         /// </summary>
-        /// <param name="model">Tender data entered by the user.</param>
+        /// 
+        [Authorize(Roles = "Administrator")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
+
             // Validate the incoming model. If the model is not valid (e.g., required fields are missing or invalid),
             // re-display the form with the user's input and validation errors.
-            if (!ModelState.IsValid)
+            // Role check
+            if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
             {
-                return View(model);
+                // Optionally: return a custom error view, message, or 403
+                return Forbid(); // or return Unauthorized(); or a custom error page
             }
 
             // Initialize the Azure Blob Storage service for file uploads.
@@ -227,44 +234,42 @@ namespace SABC_Phase2.Controllers
             });
         }
 
-        public IActionResult Index(int page = 1, int pageSize = 9)
+        // Updated Index action to support tender status filtering
+        public IActionResult Index(string status, int page = 1, int pageSize = 9)
         {
-            // Get the total number of tender records in the database.
-            // This is used for pagination calculations and for displaying the total count to the user.
-            var totalItems = _context.Tenders.Count();
+            var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
-            // Retrieve a paginated list of tenders from the database.
-            // - Include related Documents for each tender so their file information is available in the view.
-            // - Order the tenders by DatePublished in descending order (most recently published tenders first).
-            // - Skip tenders from previous pages to get the correct subset for the current page.
-            // - Take only the number of items equal to the page size (to support paging).
-            var tenders = _context.Tenders
-                .Include(t => t.Documents)
+            // Filter by status if provided (e.g. status = "open", "closed", "awarded", "cancelled")
+            if (!string.IsNullOrEmpty(status))
+            {
+                var filter = status.Trim().ToLower();
+                // Status values in DB are e.g. "Open Tender"
+                query = query.Where(t => t.Status.ToLower().Contains(filter));
+            }
+
+            var totalItems = query.Count();
+            var tenders = query
                 .OrderByDescending(t => t.DatePublished)
-                .Skip((page - 1) * pageSize) // Calculate number of items to skip based on the current page.
-                .Take(pageSize)              // Take only the tenders for this page.
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
 
-            // Initialize the Azure Blob Storage service to generate secure access URIs for document downloads/views.
+            // Blob storage for document SAS URIs (optional)
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
             foreach (var tender in tenders)
             {
-                // For each document attached to the tender, generate a SAS URI through the blob service.
-                // This ensures that file links are secure and time-limited, and that the FilePath property in the document
-                // contains a valid URL for the client to access the file from blob storage.
                 foreach (var doc in tender.Documents)
                 {
                     doc.FilePath = blobService.GetBlobSasUri(doc.FilePath);
                 }
             }
 
-            // Store pagination and count information in the ViewBag for use in the UI:
-            ViewBag.CurrentPage = page;                                // The current page number.
-            ViewBag.PageSize = pageSize;                               // The number of tenders per page.
-            ViewBag.TotalItems = totalItems;                           // The total number of tenders in the database.
-            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize); // The total number of pages for navigation.
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            ViewBag.Status = status; // For pagination links
 
-            // Return the view, providing the paginated, document-enriched list of tenders for display.
             return View(tenders);
         }
 
@@ -396,7 +401,7 @@ namespace SABC_Phase2.Controllers
                 DraftId = draft.DraftId,                      // Unique identifier for the draft
                 TenderType = draft.TenderType,                // Type of tender (e.g., RFI, RFP)
                 TenderNumber = draft.TenderNumber,            // Reference number for the draft tender
-                ClosingDate = draft.ClosingDate ?? default,   // Date the tender closes; will set below if null
+                ClosingDate = draft.ClosingDate, // nullable DateTime? property   // Date the tender closes; will set below if null
                 ClosingTime = draft.ClosingTime,              // Time the tender closes on the closing date
                 Status = draft.Status,                        // Current status of the draft (e.g., Draft, Pending)
                 Title = draft.Title,                          // Title for the tender
@@ -412,8 +417,8 @@ namespace SABC_Phase2.Controllers
 
             // If the ClosingDate is not set (null), default to today's date.
             // This prevents validation errors in the view when rendering the edit form.
-            if (draft.ClosingDate == null)
-                model.ClosingDate = DateTime.Today;
+            //if (draft.ClosingDate == null)
+            //    model.ClosingDate = DateTime.Today;
 
             // Reuse the "Create" view for editing drafts, passing in the populated model.
             // The view will display the draft's details for editing.

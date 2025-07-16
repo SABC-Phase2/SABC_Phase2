@@ -5,6 +5,8 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Security.Claims;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace SABC_Phase2.Controllers
 {
@@ -20,6 +22,7 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            // Always use explicit path!
             return View("~/Views/Authentication/Login.cshtml");
         }
 
@@ -64,7 +67,7 @@ namespace SABC_Phase2.Controllers
                 if (legacyUserId == null)
                 {
                     ViewBag.Error = "Invalid email or password";
-                    return View();
+                    return View("~/Views/Authentication/Login.cshtml");
                 }
 
                 // Get user by user_id and check password
@@ -93,7 +96,7 @@ namespace SABC_Phase2.Controllers
                 if (!passwordMatch)
                 {
                     ViewBag.Error = "Invalid email or password";
-                    return View();
+                    return View("~/Views/Authentication/Login.cshtml");
                 }
             }
 
@@ -104,9 +107,9 @@ namespace SABC_Phase2.Controllers
 
                 using (SqlCommand cmd = new SqlCommand(
                     @"IF EXISTS (SELECT 1 FROM dbo.Users WHERE LegacyUserId = @LegacyUserId)
-                UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
-            ELSE
-                INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
+                    UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
+                ELSE
+                    INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
                 {
                     cmd.Parameters.Add("@LegacyUserId", SqlDbType.Int).Value = legacyUserId.Value;
                     cmd.Parameters.AddWithValue("@Role", role);
@@ -130,12 +133,12 @@ namespace SABC_Phase2.Controllers
 
             // 4. Set up the claims and sign in
             var claims = new List<Claim>
-    {
-       new Claim(ClaimTypes.Name, legalName ?? email),
-       new Claim(ClaimTypes.Role, role),
-       new Claim("UserId", newUserId.ToString()),
-       new Claim("SupplierType", supplierType ?? "Unknown Supplier")
-    };
+            {
+                new Claim(ClaimTypes.Name, legalName ?? email),
+                new Claim(ClaimTypes.Role, role),
+                new Claim("UserId", newUserId.ToString()),
+                new Claim("SupplierType", supplierType ?? "Unknown Supplier")
+            };
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
@@ -150,6 +153,82 @@ namespace SABC_Phase2.Controllers
         {
             await HttpContext.SignOutAsync(); // or SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
             return RedirectToAction("Index", "OVRS_User");
+        }
+
+        //-----------------------------------------------------------------------------------------------------------------------------
+        [HttpGet]
+        public IActionResult AdminLogin()
+        {
+            return View("~/Views/Authentication/AdminLogin.cshtml");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AdminLogin(string email, string password)
+        {
+            var connString = _config.GetConnectionString("DefaultConn");
+
+            int? adminId = null;
+            string firstName = null, lastName = null, role = null, passwordHash = null;
+
+            using (var conn = new SqlConnection(connString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(
+                    "SELECT Id, Email, PasswordHash, FirstName, LastName, Role FROM dbo.Administrators WHERE Email = @Email", conn))
+                {
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            adminId = Convert.ToInt32(reader["Id"]);
+                            passwordHash = reader["PasswordHash"].ToString();
+                            firstName = reader["FirstName"].ToString();
+                            lastName = reader["LastName"].ToString();
+                            role = reader["Role"].ToString();
+                        }
+                    }
+                }
+            }
+
+            if (adminId == null)
+            {
+                ViewBag.Error = "Invalid email or password";
+                return View("~/Views/Authentication/AdminLogin.cshtml");
+            }
+
+            string hashedInputPassword = HashPassword(password);
+            if (passwordHash != hashedInputPassword)
+            {
+                ViewBag.Error = "Invalid email or password";
+                return View("~/Views/Authentication/AdminLogin.cshtml");
+            }
+
+            // Always sign out before signing in as a new user!
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, $"{firstName} {lastName}"),
+        new Claim(ClaimTypes.Role, "Administrator"),
+        new Claim("AdminId", adminId.ToString()),
+        new Claim("AdminEmail", email)
+    };
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+            return RedirectToAction("Index", "TenderAdmin");
+        }
+
+        private string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(password);
+                var hash = sha256.ComputeHash(bytes);
+                return Convert.ToBase64String(hash);
+            }
         }
     }
 }

@@ -4,15 +4,10 @@
     ViewData["BannerText"] = "Tenders";
     int pageSize = ViewBag.PageSize ?? 9;
     int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
-    int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
-    int emptyRows = pageSize - (Model?.Count ?? 0);
-
-    // Read the status filter from the query string, e.g. "open", "closed", "cancelled", "awarded"
-    var tenderStatusFilter = Context.Request.Query["status"].ToString().ToLower();
-    bool hasStatusFilter = !string.IsNullOrEmpty(tenderStatusFilter);
+    int emptyRows = pageSize - Model.Count;
 }
-
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
 <div class="breadcrumb-custom">
@@ -24,13 +19,13 @@
         <i class="fas fa-search"></i>
         <input type="text" class="search-input" placeholder="Search keyword" />
     </div>
-    <select class="filter-dropdown" id="tenderTypeDropdown">
-        <option value="" disabled selected hidden>Tender Type</option>
-        <option value="rfq">RFQ</option>
-        <option value="rfp">RFP</option>
-        <option value="rfi">RFI</option>
-        <option value="rfo">RFO</option>
+
+    <select class="filter-dropdown">
+        <option value="all">ALL</option>
+        <option value="open">Open</option>
+        <option value="closed">Closed</option>
     </select>
+
     <button class="refresh-btn">
         <i class="fas fa-sync-alt"></i>
     </button>
@@ -50,7 +45,6 @@
             <tbody>
                 @foreach (var tender in Model)
                 {
-                    // Always make the row clickable to details, regardless of status filter.
                     <tr class="clickable-row"
                         data-url="@Url.Action("View_Tender_Details", "OVRS_User", new { id = tender.Id })"
                         style="cursor:pointer;">
@@ -60,10 +54,10 @@
                         <td>@tender.Title</td>
                         <td>
                             <span class="tender-status
-                                    @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
-                                                                     tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
-                                                                     tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
-                                                                     tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                                @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                                                               tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                                                               tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                                                               tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
                             @tender.Status
                         </span>
                     </td>
@@ -80,24 +74,23 @@
         </table>
     </div>
 </div>
-
 @if (totalPages > 1)
 {
     <div class="pagination-container">
         <ul class="pagination">
             <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage - 1)@(hasStatusFilter ? $"&status={tenderStatusFilter}" : "")" aria-label="Previous">
+                <a class="page-link" href="?page=@(currentPage - 1)" aria-label="Previous">
                     <span aria-hidden="true">&laquo;</span>
                 </a>
             </li>
             @for (int i = 1; i <= totalPages; i++)
             {
                 <li class="page-item @(i == currentPage ? "active" : "")">
-                    <a class="page-link" href="?page=@i@(hasStatusFilter ? $"&status={tenderStatusFilter}" : "")">@i</a>
+                    <a class="page-link" href="?page=@i">@i</a>
                 </li>
             }
             <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage + 1)@(hasStatusFilter ? $"&status={tenderStatusFilter}" : "")" aria-label="Next">
+                <a class="page-link" href="?page=@(currentPage + 1)" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                 </a>
             </li>
@@ -106,6 +99,7 @@
 }
 
 <script>
+    // Make each row clickable and navigate to details
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.clickable-row').forEach(function(row) {
             row.addEventListener('click', function() {
@@ -116,13 +110,7 @@
     });
 </script>
 
-<!--
-    Styles for the OVRS User Index page.
-    These styles ensure a consistent, professional look and feel,
-    following enterprise UI/UX and accessibility best practices.
--->
 <style>
-    /* Container for table with margin, padding, and shadow for separation */
     .table-container {
         margin-top: 35px;
         margin-bottom: 120px;
@@ -133,7 +121,6 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
-    /* Table styling: spacing and font */
     .tender-table {
         width: 100%;
         border-collapse: separate;
@@ -141,7 +128,6 @@
         font-family: 'Segoe UI', sans-serif;
     }
 
-        /* Table header with background and rounded corners */
         .tender-table thead th {
             background-color: #f5c012;
             color: #fff;
@@ -151,8 +137,16 @@
             border-radius: 0;
         }
 
-            .tender-table thead th:nth-child(2), /* TITLES */
-            .tender-table thead th:nth-child(4) { /* DATE PUBLISHED */
+            .tender-table thead th:nth-child(3) {
+                white-space: nowrap;
+            }
+
+            .tender-table thead th:nth-child(4) {
+                white-space: nowrap;
+            }
+
+            .tender-table thead th:nth-child(2),
+            .tender-table thead th:nth-child(4) {
                 background-color: #333;
             }
 
@@ -162,7 +156,7 @@
 
             .tender-table thead th:last-child {
                 border-top-right-radius: 6px;
-                /* No background-color here */
+                background-color: #f5c012;
             }
 
             .tender-table thead th:nth-child(4) i {
@@ -170,7 +164,6 @@
                 font-size: 0.9rem;
             }
 
-        /* Table body rows and hover effect */
         .tender-table tbody tr {
             background-color: #f9f9f9;
             border-radius: 6px;
@@ -187,7 +180,6 @@
             text-align: center;
         }
 
-    /* Thumbnail image styling */
     .tender-thumbnail {
         width: 50px;
         height: 50px;
@@ -195,7 +187,6 @@
         object-fit: cover;
     }
 
-    /* Status and title cell styling */
     .tender-title {
         font-size: 0.95rem;
         color: #333;
@@ -206,12 +197,27 @@
         color: #00a651;
     }
 
-    /* Table row separation */
+    .edit-btn {
+        background-color: #fff;
+        border: 1px solid #00a651;
+        color: #00a651;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+        .edit-btn:hover {
+            background-color: #00a651;
+            color: #fff;
+        }
+
     .tender-table tbody tr:not(:last-child) {
         border-bottom: 2px solid #333;
     }
 
-    /* Action bar (search, filter, refresh) styling */
     .tender-action-bar {
         display: flex;
         align-items: center;
@@ -221,7 +227,6 @@
         flex-wrap: wrap;
     }
 
-    /* Search bar styling */
     .search-wrapper {
         position: relative;
         width: 250px;
@@ -251,7 +256,6 @@
             color: #ccc;
         }
 
-    /* Filter dropdown styling */
     .filter-dropdown {
         padding: 12px 36px 12px 12px;
         border: none;
@@ -268,7 +272,6 @@
         background-size: 10px;
     }
 
-    /* Refresh button styling */
     .refresh-btn {
         background-color: #333;
         color: #fff;
@@ -282,7 +285,32 @@
         justify-content: center;
     }
 
-    /* Breadcrumb style for navigation context */
+    .new-tender-btn {
+        margin-left: auto;
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        position: relative;
+        display: none; /* Hide for unauthenticated users */
+    }
+
+        .new-tender-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
     .breadcrumb-custom {
         color: #888;
         font-size: 1.00rem;
@@ -300,7 +328,6 @@
         font-weight: 500;
     }
 
-    /* Custom pagination styles */
     .custom-pagination {
         display: flex;
         justify-content: center;
@@ -318,7 +345,6 @@
         font-family: 'Segoe UI', sans-serif;
     }
 
-    /* Pagination button styling */
     .page-item span {
         cursor: pointer;
         font-size: 1rem;
@@ -356,24 +382,22 @@
         font-weight: 500;
     }
 
-    /* Status color coding for quick recognition */
     .tender-status-open {
-        color: #00a651;
+        color: #00a651; /* green */
     }
 
     .tender-status-closed {
-        color: #e74c3c;
+        color: #e74c3c; /* red */
     }
 
     .tender-status-awarded {
-        color: #f5c012;
+        color: #f5c012; /* yellow */
     }
 
     .tender-status-cancelled {
-        color: #00bfff;
+        color: #00bfff; /* light blue */
     }
 
-    /* Scrollbar and sticky headers for table usability */
     .table-scroll-container {
         max-height: 700px;
         overflow-y: auto;
@@ -398,7 +422,6 @@
             border-top: none;
         }
 
-    /* Custom scrollbar appearance */
     .table-scroll-container::-webkit-scrollbar {
         width: 8px;
     }
@@ -417,7 +440,6 @@
             background: #555;
         }
 
-    /* Pagination container styling */
     .pagination-container {
         display: flex;
         justify-content: center;
@@ -471,5 +493,3 @@
         border-radius: 50%;
     }
 </style>
-
-

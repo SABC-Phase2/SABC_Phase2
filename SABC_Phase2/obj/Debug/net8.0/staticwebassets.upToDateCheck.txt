@@ -1,3 +1,4 @@
+wwwroot\css\site.css
 wwwroot\favicon.ico
 wwwroot\js\site.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
@@ -45,6 +46,18 @@ wwwroot\lib\bootstrap\dist\js\bootstrap.js.map
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
 wwwroot\lib\bootstrap\LICENSE
+wwwroot\lib\Images\banner.png
+wwwroot\lib\Images\bg.png
+wwwroot\lib\Images\cropped_logoblack.png
+wwwroot\lib\Images\draft-responses-icon.png
+wwwroot\lib\Images\logo.png
+wwwroot\lib\Images\logoblack.png
+wwwroot\lib\Images\pdficon.png
+wwwroot\lib\Images\SABC Artwork 1.jpg
+wwwroot\lib\Images\sabc-logo.png
+wwwroot\lib\Images\submissions-icon.png
+wwwroot\lib\Images\Tick-Box.png
+wwwroot\lib\Images\X-Box.png
 wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.js
 wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.min.js
 wwwroot\lib\jquery-validation-unobtrusive\LICENSE.txt
@@ -57,15 +70,3 @@ wwwroot\lib\jquery\dist\jquery.js
 wwwroot\lib\jquery\dist\jquery.min.js
 wwwroot\lib\jquery\dist\jquery.min.map
 wwwroot\lib\jquery\LICENSE.txt
-wwwroot\css\site.css
-wwwroot\lib\Images\banner.png
-wwwroot\lib\Images\bg.png
-wwwroot\lib\Images\logo.png
-wwwroot\lib\Images\logoblack.png
-wwwroot\lib\Images\sabc-logo.png
-wwwroot\lib\Images\cropped_logoblack.png
-wwwroot\lib\Images\Tick-Box.png
-wwwroot\lib\Images\X-Box.png
-wwwroot\lib\Images\pdficon.png
-wwwroot\lib\Images\draft-responses-icon.png
-wwwroot\lib\Images\submissions-icon.png

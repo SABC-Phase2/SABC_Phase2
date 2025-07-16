@@ -7,10 +7,11 @@
     int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
     int emptyRows = pageSize - Model.Count;
+    var statusFilter = ViewBag.Status as string;
+    bool hasStatusFilter = !string.IsNullOrEmpty(statusFilter);
 }
+
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-
-
 
 <div class="breadcrumb-custom">
     <span class="breadcrumb-active">Home</span>
@@ -22,13 +23,15 @@
         <input type="text" class="search-input" placeholder="Search keyword" />
     </div>
 
-    <select class="filter-dropdown">
-        <option value="all">ALL</option>
-        <option value="open">Open</option>
-        <option value="closed">Closed</option>
+    <select class="filter-dropdown" onchange="location.href='?status=' + this.value;">
+        <option value="">ALL</option>
+        <option value="open" selected="@(statusFilter == "open" ? "selected" : null)">Open</option>
+        <option value="closed" selected="@(statusFilter == "closed" ? "selected" : null)">Closed</option>
+        <option value="cancelled" selected="@(statusFilter == "cancelled" ? "selected" : null)">Cancelled</option>
+        <option value="awarded" selected="@(statusFilter == "awarded" ? "selected" : null)">Awarded</option>
     </select>
 
-    <button class="refresh-btn">
+    <button class="refresh-btn" onclick="location.reload();">
         <i class="fas fa-sync-alt"></i>
     </button>
 
@@ -59,19 +62,19 @@
                         <td>@tender.Title</td>
                         <td>
                             <span class="tender-status
-                        @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
-                                                        tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
-                                                        tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
-                                                        tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
-                            @tender.Status
-                        </span>
-                    </td>
-                    <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
-                    <td>
-                        <a asp-controller="TenderAdmin" asp-action="Edit" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
-                    </td>
-                </tr>
-                                }
+                                @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                   tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                   tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                   tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                                @tender.Status
+                            </span>
+                        </td>
+                        <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            <a asp-controller="TenderAdmin" asp-action="Edit" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
+                        </td>
+                    </tr>
+                }
                 @for (int i = 0; i < emptyRows; i++)
                 {
                     <tr>
@@ -87,25 +90,24 @@
     <div class="pagination-container">
         <ul class="pagination">
             <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage - 1)" aria-label="Previous">
+                <a class="page-link" href="?page=@(currentPage - 1)@(hasStatusFilter ? $"&status={statusFilter}" : "")" aria-label="Previous">
                     <span aria-hidden="true">&laquo;</span>
                 </a>
             </li>
             @for (int i = 1; i <= totalPages; i++)
             {
                 <li class="page-item @(i == currentPage ? "active" : "")">
-                    <a class="page-link" href="?page=@i">@i</a>
+                    <a class="page-link" href="?page=@i@(hasStatusFilter ? $"&status={statusFilter}" : "")">@i</a>
                 </li>
             }
             <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage + 1)" aria-label="Next">
+                <a class="page-link" href="?page=@(currentPage + 1)@(hasStatusFilter ? $"&status={statusFilter}" : "")" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                 </a>
             </li>
         </ul>
     </div>
 }
-
 <style>
     .table-container {
         margin-top: 35px;

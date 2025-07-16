@@ -1,307 +1,447 @@
-﻿<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+﻿@* Sidebar Razor View for OVRS_User and Administrator roles *@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <div class="sidebar expanded" id="sidebar">
     <div class="menu-toggle" onclick="toggleSidebar()">
         <i class="fas fa-bars"></i>
         <span class="label">Hide Menu</span>
     </div>
+    <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
+        <i class="fas fa-user-circle fa-2x"></i>
+        <div class="info">
+            @if (User.Identity.IsAuthenticated)
+            {
+                <span class="name">@User.Identity.Name</span>
+                <br />
+                <span class="supplier-type">@User.FindFirst("SupplierType")?.Value</span>
+            }
+            else
+            {
+                <a href="@Url.Action("Login", "Account")" style="color:inherit;text-decoration:none;">
+                    <span class="name">Sign In / Register</span>
+                </a>
+            }
+        </div>
 
-<div class="profile profile-dropdown" id="profileDropdown">
-    <i class="fas fa-user-circle fa-3x"></i>
-    <div class="info">
         @if (User.Identity.IsAuthenticated)
         {
-            <span class="name">@User.Identity.Name</span>
-            <br />
-            <span class="supplier-type">@User.FindFirst("SupplierType")?.Value</span>
-        }
-        else
-        {
-            <a href="@Url.Action("Login", "Account")" style="color:inherit;text-decoration:none;">
-                <span class="name">Sign In / Register</span>
-            </a>
+            <span class="profile-caret">
+                <i class="fas fa-chevron-down"></i>
+            </span>
+            <div class="profile-dropdown-menu" id="profileDropdownMenu">
+                <a href="@Url.Action("Profile", "Account")" class="dropdown-item">
+                    <i class="fas fa-id-badge fa-2x"></i> View Profile
+                </a>
+                <form action="@Url.Action("Logout", "Account")" method="post" style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="dropdown-item logout">
+                        <i class="fas fa-sign-out-alt fa-2x"></i> Logout
+                    </button>
+                </form>
+            </div>
         }
     </div>
-    @if (User.Identity.IsAuthenticated)
-    {
-        <span class="profile-caret" onclick="toggleProfileDropdown(event)">
-            <i class="fas fa-chevron-down"></i>
-        </span>
-        <div class="profile-dropdown-menu" id="profileDropdownMenu">
-            <a href="@Url.Action("Profile", "Account")" class="dropdown-item">
-                <i class="fas fa-id-badge"></i> View Profile
-            </a>
-            <form action="@Url.Action("Logout", "Account")" method="post" style="margin:0;">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="dropdown-item" style="background:none;border:none;color:#f00;cursor:pointer;">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </form>
-        </div>
-    }
-</div>
     <div class="menu">
-        @if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
+        @if (User.Identity.IsAuthenticated && User.IsInRole("Administrator"))
         {
-            <!-- Only show these to OVRS_User when authenticated -->
+            @* ADMINISTRATOR MENU *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
-                <i class="fas fa-users"></i>
+                <i class="fas fa-users fa-2x"></i>
                 <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
-                    Tenders
+                    Tenders Panel
                 </a>
                 <span class="chevron-toggle">
                     <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
                 </span>
             </div>
-
             <div class="submenu visible">
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="open" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Open Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="closed" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Closed Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="cancelled" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Cancelled Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
-                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                        Awarded Tenders
-                    </a>
-                </div>
-            </div>
-
-            <div class="menu-section">
-                <i class="fas fa-handshake" style="color: white;"></i>
-                <span class="label">Company Details</span>
-            </div>
-            <div class="menu-section">
-                <i class="fas fa-file-alt" style="color: white;"></i>
-                <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    My Documents
-                </a>
-            </div>
-            <div class="menu-section">
-                <i class="fas fa-question"></i>
-                <span class="label">Help</span>
-            </div>
-        }
-        else if (!User.Identity.IsAuthenticated)
-        {
-            <!-- Show ALL tabs when NOT authenticated -->
-            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
-                <i class="fas fa-users"></i>
-                <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
-                    Tenders
-                </a>
-                <span class="chevron-toggle">
-                    <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
-                </span>
-            </div>
-
-            <div class="submenu visible">
-                <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
-                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                        Open Tenders
-                    </a>
-                </div>
-                <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
-                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                        Closed Tenders
-                    </a>
-                </div>
-                <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
-                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                        Cancelled Tenders
-                    </a>
-                </div>
-                <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="awarded" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Awarded Tenders
                     </a>
                 </div>
             </div>
             <div class="menu-section">
-                <i class="fas fa-file-alt"></i>
+                <i class="fas fa-file-alt fa-2x"></i>
                 <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Scheduled Tenders
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-times"></i>
+                <i class="fas fa-times fa-2x"></i>
                 <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Drafts
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-download"></i>
+                <i class="fas fa-download fa-2x"></i>
                 <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Reports
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-handshake" style="color: white;"></i>
+                <i class="fas fa-question fa-2x"></i>
+                <span class="label">Help</span>
+            </div>
+        }
+        else if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
+        {
+            @* OVRS_USER MENU *@
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+                <i class="fas fa-users fa-2x"></i>
+                <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
+                    Tender Panel
+                </a>
+
+                <span class="chevron-toggle">
+                    <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
+                </span>
+            </div>
+            <div class="submenu visible">
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Open Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Closed Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Cancelled Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Awarded Tenders
+                    </a>
+                </div>
+            </div>
+            <div class="menu-section">
+                <i class="fas fa-handshake fa-2x" style="color: white;"></i>
                 <span class="label">Company Details</span>
             </div>
             <div class="menu-section">
-                <i class="fas fa-file-alt" style="color: white;"></i>
+                <i class="fas fa-file-alt fa-2x" style="color: white;"></i>
                 <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     My Documents
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-question"></i>
+                <i class="fas fa-question fa-2x"></i>
                 <span class="label">Help</span>
             </div>
         }
-        <!-- If you want other roles to see no menu or a different menu, add more else if blocks. -->
+        else
+        {
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+                <i class="fas fa-users fa-2x"></i>
+                <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
+                    Tenders
+                </a>
+                <span class="chevron-toggle">
+                    <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
+                </span>
+            </div>
+            <div class="submenu visible">
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Open Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Closed Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Cancelled Tenders
+                    </a>
+                </div>
+                <div class="menu-section sub-item">
+                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Awarded Tenders
+                    </a>
+                </div>
+            </div>
+
+        }
     </div>
 </div>
 
 <script>
-    function toggleSidebar() {
-      const sidebar = document.getElementById("sidebar");
-      sidebar.classList.toggle("collapsed");
-      const menuIcon = sidebar.querySelector(".menu-toggle i.fas.fa-bars");
-      if (menuIcon) {
-        menuIcon.classList.toggle("rotated", sidebar.classList.contains("collapsed"));
-      }
-    }
-    function toggleSubmenu(element) {
-        const isLinkClick = event.target.closest('a');
-        if (isLinkClick) return; // Don't toggle submenu if clicking the link
 
-        const submenu = element.nextElementSibling;
-        submenu.classList.toggle("visible");
+        function toggleSidebar() {
 
-        // Find the chevron toggle span
-        const chevronToggle = element.querySelector('.chevron-toggle');
-        if (submenu.classList.contains("visible")) {
-            // Show chevron if submenu is visible
-            chevronToggle.style.display = "inline";
-            const icon = chevronToggle.querySelector(".submenu-icon");
-            if (icon) icon.classList.add("rotated");
-        } else {
-            // Hide chevron if submenu is hidden
-            chevronToggle.style.display = "none";
-        }
-    }
+          const sidebar = document.getElementById("sidebar");
 
-    // On page load, set chevron visibility based on submenu state
-    document.addEventListener("DOMContentLoaded", function () {
-        var submenuTrigger = document.querySelector('.menu-section.has-submenu');
-        var submenu = submenuTrigger && submenuTrigger.nextElementSibling;
-        var chevronToggle = submenuTrigger && submenuTrigger.querySelector('.chevron-toggle');
+          sidebar.classList.toggle("collapsed");
 
-        if (submenu && chevronToggle) {
-            if (submenu.classList.contains('visible')) {
-                chevronToggle.style.display = "inline";
-                const icon = chevronToggle.querySelector(".submenu-icon");
-                if (icon) icon.classList.add("rotated");
-            } else {
-                chevronToggle.style.display = "none";
-            }
+          const menuIcon = sidebar.querySelector(".menu-toggle i.fas.fa-bars");
+
+          if (menuIcon) {
+
+            menuIcon.classList.toggle("rotated", sidebar.classList.contains("collapsed"));
+
+          }
+
         }
 
-        // Highlight the correct menu item based on URL
-        document.querySelectorAll('.menu-section').forEach(function (el) {
-            el.classList.remove('active');
-        });
+        function toggleSubmenu(event, element) {
 
-        var currentPath = window.location.pathname.toLowerCase();
-        var currentSearch = window.location.search.toLowerCase();
+            const isLinkClick = event.target.closest('a');
 
-        var foundActive = false;
-        document.querySelectorAll('.menu-section.sub-item a').forEach(function(link) {
-            if (link.pathname.toLowerCase() === currentPath) {
-                var linkSearch = link.search.toLowerCase();
-                if (linkSearch && currentSearch && linkSearch === currentSearch) {
-                    link.parentElement.classList.add('active');
-                    foundActive = true;
+            if (isLinkClick) return; // Don't toggle submenu if clicking the link
+
+            // Close all other submenus
+
+            document.querySelectorAll('.submenu').forEach(function (submenu) {
+
+                if (submenu !== element.nextElementSibling) {
+
+                    submenu.classList.remove('visible');
+
+                    const chevron = submenu.previousElementSibling.querySelector('.chevron-toggle');
+
+                    const icon = chevron?.querySelector(".submenu-icon");
+
+                    if (chevron) chevron.style.display = "inline";
+
+                    if (icon) icon.classList.remove("rotated");
+
                 }
-            }
-        });
-        if (!foundActive) {
-            document.querySelectorAll('.menu-section:not(.sub-item) a').forEach(function(link) {
-                if (link.pathname && link.pathname.toLowerCase() === currentPath) {
-                    link.parentElement.classList.add('active');
-                    foundActive = true;
-                }
+
             });
+
+            const submenu = element.nextElementSibling;
+
+            submenu.classList.toggle("visible");
+
+            const chevronToggle = element.querySelector('.chevron-toggle');
+
+            const icon = chevronToggle?.querySelector(".submenu-icon");
+
+            if (submenu.classList.contains("visible")) {
+
+                chevronToggle.style.display = "inline";
+
+                icon?.classList.add("rotated");
+
+            } else {
+
+                chevronToggle.style.display = "inline";
+
+                icon?.classList.remove("rotated");
+
+            }
+
         }
-        if (!foundActive) {
-            var helpSection = document.querySelector('.menu-section:last-child');
-            if (helpSection) helpSection.classList.add('active');
+
+        // On page load, set chevron visibility based on submenu state
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            var submenuTrigger = document.querySelector('.menu-section.has-submenu');
+
+            var submenu = submenuTrigger && submenuTrigger.nextElementSibling;
+
+            var chevronToggle = submenuTrigger && submenuTrigger.querySelector('.chevron-toggle');
+
+            if (submenu && chevronToggle) {
+
+                if (submenu.classList.contains('visible')) {
+
+                    chevronToggle.style.display = "inline";
+
+                    const icon = chevronToggle.querySelector(".submenu-icon");
+
+                    if (icon) icon.classList.add("rotated");
+
+                } else {
+
+                    chevronToggle.style.display = "none";
+
+                }
+
+            }
+
+            // Highlight the correct menu item based on URL
+
+            document.querySelectorAll('.menu-section').forEach(function (el) {
+
+                el.classList.remove('active');
+
+            });
+
+            var currentPath = window.location.pathname.toLowerCase();
+
+            var currentSearch = window.location.search.toLowerCase();
+
+            var foundActive = false;
+
+            document.querySelectorAll('.menu-section.sub-item a').forEach(function(link) {
+
+                if (link.pathname.toLowerCase() === currentPath) {
+
+                    var linkSearch = link.search.toLowerCase();
+
+                    if (linkSearch && currentSearch && linkSearch === currentSearch) {
+
+                        link.parentElement.classList.add('active');
+
+                        foundActive = true;
+
+                    }
+
+                }
+
+            });
+
+            if (!foundActive) {
+
+                document.querySelectorAll('.menu-section:not(.sub-item) a').forEach(function(link) {
+
+                    if (link.pathname && link.pathname.toLowerCase() === currentPath) {
+
+                        link.parentElement.classList.add('active');
+
+                        foundActive = true;
+
+                    }
+
+                });
+
+            }
+
+        });
+
+        function adjustSidebarHeight() {
+
+            const headerHeight = 120; // Same as .sidebar top
+
+            const footer = document.querySelector('footer');
+
+            const sidebar = document.querySelector('.sidebar');
+
+            if (footer && sidebar) {
+
+                const footerRect = footer.getBoundingClientRect();
+
+                const footerTop = footerRect.top + window.scrollY;
+
+                const viewportHeight = window.innerHeight;
+
+                const scrollY = window.scrollY;
+
+                const maxHeight = footerTop - scrollY - headerHeight;
+
+                sidebar.style.height = `${Math.max(0, maxHeight)}px`;
+
+            }
+
         }
+
+
+        @* toggleProfileDropdown toggle script *@
+
+        function toggleProfileDropdown(e) {
+
+            e.stopPropagation();
+
+            const profile = document.getElementById('profileDropdown');
+
+            const caret = profile.querySelector('.profile-caret');
+
+            const menu = document.getElementById('profileDropdownMenu');
+
+            const isOpen = profile.classList.contains('open');
+
+            profile.classList.toggle('open', !isOpen);
+
+            if (caret) caret.classList.toggle('open', !isOpen);
+
+            if (menu) menu.style.display = !isOpen ? 'flex' : 'none';
+
+        }
+
+    // Close dropdown when clicking outside
+
+    document.addEventListener('click', function (event) {
+
+        const profile = document.getElementById('profileDropdown');
+
+        if (profile && profile.classList.contains('open')) {
+
+            if (!profile.contains(event.target)) {
+
+                profile.classList.remove('open');
+
+                const caret = profile.querySelector('.profile-caret');
+
+                if (caret) caret.classList.remove('open');
+
+                document.getElementById('profileDropdownMenu').style.display = 'none';
+
+            }
+
+        }
+
     });
 
-    function adjustSidebarHeight() {
-        const headerHeight = 120; // Same as .sidebar top
-        const footer = document.querySelector('footer');
-        const sidebar = document.querySelector('.sidebar');
+        window.addEventListener('scroll', adjustSidebarHeight);
 
-        if (footer && sidebar) {
-            const footerRect = footer.getBoundingClientRect();
-            const footerTop = footerRect.top + window.scrollY;
-            const viewportHeight = window.innerHeight;
-            const scrollY = window.scrollY;
-            const maxHeight = footerTop - scrollY - headerHeight;
-            sidebar.style.height = `${Math.max(0, maxHeight)}px`;
-        }
-    }
+        window.addEventListener('resize', adjustSidebarHeight);
 
-
-
-    @* toggleProfileDropdown toggle script *@
-    function toggleProfileDropdown(e) {
-    e.stopPropagation();
-    const profile = document.getElementById('profileDropdown');
-    const caret = profile.querySelector('.profile-caret');
-    profile.classList.toggle('open');
-    if (caret) caret.classList.toggle('open');
-    document.getElementById('profileDropdownMenu').style.display = profile.classList.contains('open') ? 'flex' : 'none';
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function (event) {
-    const profile = document.getElementById('profileDropdown');
-    if (profile && profile.classList.contains('open')) {
-        if (!profile.contains(event.target)) {
-            profile.classList.remove('open');
-            const caret = profile.querySelector('.profile-caret');
-            if (caret) caret.classList.remove('open');
-            document.getElementById('profileDropdownMenu').style.display = 'none';
-        }
-    }
-});
-
-    window.addEventListener('scroll', adjustSidebarHeight);
-    window.addEventListener('resize', adjustSidebarHeight);
-    window.addEventListener('load', adjustSidebarHeight);
+        window.addEventListener('load', adjustSidebarHeight);
 </script>
+
+
+
 <style>
+
+
     .sidebar {
         background-color: #333;
         color: #fff;
@@ -313,7 +453,7 @@ document.addEventListener('click', function (event) {
         padding: 10px;
         padding-left: 10px;
         transition: width 0.3s ease;
-        overflow: auto;
+        overflow: hidden;
         overflow-x: hidden;
         z-index: 9998;
     }
@@ -322,7 +462,7 @@ document.addEventListener('click', function (event) {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 18px;
     }
 
     .sidebar.collapsed {
@@ -387,7 +527,12 @@ document.addEventListener('click', function (event) {
         display: flex;
         align-items: center;
         transition: background 0.2s, color 0.2s;
+        gap: 0; /* Remove default gap, we'll set it for main items only */
     }
+
+        .menu-section:not(.sub-item) .label {
+            margin-left: 28px; /* More space between icon and label for main nav */
+        }
 
         .menu-section:hover {
             background-color: #444;
@@ -399,8 +544,10 @@ document.addEventListener('click', function (event) {
         }
 
         .menu-section i {
-            width: 30px;
+            width: 50px; /* Increased from 30px for better alignment */
+
             text-align: center;
+            min-width: 50px;
         }
 
     .submenu {
@@ -429,10 +576,17 @@ document.addEventListener('click', function (event) {
     }
 
     /* Style sub-items same as menu-section but indented */
+
     .menu-section.sub-item {
         padding-left: 70px;
         font-size: 14px;
+        margin-top: 0;
+        margin-bottom: 0;
     }
+
+        .menu-section.sub-item .label {
+            margin-left: 0; /* No extra gap for submenu items */
+        }
 
         .menu-section.sub-item:hover {
             background-color: #444;
@@ -459,7 +613,28 @@ document.addEventListener('click', function (event) {
     .label {
         display: inline-block;
         white-space: nowrap;
+        margin-left: 18px;
     }
+
+    .sidebar.collapsed .menu-section {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        justify-content: center;
+    }
+
+        .sidebar.collapsed .menu-section i {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            text-align: center;
+        }
+
+        .sidebar.collapsed .menu-section .label {
+            display: none !important;
+        }
+
+        .sidebar.collapsed .menu-section.sub-item {
+            padding-left: 0 !important;
+        }
 
     .sidebar.collapsed {
         width: 70px;
@@ -484,55 +659,111 @@ document.addEventListener('click', function (event) {
     }
 
     @*---------------------------------------------
+
     Prfile section*@
+
+    .profile-dropdown.open .supplier-type {
+        color: black;
+    }
+
+    .profile-dropdown-menu .dropdown-item i {
+        color: white;
+        font-size: 1.8em;
+    }
+
+    .profile-dropdown.open .profile-dropdown-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .profile-dropdown.open {
+        background-color: #888888; /* Grey like in image */
+
+        border-radius: 10px;
+    }
+
     .profile-dropdown {
-    position: relative;
-    cursor: pointer;
-    z-index: 10001;
-}
-.profile-caret {
-    margin-left: 10px;
-    font-size: 1.2em;
-    cursor: pointer;
-    color: #ccc;
-    transition: transform 0.2s;
-}
-.profile-caret.open {
-    transform: rotate(180deg);
-}
-.profile-dropdown-menu {
-    display: none;
-    flex-direction: column;
-    position: absolute;
-    top: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 170px;
-    background: #222;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    border-radius: 8px;
-    padding: 7px 0;
-    z-index: 10002;
-    transition: all 0.2s;
-}
-.profile-dropdown-menu .dropdown-item {
-    color: #fff;
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    border: none;
-    background: none;
-    cursor: pointer;
-    width: 100%;
-    font-size: 15px;
-    gap: 8px;
-}
-.profile-dropdown-menu .dropdown-item:hover {
-    background: #444;
-    color: #fbbd08;
-}
-.profile-dropdown.open .profile-dropdown-menu {
-    display: flex;
-}
+        position: relative;
+        cursor: pointer;
+        z-index: 10001;
+    }
+
+    .profile-caret {
+        margin-left: 10px;
+        font-size: 1.2em;
+        cursor: pointer;
+        color: #ccc;
+        transition: transform 0.2s;
+    }
+
+
+        /* Caret styling for rotation */
+
+        .profile-caret.open {
+            transform: rotate(180deg);
+        }
+
+    /* Adjust dropdown width to match profile nav */
+
+    .profile-dropdown-menu {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        margin-top: 6px;
+        left: 0;
+        width: 100%;
+        background-color: #888888; /* Light grey background like image */
+
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        border-radius: 10px;
+        padding: 8px 0;
+        z-index: 10002;
+    }
+
+        /* Style each dropdown item */
+
+        .profile-dropdown-menu .dropdown-item {
+            color: white;
+            padding: 10px 30px 10px 40px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            border: none;
+            background: none;
+            cursor: pointer;
+            width: 100%;
+            font-size: 15px;
+            gap: 20px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+            /* Hover style for all except logout */
+
+            .profile-dropdown-menu .dropdown-item:hover:not(.logout) {
+                background: #bbbbbb; /* slightly darker grey on hover */
+            }
+
+            .profile-dropdown-menu .dropdown-item.logout {
+                background-color: #fbbd08;
+                font-weight: bold;
+                margin-top: 12px;
+                border-top: 1px solid #aaa; /* Subtle divider line */
+
+                padding-top: 12px; /* Extra padding to offset the line */
+
+                border-radius: 10px;
+            }
+
+                .profile-dropdown-menu .dropdown-item.logout:hover {
+                    background-color: #e0a800; /* Darker yellow hover */
+                }
+
+    .profile-dropdown.open .profile-dropdown-menu {
+        display: flex;
+    }
+</style>
+
 </style>

@@ -2,11 +2,16 @@
 
 @{
     ViewData["Title"] = "Tender Details";
+    bool isAuthenticated = User.Identity.IsAuthenticated;
+    var tenderStatus = Model.Status?.ToLower() ?? "";
+    bool isOpen = tenderStatus == "open tender";
+    bool isClosed = tenderStatus == "closed tender";
+    bool isAwarded = tenderStatus == "awarded tender";
+    bool isCancelled = tenderStatus == "cancelled tender";
+    bool showGreyButton = isClosed || isAwarded || isCancelled;
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-
-
 
 <!-- Breadcrumb -->
 <div class="breadcrumb-custom">
@@ -81,16 +86,138 @@
             </table>
         </div>
     }
-   
-</div>
-<!-- Respond Button -->
-<div class="tender-respond-row">
-    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
 </div>
 
+<!-- Respond Button always visible, but may be disabled/greyed out -->
+<div class="tender-respond-row">
+    @if (isOpen)
+    {
+        @if (isAuthenticated)
+        {
+            <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+        }
+        else
+        {
+            <button type="button" class="respond-btn" onclick="showLoginModal()">Respond</button>
+        }
+    }
+    else if (showGreyButton)
+    {
+        <button type="button" class="respond-btn disabled-respond" disabled title="You cannot respond to this tender.">Respond</button>
+    }
+</div>
+
+<!-- Modal Popup -->
+<div id="loginModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeLoginModal()">&times;</span>
+        <h2 style="color:#e74c3c;">Error</h2>
+        <p>Please login in order to respond to this tender.</p>
+        <a href="@Url.Action("Login", "Account")" class="modal-btn">Login / Register</a>
+    </div>
+</div>
+
+<script>
+    // Script to handle modal popup
+    function showLoginModal() {
+        document.getElementById("loginModal").style.display = "block";
+    }
+    function closeLoginModal() {
+        document.getElementById("loginModal").style.display = "none";
+    }
+    // Close modal when clicking outside content
+    window.onclick = function(event) {
+        var modal = document.getElementById("loginModal");
+        if (event.target == modal) modal.style.display = "none";
+    }
+</script>
 
 <style>
+    /* ------------------------------------------------------ */
+    /* Modal Popup styles */
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
 
+    .modal-content {
+        background-color: #fff;
+        margin: 12% auto;
+        padding: 30px;
+        border: 1px solid #888;
+        width: 340px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        text-align: center;
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        cursor: pointer;
+    }
+
+    .modal-btn {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 10px 32px;
+        background-color: #f5c012;
+        color: #222;
+        font-weight: bold;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 1.05em;
+    }
+
+        .modal-btn:hover {
+            background-color: #fbbd08;
+            color: #000;
+        }
+
+/* ------------------------------------------------------------------------- */
+        /* Respond button greyed out for closed, canceled and awarded content */
+    .respond-btn.disabled-respond,
+    .respond-btn:disabled {
+        background-color: #aaa !important;
+        color: #fff !important;
+        cursor: not-allowed !important;
+        border: none !important;
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .respond-btn {
+        color: #222;
+        border: none;
+        border-radius: 6px;
+        padding: 12px 32px;
+        font-size: 1.05em;
+        font-weight: bold;
+        text-decoration: none;
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        margin-top: 24px;
+        display: inline-block;
+    }
+
+   
+
+ /* ------------------------------------------------------------------------------------ */
+
+
+
+ /* ------------------------------------------------------------------------------------ */
 
     .upload-label-underline {
         width: 100%;
