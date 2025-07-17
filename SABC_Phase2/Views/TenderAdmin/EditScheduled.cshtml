@@ -191,139 +191,132 @@
 
 @section Scripts {
     <script>
+                document.addEventListener('DOMContentLoaded', function () {
+            // -------- Tab logic (same as create/edit) --------
+            const tabs = ['details', 'documents'];
+            let currentTab = 'details';
 
-             // On page load, set schedule fields visibility based on checkbox
-        document.addEventListener('DOMContentLoaded', function () {
-            const checkbox = document.getElementById('IsScheduled');
+            window.showTab = function(tabName) {
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                document.getElementById('tab' + capitalize(tabName)).classList.add('active');
+                currentTab = tabName;
+            };
+
+            function capitalize(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            // Initial tab setup
+            showTab(currentTab);
+
+            // Schedule toggle logic
+            const scheduleToggle = document.getElementById('IsScheduled');
             const scheduleFields = document.getElementById('scheduleFields');
-            scheduleFields.classList.toggle('show', checkbox.checked);
-
-            checkbox.addEventListener('change', function () {
-                scheduleFields.classList.toggle('show', checkbox.checked);
-            });
-        });
-
-        function showTab(tab) {
-            document.getElementById("details").classList.remove("active");
-            document.getElementById("documents").classList.remove("active");
-            document.getElementById("tabDetails").classList.remove("active");
-            document.getElementById("tabDocuments").classList.remove("active");
-
-            document.getElementById(tab).classList.add("active");
-            document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
-        }
-
-        const fileInput = document.getElementById("UploadedFiles");
-        const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
-        const uploadInputGroup = document.getElementById("uploadInputGroup");
-        const form = document.querySelector("form");
-
-        const storedFiles = [];
-
-        fileInput.addEventListener("change", function () {
-            for (const file of fileInput.files) {
-                if (!file.name.endsWith(".pdf")) {
-                    alert(`${file.name} is not a PDF.`);
-                    continue;
+            if (scheduleToggle && scheduleFields) {
+                function updateScheduleFields() {
+                    if (scheduleToggle.checked) {
+                        scheduleFields.classList.add('show');
+                    } else {
+                        scheduleFields.classList.remove('show');
+                        // Optionally clear values if not scheduled
+                        document.getElementById('ScheduledDate').value = "";
+                        document.getElementById('ScheduledTime').value = "";
+                    }
                 }
-                if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                    continue;
+                scheduleToggle.addEventListener('change', updateScheduleFields);
+                // Initial set on page load
+                updateScheduleFields();
+            }
+
+            // PDF upload logic
+            const fileInput = document.getElementById('UploadedFiles');
+            const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
+
+            if (fileInput) {
+                fileInput.addEventListener('change', function () {
+                    // Remove any previous new doc previews
+                    document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+                    const files = fileInput.files;
+                    if (files.length > 0) {
+                        Array.from(files).forEach(function (file) {
+                            if (file.type !== "application/pdf") {
+                                alert("Only PDF files are allowed.");
+                                fileInput.value = "";
+                                return;
+                            }
+                            const entryDiv = document.createElement('div');
+                            entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                            entryDiv.innerHTML = `<div>
+                                <strong>${file.name}</strong>
+                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                                    <span>Selected for upload</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
+                            entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                                entryDiv.remove();
+                                fileInput.value = "";
+                            });
+                            uploadedFilesContainer.appendChild(entryDiv);
+                        });
+                    }
+                });
+            }
+
+            // Save Changes/Submit logic
+            window.submitForm = function() {
+                var form = document.querySelector('form[asp-action="EditScheduled"]');
+                if (!form) form = document.querySelector('form[action*="EditScheduled"]');
+                if (!form) {
+                    alert("Form not found!");
+                    return;
                 }
-                const fileInfo = {
-                    file: file,
-                    uploadedAt: new Date()
-                };
-                storedFiles.push(fileInfo);
-            }
-            renderUploadedFiles();
-            fileInput.value = "";
-        });
+                var formData = new FormData(form);
 
-        function renderUploadedFiles() {
-            const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
-            uploadedFilesContainer.innerHTML = "";
-            existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
-            storedFiles.forEach((fileInfo, index) => {
-                const { file, uploadedAt } = fileInfo;
-                const fileRow = document.createElement("div");
-                fileRow.className = `uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 ${index % 2 === 0 ? 'bg-light' : 'bg-secondary text-white'}`;
-                const fileDetails = document.createElement("div");
-                const fileName = document.createElement("strong");
-                fileName.textContent = file.name;
-                const fileMeta = document.createElement("div");
-                fileMeta.className = "text-muted small mt-1";
-                fileMeta.style.fontSize = "0.75rem";
-                const size = formatFileSize(file.size);
-                const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                fileMeta.textContent = `${size} • Uploaded at ${time}`;
-                fileDetails.appendChild(fileName);
-                fileDetails.appendChild(fileMeta);
-                const actions = document.createElement("div");
-                actions.className = "uploaded-file-actions d-flex";
-                const viewBtn = document.createElement("button");
-                viewBtn.type = "button";
-                viewBtn.className = "btn btn-outline-primary btn-sm me-2";
-                viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                viewBtn.onclick = () => {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, "_blank");
-                };
-                const deleteBtn = document.createElement("button");
-                deleteBtn.type = "button";
-                deleteBtn.className = "btn btn-outline-danger btn-sm";
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.onclick = () => {
-                    storedFiles.splice(index, 1);
-                    renderUploadedFiles();
-                };
-                actions.appendChild(viewBtn);
-                actions.appendChild(deleteBtn);
-                fileRow.appendChild(fileDetails);
-                fileRow.appendChild(actions);
-                uploadedFilesContainer.appendChild(fileRow);
-            });
-            if (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3")) {
-                uploadInputGroup.classList.add("mt-3");
-            }
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return `${bytes} B`;
-            else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-            else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-        }
-
-        function submitForm() {
-            const continueBtn = document.getElementById("continueBtn");
-            if (continueBtn.disabled) return;
-            continueBtn.disabled = true;
-            continueBtn.innerHTML = 'Saving... <span class="arrow-icon"></span>';
-
-            const formData = new FormData(form);
-            storedFiles.forEach(fileInfo => {
-                formData.append("UploadedFiles", fileInfo.file);
-            });
-
-            fetch(form.action, {
-                method: "POST",
-                body: formData
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
+                // If scheduled, ensure scheduled date/time is provided
+                if (scheduleToggle && scheduleToggle.checked) {
+                    var dateVal = document.getElementById('ScheduledDate').value;
+                    var timeVal = document.getElementById('ScheduledTime').value;
+                    if (!dateVal || !timeVal) {
+                        alert("Please specify both the scheduled date and time.");
+                        showTab('details');
+                        if (!dateVal) document.getElementById('ScheduledDate').focus();
+                        else document.getElementById('ScheduledTime').focus();
+                        return;
+                    }
+                    formData.set('IsScheduled', 'true'); // checkbox
                 } else {
-                    return response.text().then(html => {
-                        document.body.innerHTML = html;
-                    });
+                    formData.delete('IsScheduled');
+                    formData.delete('ScheduledDate');
+                    formData.delete('ScheduledTime');
                 }
-            })
-            .catch(error => {
-                alert("Error saving changes");
-                console.error(error);
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-            });
-        }
+
+                // Submit the form via AJAX
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        // If ModelState invalid, replace body with returned HTML
+                        response.text().then(html => {
+                            document.body.innerHTML = html;
+                            window.scrollTo(0, 0);
+                        });
+                    }
+                })
+                .catch(error => {
+                    alert("An error occurred while saving changes.");
+                });
+            };
+        });
     </script>
 }
 

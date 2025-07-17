@@ -197,214 +197,137 @@
 
 @section Scripts {
     <script>
-        /**
-         * Handles tab switching between Details and Documents,
-         * Sets the appropriate tab content and styles.
-         */
-        function showTab(tab) {
-            document.getElementById("details").classList.remove("active");
-            document.getElementById("documents").classList.remove("active");
-            document.getElementById("tabDetails").classList.remove("active");
-            document.getElementById("tabDocuments").classList.remove("active");
+          document.addEventListener('DOMContentLoaded', function () {
+            // -------- Tab logic (same as create) --------
+            const tabs = ['details', 'documents'];
+            let currentTab = 'details';
 
-            document.getElementById(tab).classList.add("active");
-            document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
-        }
-
-        /**
-         * Handles toggling of the scheduled tender fields.
-         * (Schedule not shown in this form, but handled for extensibility.)
-         */
-        document.getElementById('scheduleToggle')?.addEventListener('click', function() {
-            const checkbox = document.getElementById('IsScheduled');
-            const scheduleFields = document.getElementById('scheduleFields');
-            checkbox.value = checkbox.value === 'false' ? 'true' : 'false';
-            scheduleFields.classList.toggle('show');
-        });
-
-        // File input and upload logic for new PDFs
-        const fileInput = document.getElementById("UploadedFiles");
-        const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
-        const uploadInputGroup = document.getElementById("uploadInputGroup");
-        const form = document.querySelector("form");
-        const storedFiles = []; // Array to hold client-side PDF uploads before submission
-
-        /**
-         * Handles PDF file selection and rendering to the list.
-         * Prevents duplicate files and ensures only PDFs are accepted.
-         */
-        fileInput.addEventListener("change", function () {
-            for (const file of fileInput.files) {
-                if (!file.name.endsWith(".pdf")) {
-                    alert(`${file.name} is not a PDF.`);
-                    continue;
-                }
-                // Prevent duplicates based on name and size
-                if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                    continue;
-                }
-                const fileInfo = {
-                    file: file,
-                    uploadedAt: new Date()
-                };
-                storedFiles.push(fileInfo);
-            }
-            renderUploadedFiles();
-            fileInput.value = ""; // Reset input for next upload
-        });
-
-        /**
-         * Renders both existing and newly selected files in the UI.
-         */
-        function renderUploadedFiles() {
-            // Preserve server-side existing docs
-            const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
-            uploadedFilesContainer.innerHTML = "";
-            existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
-            // Render newly added PDFs
-            storedFiles.forEach((fileInfo, index) => {
-                const { file, uploadedAt } = fileInfo;
-                const fileRow = document.createElement("div");
-                fileRow.className = `uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 ${index % 2 === 0 ? 'bg-light' : 'bg-secondary text-white'}`;
-                const fileDetails = document.createElement("div");
-                const fileName = document.createElement("strong");
-                fileName.textContent = file.name;
-                const fileMeta = document.createElement("div");
-                fileMeta.className = "text-muted small mt-1";
-                fileMeta.style.fontSize = "0.75rem";
-                const size = formatFileSize(file.size);
-                const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                fileMeta.textContent = `${size} • Uploaded at ${time}`;
-                fileDetails.appendChild(fileName);
-                fileDetails.appendChild(fileMeta);
-                const actions = document.createElement("div");
-                actions.className = "uploaded-file-actions d-flex";
-                // View PDF file
-                const viewBtn = document.createElement("button");
-                viewBtn.type = "button";
-                viewBtn.className = "btn btn-outline-primary btn-sm me-2";
-                viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                viewBtn.onclick = () => {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, "_blank");
-                };
-                // Remove from client-side list
-                const deleteBtn = document.createElement("button");
-                deleteBtn.type = "button";
-                deleteBtn.className = "btn btn-outline-danger btn-sm";
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.onclick = () => {
-                    storedFiles.splice(index, 1);
-                    renderUploadedFiles();
-                };
-                actions.appendChild(viewBtn);
-                actions.appendChild(deleteBtn);
-                fileRow.appendChild(fileDetails);
-                fileRow.appendChild(actions);
-                uploadedFilesContainer.appendChild(fileRow);
-            });
-            // Maintain spacing for upload section
-            if (storedFiles.length === 0 || !uploadInputGroup.classList.contains("mt-3")) {
-                uploadInputGroup.classList.add("mt-3");
-            }
-        }
-
-        /**
-         * Helper to format file sizes for display.
-        
-         */
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return `${bytes} B`;
-            else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-            else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-        }
-
-        /**
-         * Handles form submission via AJAX, including both form data and any client-side PDF uploads.
-         * On success, redirects to the server response URL. On failure, displays the updated page.
-         */
-             function submitForm() {
-            const continueBtn = document.getElementById("continueBtn");
-            if (continueBtn.disabled) return;
-            continueBtn.disabled = true;
-            continueBtn.innerHTML = 'Saving... <span class="arrow-icon"></span>';
-
-            const formData = new FormData(form);
-            storedFiles.forEach(fileInfo => {
-                formData.append("UploadedFiles", fileInfo.file);
-            });
-
-            fetch(form.action, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                }
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    // Try JSON first
-                    return response.json().then(data => {
-                        if (data.success && data.awarded) {
-                            // Show Awarded Modal
-                            showAwardedModal(data.tenderNumber, data.redirectUrl);
-                        } else if (data.redirectUrl) {
-                            window.location.href = data.redirectUrl;
-                        } else {
-                            // fallback: show new HTML
-                            return response.text().then(html => {
-                                document.body.innerHTML = html;
-                            });
-                        }
-                    }).catch(() => {
-                        // fallback: show new HTML
-                        return response.text().then(html => {
-                            document.body.innerHTML = html;
-                        });
-                    });
-                }
-            })
-            .catch(error => {
-                alert("Error saving changes");
-                console.error(error);
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-            });
-        }
-
-        // Modal popup logic for Awarded Tender
-        function showAwardedModal(tenderNumber, redirectUrl) {
-            document.getElementById('awardedModalTenderNumber').innerText = tenderNumber ?? '';
-            document.getElementById('awardedModal').classList.add('show');
-            document.getElementById('awardedModal').style.display = 'flex';
-
-            document.getElementById('awardedModalCloseBtn').onclick = function() {
-                document.getElementById('awardedModal').classList.remove('show');
-                document.getElementById('awardedModal').style.display = 'none';
-                window.location.href = redirectUrl;
+            window.showTab = function(tabName) {
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                document.getElementById('tab' + capitalize(tabName)).classList.add('active');
+                currentTab = tabName;
             };
-        }
 
-        /**
-         * Shows or hides the "Awarded To" field next to the Status dropdown,
-         * depending on whether "Awarded Tender" is selected.
-         */
-        document.addEventListener('DOMContentLoaded', function() {
+            function capitalize(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            // Initial tab setup
+            showTab(currentTab);
+
+            // Awarded Tender field show/hide
             const statusDropdown = document.getElementById('StatusDropdown');
             const awardedContainer = document.getElementById('AwardedTenderContainer');
-
-            function toggleAwardedNote() {
+            function updateAwardedTenderVisibility() {
                 if (statusDropdown.value === 'Awarded Tender') {
                     awardedContainer.style.display = 'block';
                 } else {
                     awardedContainer.style.display = 'none';
+                    document.getElementById('AwardedTenderNote').value = '';
                 }
             }
+            if (statusDropdown) {
+                statusDropdown.addEventListener('change', updateAwardedTenderVisibility);
+                // Initial set on page load
+                updateAwardedTenderVisibility();
+            }
 
-            toggleAwardedNote(); // Initial check (for edit mode)
-            statusDropdown.addEventListener('change', toggleAwardedNote);
+            // PDF upload logic
+            const fileInput = document.getElementById('UploadedFiles');
+            const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
+
+            if (fileInput) {
+                fileInput.addEventListener('change', function () {
+                    // Remove any previous new doc previews
+                    document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+                    const files = fileInput.files;
+                    if (files.length > 0) {
+                        Array.from(files).forEach(function (file) {
+                            if (file.type !== "application/pdf") {
+                                alert("Only PDF files are allowed.");
+                                fileInput.value = "";
+                                return;
+                            }
+                            const entryDiv = document.createElement('div');
+                            entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                            entryDiv.innerHTML = `<div>
+                                <strong>${file.name}</strong>
+                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                                    <span>Selected for upload</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
+                            entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                                entryDiv.remove();
+                                fileInput.value = "";
+                            });
+                            uploadedFilesContainer.appendChild(entryDiv);
+                        });
+                    }
+                });
+            }
+
+            // Save Changes/Submit logic
+            window.submitForm = function() {
+                var form = document.querySelector('form[asp-action="Edit"]');
+                if (!form) form = document.querySelector('form[action*="Edit"]');
+                if (!form) {
+                    alert("Form not found!");
+                    return;
+                }
+                var formData = new FormData(form);
+
+                // Check if "Awarded Tender" is required but empty
+                if (statusDropdown.value === 'Awarded Tender') {
+                    var awardedValue = document.getElementById('AwardedTenderNote').value.trim();
+                    if (!awardedValue) {
+                        alert('Please provide details for the awarded tender.');
+                        showTab('details');
+                        document.getElementById('AwardedTenderNote').focus();
+                        return;
+                    }
+                }
+
+                // Submit the form via AJAX
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(async response => {
+                    // If JSON, handle Awarded modal case
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const data = await response.json();
+                        if (data.success && data.awarded) {
+                            document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
+                            var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
+                            modal.show();
+                            document.getElementById('awardedModalCloseBtn').onclick = function() {
+                                window.location.href = data.redirectUrl || "/TenderAdmin/Index";
+                            }
+                        } else {
+                            alert("Failed to award tender.");
+                        }
+                    } else if (response.redirected) {
+                        // Standard redirect
+                        window.location.href = response.url;
+                    } else {
+                        // If ModelState invalid, replace body with returned HTML
+                        response.text().then(html => {
+                            document.body.innerHTML = html;
+                            window.scrollTo(0, 0);
+                        });
+                    }
+                })
+                .catch(error => {
+                    alert("An error occurred while saving changes.");
+                });
+            };
         });
     </script>
 }
@@ -765,3 +688,10 @@
             display: block;
         }
 </style>
+
+
+
+
+
+
+

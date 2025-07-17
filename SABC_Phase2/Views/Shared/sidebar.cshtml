@@ -4,7 +4,7 @@
 <div class="sidebar expanded" id="sidebar">
     <div class="menu-toggle" onclick="toggleSidebar()">
         <i class="fas fa-bars"></i>
-        <span class="label">Hide Menu</span>
+        <span class="label">Menu</span>
     </div>
     <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
         <i class="fas fa-user-circle fa-2x"></i>
@@ -40,12 +40,13 @@
                 </form>
             </div>
         }
+       
     </div>
     <div class="menu">
         @if (User.Identity.IsAuthenticated && User.IsInRole("Administrator"))
         {
             @* ADMINISTRATOR MENU *@
-            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
                 <i class="fas fa-users fa-2x"></i>
                 <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
                     Tenders Panel
@@ -110,10 +111,10 @@
         else if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
         {
             @* OVRS_USER MENU *@
-            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
                 <i class="fas fa-users fa-2x"></i>
                 <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
-                    Tender Panel
+                    Tenders
                 </a>
 
                 <span class="chevron-toggle">
@@ -167,7 +168,7 @@
         }
         else
         {
-            <div class="menu-section has-submenu" onclick="toggleSubmenu(this)">
+            <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
                 <i class="fas fa-users fa-2x"></i>
                 <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
                     Tenders
@@ -499,7 +500,7 @@
     }
 
         .profile .info {
-            margin-left: 10px;
+            margin-left: 30px;
         }
 
         .profile img {
@@ -764,6 +765,4 @@
     .profile-dropdown.open .profile-dropdown-menu {
         display: flex;
     }
-</style>
-
 </style>

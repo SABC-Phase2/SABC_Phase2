@@ -12,26 +12,50 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 <!-- Add this modal HTML (similar to the PDF one but with different ID) -->
+<!-- Calendar Date Range Picker Modal -->
 <div id="newReportModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h4>Generate A Report</h4>
+    <div class="modal-content calendar-modal">
+        <div class="modal-header centered-header">
+            <div class="modal-header-text">
+                <h1 class="modal-tender-title">Closed Tenders Summary</h1>
+                <h3 class="modal-subtitle">Select the duration for the report</h3>
+            </div>
             <span class="close">&times;</span>
         </div>
+
         <div class="modal-body">
-            <div class="date-picker-container">
-                <div class="date-picker">
-                    <label for="newReportStartDate">From:</label>
-                    <input type="date" id="newReportStartDate" class="date-input">
+            <div class="calendar-controls">
+                <button id="prevMonth" class="month-nav">&lt;</button>
+                <div class="month-header">
+                    <span id="currentMonth">Month Year</span>
                 </div>
-                <div class="date-picker">
-                    <label for="newReportEndDate">To:</label>
-                    <input type="date" id="newReportEndDate" class="date-input">
+                <button id="nextMonth" class="month-nav">&gt;</button>
+            </div>
+
+            <div class="calendar">
+                <div class="calendar-header weekdays-row">
+                    <div>S</div>
+                    <div>M</div>
+                    <div>T</div>
+                    <div>W</div>
+                    <div>T</div>
+                    <div>F</div>
+                    <div>S</div>
+                </div>
+                <div class="calendar-body" id="calendarDays">
+                    <!-- Calendar days go here -->
                 </div>
             </div>
+
+            <div class="selected-dates">
+                <div>Start Date: <span id="startDateDisplay">Not selected</span></div>
+                <div>End Date: <span id="endDateDisplay">Not selected</span></div>
+            </div>
         </div>
+
         <div class="modal-footer">
-            <button id="createReportBtn" class="btn-generate">Create Report</button>
+            <button id="clearSelection" class="btn-clear">Clear</button>
+            <button id="generateReportBtn" class="btn-generate">Done</button>
         </div>
     </div>
 </div>
@@ -49,8 +73,10 @@
 
 
 <div class="card report-card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h2>Closed Tenders</h2>
+    <div class="card-header">
+        <div class="label-toggle-wrap">
+            <label class="closed-label">Closed Tenders</label>
+        </div>
 
         <div class="view-toggle-buttons">
             <button id="gridViewBtn" class="view-toggle active" title="Grid View">
@@ -80,13 +106,15 @@
                                         <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
                                         <span class="tender-block-status">CLOSED</span>
                                     </div>
-                                    <div class="tender-block-number">@tender.TenderNumber</div>
-                                    <div class="tender-block-title">
-                                        @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
-                                    </div>
-                                    <div class="tender-block-closing">
-                                        CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span><br />
-                                        TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                    <div class="tender-block-content">
+                                        <div class="tender-block-number">@tender.TenderNumber</div>
+                                        <div class="tender-block-title">
+                                            @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+                                        </div>
+                                        <div class="tender-block-closing">
+                                            CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
+                                            TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                        </div>
                                     </div>
                                 </div>
                             </a>
@@ -98,7 +126,427 @@
     </div>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+          // Elements
+          const modal = document.getElementById("newReportModal");
+          const openBtn = document.getElementById("newReportBtn");
+          const closeBtn = modal.querySelector(".close");
+          const prevMonthBtn = document.getElementById("prevMonth");
+          const nextMonthBtn = document.getElementById("nextMonth");
+          const currentMonthEl = document.getElementById("currentMonth");
+          const calendarDays = document.getElementById("calendarDays");
+          const startDateDisplay = document.getElementById("startDateDisplay");
+          const endDateDisplay = document.getElementById("endDateDisplay");
+          const clearSelectionBtn = document.getElementById("clearSelection");
+          const generateReportBtn = document.getElementById("generateReportBtn");
+
+          let currentDate = new Date();
+          let startDate = null;
+          let endDate = null;
+
+          // Show modal
+          openBtn.onclick = function () {
+              renderCalendar();
+              modal.style.display = "block";
+          };
+
+          // Close modal
+          closeBtn.onclick = function () {
+              modal.style.display = "none";
+          };
+
+          // Close on outside click
+          window.onclick = function (event) {
+              if (event.target === modal) {
+                  modal.style.display = "none";
+              }
+          };
+
+          // Month navigation
+          prevMonthBtn.addEventListener("click", () => {
+              currentDate.setMonth(currentDate.getMonth() - 1);
+              renderCalendar();
+          });
+
+          nextMonthBtn.addEventListener("click", () => {
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              renderCalendar();
+          });
+
+          // Clear selection
+          clearSelectionBtn.addEventListener("click", () => {
+              startDate = null;
+              endDate = null;
+              updateDateDisplays();
+              renderCalendar();
+          });
+
+          // Render calendar
+          function renderCalendar() {
+              currentMonthEl.textContent = currentDate.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric"
+              });
+
+              calendarDays.innerHTML = "";
+
+              const year = currentDate.getFullYear();
+              const month = currentDate.getMonth();
+
+              const firstDay = new Date(year, month, 1).getDay();
+              const totalDays = new Date(year, month + 1, 0).getDate();
+              const prevMonthLastDate = new Date(year, month, 0).getDate();
+
+              let dateCounter = 1;
+              let nextMonthDay = 1;
+
+              for (let i = 0; i < 6; i++) {
+                  const row = document.createElement("div");
+                  row.classList.add("week");
+
+                  for (let j = 0; j < 7; j++) {
+                      const dayCell = document.createElement("div");
+                      dayCell.classList.add("day");
+
+                      if (i === 0 && j < firstDay) {
+                          dayCell.textContent = prevMonthLastDate - (firstDay - j - 1);
+                          dayCell.classList.add("other-month");
+                      } else if (dateCounter > totalDays) {
+                          dayCell.textContent = nextMonthDay++;
+                          dayCell.classList.add("other-month");
+                      } else {
+                          const thisDate = new Date(year, month, dateCounter);
+                          dayCell.textContent = dateCounter;
+
+                          if (startDate && isSameDay(thisDate, startDate)) {
+                              dayCell.classList.add("selected");
+                          } else if (endDate && isSameDay(thisDate, endDate)) {
+                              dayCell.classList.add("selected");
+                          } else if (startDate && endDate && thisDate > startDate && thisDate < endDate) {
+                              dayCell.classList.add("in-range");
+                          }
+
+                          dayCell.addEventListener("click", () => selectDate(thisDate));
+                          dateCounter++;
+                      }
+
+                      row.appendChild(dayCell);
+                  }
+
+                  calendarDays.appendChild(row);
+              }
+          }
+
+          // Handle date selection
+          function selectDate(date) {
+              if (!startDate || (startDate && endDate)) {
+                  startDate = new Date(date);
+                  endDate = null;
+              } else if (date < startDate) {
+                  endDate = new Date(startDate);
+                  startDate = new Date(date);
+              } else {
+                  endDate = new Date(date);
+              }
+
+              updateDateDisplays();
+              renderCalendar();
+          }
+
+          function updateDateDisplays() {
+              startDateDisplay.textContent = startDate
+                  ? startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : "Not selected";
+
+              endDateDisplay.textContent = endDate
+                  ? endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : "Not selected";
+          }
+
+          function isSameDay(d1, d2) {
+              return d1.getFullYear() === d2.getFullYear() &&
+                     d1.getMonth() === d2.getMonth() &&
+                     d1.getDate() === d2.getDate();
+          }
+
+          // Generate report
+          generateReportBtn.addEventListener("click", () => {
+              if (!startDate || !endDate) {
+                  alert("Please select both start and end dates.");
+                  return;
+              }
+
+              const startDateIso = startDate.toISOString();
+              const endDateIso = endDate.toISOString();
+
+              const url = '@Url.Action("GenerateClosedTendersSummaryReport", "TenderAdmin")' +
+                  '?startDate=' + encodeURIComponent(startDateIso) +
+                  '&endDate=' + encodeURIComponent(endDateIso);
+
+              window.open(url, '_blank');
+              modal.style.display = "none";
+          });
+      });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const gridBtn = document.getElementById("gridViewBtn");
+        const listBtn = document.getElementById("listViewBtn");
+        const tenderContainer = document.querySelector(".tender-blocks-container");
+
+        gridBtn.addEventListener("click", function () {
+            tenderContainer.classList.remove("list-view");
+            gridBtn.classList.add("active");
+            listBtn.classList.remove("active");
+        });
+
+        listBtn.addEventListener("click", function () {
+            tenderContainer.classList.add("list-view");
+            listBtn.classList.add("active");
+            gridBtn.classList.remove("active");
+        });
+    });
+</script>
+
 <style>
+
+    /* Modal container */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 50px;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(2px);
+    }
+
+    /* Modal content */
+    .modal-content {
+        background-color: #fff;
+        margin: 5% auto;
+        padding: 40px 30px;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 700px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Header */
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .modal-header-text {
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    .modal-tender-title {
+        font-size: 2.3rem;
+        font-weight: 700;
+        color: #00a651;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .modal-subtitle {
+        font-size: 1rem;
+        font-weight: 500;
+        text-align: center;
+        color: #444;
+    }
+
+    .close {
+        color: #ccc;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+
+        .close:hover {
+            color: #333;
+        }
+
+    /* Calendar Controls */
+    .calendar-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .month-header {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .month-nav {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #00a651;
+        cursor: pointer;
+    }
+
+    /* Calendar Structure */
+    .calendar {
+        width: 100%;
+    }
+
+    .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: 600;
+        color: #666;
+        background-color: #f5f5f5;
+        padding: 8px 0;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+
+    .calendar-body {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .week {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+    }
+
+    .day {
+        padding: 10px 0;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+        .day:hover {
+            background-color: #f0f0f0;
+        }
+
+        .day.selected,
+        .day.start,
+        .day.end {
+            background-color: #00a651;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 50%;
+        }
+
+        .day.in-range {
+            background-color: #e6f7ef;
+        }
+
+    .other-month {
+        color: #ccc;
+    }
+
+    /* Date display */
+    .selected-dates {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid #eee;
+        font-size: 0.95rem;
+        color: #555;
+        display: flex;
+        justify-content: space-between;
+    }
+
+        .selected-dates span {
+            font-weight: 600;
+            color: #00a651;
+        }
+
+    /* Footer */
+    .modal-footer {
+        margin-top: 30px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid #eee;
+        padding-top: 16px;
+    }
+
+    /* Buttons */
+    .btn-generate {
+        background-color: #00a651;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 28px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+        .btn-generate:hover {
+            background-color: #008f47;
+        }
+
+    .btn-clear {
+        background-color: #f5f5f5;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+        .btn-clear:hover {
+            background-color: #e4e4e4;
+        }
+
+    .btn-generate {
+        background: #00a651;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+
+    .label-toggle-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .closed-label {
+        font-size: 2.55rem;
+        color: #1a7f37;
+        font-weight: 600;
+        margin-bottom: 0.4rem; /* Tighter spacing */
+        margin-left: 30px; /* Align with the left padding of the card */
+    }
+
+    .upload-label-underline {
+        width: 100%;
+        height: 2px;
+        background: #1a7f37;
+        border-radius: 2px;
+    }
+
     .report-action-bar {
         display: flex;
         align-items: center;
@@ -178,26 +626,26 @@
         display: flex;
         flex-direction: column;
         gap: 30px;
-        padding: 0; /* Remove horizontal padding */
+        padding: 0 50px; /* ✅ add equal left and right padding */
         box-sizing: border-box;
     }
 
     .tender-block-row {
         display: flex;
-        gap: 25px; /* smaller gap */
+        width: 100%;
+        flex-wrap: wrap; /* ✅ allow wrapping for better responsiveness */
+        gap: 25px;
         justify-content: flex-start;
         align-items: stretch;
     }
 
     /* Block that populates on cards */
     .tender-block {
-        flex: 0 1 calc((100% - 30px) / 4);
         background: #fff;
         border-radius: 18px;
         box-shadow: 0 1px 8px rgba(0,0,0,0.10);
         padding: 28px 18px 18px 18px;
-        min-width: 0; /* Prevent overflow */
-        max-width: none; /* Remove max-width restriction */
+        width: 259px; /* Prevent cards from becoming too small */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -262,7 +710,7 @@
         color: #222;
         margin-bottom: 10px;
         text-align: center;
-        margin-top: 2px;
+        margin-top: 0px;
         letter-spacing: 0.01em;
     }
 
@@ -395,12 +843,14 @@
     .card-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start; /* Align label and buttons to the top */
+        margin-bottom: 1rem;
     }
 
     .view-toggle-buttons {
         display: flex;
         gap: 10px;
+        margin-top: 10px;
     }
 
     .view-toggle {
@@ -424,103 +874,90 @@
             border-color: #00a651;
         }
 
+    /* LIST VIEW OVERRIDES */
     .tender-blocks-container.list-view .tender-block-row {
         flex-direction: column;
+        gap: 12px;
     }
 
+    /* List view: flex row layout */
     .tender-blocks-container.list-view .tender-block {
+        position: relative;
+        width: 100%;
+        display: flex;
         flex-direction: row;
-        align-items: center;
-        padding: 16px 20px;
-        gap: 20px;
-        min-height: auto;
-        justify-content: flex-start;
-    }
-
-    .tender-blocks-container.list-view .tender-block-logo-wrap {
-        width: auto;
-        margin-bottom: 0;
-        min-height: unset;
-    }
-
-    .tender-blocks-container.list-view .tender-block-thumbnail {
-        width: 70px;
-        height: 70px;
-    }
-
-    .tender-blocks-container.list-view .tender-block-status {
-        top: 0;
-        right: -10px;
+        align-items: flex-start;
+        padding: 12px 24px;
+        gap: 24px;
         height: auto;
-        padding: 6px 14px;
-        font-size: 0.85rem;
+        min-height: unset;
+        box-sizing: border-box;
+    }
+
+    /* Left section: logo + status wrap */
+    .tender-blocks-container.list-view .tender-block-logo-wrap {
+        align-items: center;
+        width: 100px; /* lock width */
+        min-width: 100px;
+        height: auto;
+        padding-top: 4px;
+    }
+
+    /* Logo image */
+    .tender-blocks-container.list-view .tender-block-thumbnail {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    /* Display number and title in a row */
+    .tender-blocks-container.list-view .tender-block-number,
+    .tender-blocks-container.list-view .tender-block-title {
+        display: inline-block;
+        margin-right: 12px;
+        vertical-align: middle;
+        margin-bottom: 0;
+    }
+
+    /* Remove margin between them */
+    .tender-blocks-container.list-view .tender-block-number {
+        font-weight: 700;
+        color: #222;
+    }
+
+    .tender-blocks-container.list-view .tender-block-title {
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    /* Group them using flexbox if needed */
+    .tender-blocks-container.list-view .tender-block-content {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+        .tender-blocks-container.list-view .tender-block-content > div:first-child {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+    /* Text alignment */
+    .tender-blocks-container.list-view .tender-block-number,
+    .tender-blocks-container.list-view .tender-block-title,
+    .tender-blocks-container.list-view .tender-block-closing {
+        text-align: left;
+        margin-bottom: 4px;
+        line-height: 1.2;
+    }
+
+    /* Status badge: top right of the entire row */
+    .tender-blocks-container.list-view .tender-block-status {
+        position: absolute;
+        top: 38px;
+        right: -995px;
     }
 </style>
 
-<script>
-    $(document).ready(function() {
-        var newReportModal = document.getElementById("newReportModal");
-        var newReportBtn = document.getElementById("newReportBtn");
-        var closeSpan = document.querySelector("#newReportModal .close");
-
-        if (newReportBtn) {
-            newReportBtn.onclick = function() {
-                if (newReportModal) {
-                    newReportModal.style.display = "block";
-                }
-            }
-        }
-        if (closeSpan) {
-            closeSpan.onclick = function() {
-                if (newReportModal) {
-                    newReportModal.style.display = "none";
-                }
-            }
-        }
-        window.onclick = function(event) {
-            if (event.target == newReportModal) {
-                newReportModal.style.display = "none";
-            }
-        }
-
-        $("#createReportBtn").click(function() {
-            var startDate = $("#newReportStartDate").val();
-            var endDate = $("#newReportEndDate").val();
-
-            if (!startDate || !endDate) {
-                alert("Please select both start and end dates.");
-                return;
-            }
-
-            // Convert to ISO for URL
-            var startDateIso = new Date(startDate).toISOString();
-            var endDateIso = new Date(endDate).toISOString();
-
-            // Call the new PDF endpoint
-            var url = '@Url.Action("GenerateClosedTendersSummaryReport", "TenderAdmin")' +
-                      '?startDate=' + encodeURIComponent(startDateIso) +
-                      '&endDate=' + encodeURIComponent(endDateIso);
-
-            window.open(url, '_blank');
-            newReportModal.style.display = "none";
-        });
-    });
-
-      document.addEventListener("DOMContentLoaded", function () {
-        const gridBtn = document.getElementById("gridViewBtn");
-        const listBtn = document.getElementById("listViewBtn");
-        const tenderContainer = document.querySelector(".tender-blocks-container");
-
-        gridBtn.addEventListener("click", function () {
-            tenderContainer.classList.remove("list-view");
-            gridBtn.classList.add("active");
-            listBtn.classList.remove("active");
-        });
-
-        listBtn.addEventListener("click", function () {
-            tenderContainer.classList.add("list-view");
-            listBtn.classList.add("active");
-            gridBtn.classList.remove("active");
-        });
-    });
-</script>

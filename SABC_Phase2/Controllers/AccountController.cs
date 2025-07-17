@@ -32,6 +32,60 @@ namespace SABC_Phase2.Controllers
             var legacyConnString = _config.GetConnectionString("LegacyDb");
             var defaultConnString = _config.GetConnectionString("DefaultConn");
 
+            // 1. Try Admin login first
+            int? adminId = null;
+            string adminFirstName = null, adminLastName = null, adminRole = null, adminPasswordHash = null;
+
+            using (var conn = new SqlConnection(defaultConnString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(
+                    "SELECT Id, Email, PasswordHash, FirstName, LastName, Role FROM dbo.Administrators WHERE Email = @Email", conn))
+                {
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            adminId = Convert.ToInt32(reader["Id"]);
+                            adminPasswordHash = reader["PasswordHash"]?.ToString();
+                            adminFirstName = reader["FirstName"]?.ToString();
+                            adminLastName = reader["LastName"]?.ToString();
+                            adminRole = reader["Role"]?.ToString();
+                        }
+                    }
+                }
+            }
+            if (adminId.HasValue)
+            {
+                string hashedInputPassword = HashPassword(password);
+                if (adminPasswordHash == hashedInputPassword)
+                {
+                    // Admin login success
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
+                        new Claim(ClaimTypes.Role, "Administrator"),
+                        new Claim("AdminId", adminId.ToString()),
+                        new Claim("AdminEmail", email)
+                    };
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var principal = new ClaimsPrincipal(identity);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+                    return RedirectToAction("Index", "TenderAdmin");
+                }
+                else
+                {
+                    // If admin email found but password incorrect, fail here
+                    ViewBag.Error = "Invalid email or password";
+                    return View("~/Views/Authentication/Login.cshtml");
+                }
+            }
+
+            // 2. Try OVRS_User login
             int? legacyUserId = null;
             string legalName = null;
             string role = "OVRS_User";
@@ -107,9 +161,9 @@ namespace SABC_Phase2.Controllers
 
                 using (SqlCommand cmd = new SqlCommand(
                     @"IF EXISTS (SELECT 1 FROM dbo.Users WHERE LegacyUserId = @LegacyUserId)
-                    UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
-                ELSE
-                    INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
+                        UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
+                    ELSE
+                        INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
                 {
                     cmd.Parameters.Add("@LegacyUserId", SqlDbType.Int).Value = legacyUserId.Value;
                     cmd.Parameters.AddWithValue("@Role", role);
@@ -131,20 +185,20 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // 4. Set up the claims and sign in
-            var claims = new List<Claim>
+            // 4. Set up the claims and sign in as OVRS_User
+            var userClaims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, legalName ?? email),
                 new Claim(ClaimTypes.Role, role),
                 new Claim("UserId", newUserId.ToString()),
                 new Claim("SupplierType", supplierType ?? "Unknown Supplier")
             };
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
+            var userIdentity = new ClaimsIdentity(userClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var userPrincipal = new ClaimsPrincipal(userIdentity);
 
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, userPrincipal);
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("AllTenders", "OVRS_User");
         }
 
         [HttpPost]
@@ -153,72 +207,6 @@ namespace SABC_Phase2.Controllers
         {
             await HttpContext.SignOutAsync(); // or SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
             return RedirectToAction("Index", "OVRS_User");
-        }
-
-        //-----------------------------------------------------------------------------------------------------------------------------
-        [HttpGet]
-        public IActionResult AdminLogin()
-        {
-            return View("~/Views/Authentication/AdminLogin.cshtml");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AdminLogin(string email, string password)
-        {
-            var connString = _config.GetConnectionString("DefaultConn");
-
-            int? adminId = null;
-            string firstName = null, lastName = null, role = null, passwordHash = null;
-
-            using (var conn = new SqlConnection(connString))
-            {
-                await conn.OpenAsync();
-                using (var cmd = new SqlCommand(
-                    "SELECT Id, Email, PasswordHash, FirstName, LastName, Role FROM dbo.Administrators WHERE Email = @Email", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Email", email);
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            adminId = Convert.ToInt32(reader["Id"]);
-                            passwordHash = reader["PasswordHash"].ToString();
-                            firstName = reader["FirstName"].ToString();
-                            lastName = reader["LastName"].ToString();
-                            role = reader["Role"].ToString();
-                        }
-                    }
-                }
-            }
-
-            if (adminId == null)
-            {
-                ViewBag.Error = "Invalid email or password";
-                return View("~/Views/Authentication/AdminLogin.cshtml");
-            }
-
-            string hashedInputPassword = HashPassword(password);
-            if (passwordHash != hashedInputPassword)
-            {
-                ViewBag.Error = "Invalid email or password";
-                return View("~/Views/Authentication/AdminLogin.cshtml");
-            }
-
-            // Always sign out before signing in as a new user!
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, $"{firstName} {lastName}"),
-        new Claim(ClaimTypes.Role, "Administrator"),
-        new Claim("AdminId", adminId.ToString()),
-        new Claim("AdminEmail", email)
-    };
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-
-            return RedirectToAction("Index", "TenderAdmin");
         }
 
         private string HashPassword(string password)

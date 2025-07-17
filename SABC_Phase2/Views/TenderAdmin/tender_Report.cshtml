@@ -48,46 +48,51 @@
     </div>
 </div>
 
-<!-- PDF generation button - now triggers modal -->
+<!-- PDF generation button -->
 <div style="display: flex; justify-content: center; margin-top: 48px;">
     <button id="generatePdfBtn" style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
+
         Generate PDF <i class="fas fa-file-pdf"></i>
     </button>
-</div>
-
-<!-- Date Range Picker Modal -->
-<div id="dateRangeModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Select Date Range</h3>
-            <span class="close">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="date-picker-container">
-                <div class="date-picker">
-                    <label for="startDate">From:</label>
-                    <input type="date" id="startDate" class="date-input">
-                </div>
-                <div class="date-picker">
-                    <label for="endDate">To:</label>
-                    <input type="date" id="endDate" class="date-input">
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="generateReportBtn" class="btn-generate">Done</button>
-        </div>
-    </div>
 </div>
 
 <!-- Font Awesome for icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
-<!-- jQuery for modal functionality -->
+<!-- jQuery for functionality -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+
+<script>
+
+    $(document).ready(function() {
+
+        // Generate report button click handler
+
+        $("#generatePdfBtn").click(function() {
+
+            var tenderId = @Model.Tender.Id;
+
+            // Generate the PDF URL without date range parameters
+
+            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' +
+
+                       '?id=' + tenderId;
+
+            // Open the PDF in a new tab
+
+            window.open(url, '_blank');
+
+        });
+
+    });
+</script>
+
+
 <style>
-    /* Existing table styles remain the same */
+
+    /* Table styles */
+
     .report-table {
         min-width: 400px;
         max-width: 480px;
@@ -144,153 +149,6 @@
         .report-table tr:last-child td:first-child {
             font-weight: 700;
         }
-
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-content {
-        background-color: #fff;
-        margin: 10% auto;
-        padding: 20px;
-        border-radius: 8px;
-        width: 400px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #eee;
-    }
-
-        .modal-header h3 {
-            margin: 0;
-            color: #333;
-        }
-
-    .close {
-        color: #aaa;
-        font-size: 24px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-        .close:hover {
-            color: #333;
-        }
-
-    .date-picker-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .date-picker {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-        .date-picker label {
-            font-weight: 500;
-            color: #555;
-        }
-
-    .date-input {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 16px;
-    }
-
-    .modal-footer {
-        margin-top: 30px;
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .btn-generate {
-        background: #00a651;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-        .btn-generate:hover {
-            background: #008f47;
-        }
 </style>
 
-<script>
-    $(document).ready(function() {
-        // Get the modal
-        var modal = document.getElementById("dateRangeModal");
 
-        // Get the button that opens the modal
-        var btn = document.getElementById("generatePdfBtn");
-
-        // Get the <span> element that closes the modal
-        var span = document.getElementsByClassName("close")[0];
-
-        // When the user clicks the button, open the modal
-        btn.onclick = function() {
-            modal.style.display = "block";
-        }
-
-        // When the user clicks on <span> (x), close the modal
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        // When the user clicks anywhere outside of the modal, close it
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-
-        // Generate report button click handler
-        $("#generateReportBtn").click(function() {
-            var startDate = $("#startDate").val();
-            var endDate = $("#endDate").val();
-            var tenderId = @Model.Tender.Id;
-
-            if (!startDate || !endDate) {
-                alert("Please select both start and end dates.");
-                return;
-            }
-
-            // Convert dates to ISO format for the URL
-            var startDateIso = new Date(startDate).toISOString();
-            var endDateIso = new Date(endDate).toISOString();
-
-            // Generate the PDF URL with date range parameters
-            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' +
-                       '?id=' + tenderId +
-                       '&startDate=' + encodeURIComponent(startDateIso) +
-                       '&endDate=' + encodeURIComponent(endDateIso);
-
-            // Open the PDF in a new tab
-            window.open(url, '_blank');
-
-            // Close the modal
-            modal.style.display = "none";
-        });
-    });
-</script>
