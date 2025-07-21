@@ -46,5 +46,8 @@ namespace SABC_Phase2.Models
         public TimeSpan? ScheduledTime { get; set; }
 
         public string? AwardedTender { get; set; }
+
+        public List<TenderDocumentViewModel> AwardedDocuments { get; set; } = new();
+
     }
 }

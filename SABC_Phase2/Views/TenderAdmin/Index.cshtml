@@ -59,13 +59,18 @@
                         <td>
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                         </td>
-                        <td>@tender.Title</td>
+                        <td>
+                            <div class="tender-title-block">
+                                <strong>@tender.TenderNumber</strong> : @tender.Title
+                            </div>
+                        </td>
+
                         <td>
                             <span class="tender-status
-                                    @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
-                                                                     tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
-                                                                     tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
-                                                                     tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                                        @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                                                                                       tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                                                                                       tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                                                                                       tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
                             @tender.Status
                         </span>
                     </td>
@@ -244,6 +249,11 @@
         cursor: pointer;
         transition: all 0.3s ease;
         text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px; /* space between text and icon */
+        white-space: nowrap;
     }
 
         .edit-btn:hover {

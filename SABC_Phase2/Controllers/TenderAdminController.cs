@@ -429,120 +429,209 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            // Attempt to retrieve the tender with the specified ID from the database.
-            // Include the Documents navigation property so we can display/edit attached documents in the view.
             var tender = await _context.Tenders
-                .Include(t => t.Documents)
+                .Include(t => t.AwardedTender)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            // If no tender is found for the given ID, return a 404 Not Found response.
             if (tender == null)
                 return NotFound();
 
-            // Map the tender entity to a data transfer object (DTO) for editing.
-            // This DTO is used to transfer all necessary field values to the view.
+            // Load main tender documents (AwardedTenderId is null)
+            var mainDocs = await _context.TenderDocuments
+                .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId == null)
+                .ToListAsync();
+
+            var mainDocumentList = mainDocs.Select(doc => new TenderDocumentViewModel
+            {
+                Id = doc.Id,
+                FileName = doc.FileName,
+                FilePath = doc.FilePath
+            }).ToList();
+
+            // Load awarded documents if any
+            List<TenderDocumentViewModel> awardedDocumentList = new();
+            if (tender.AwardedTender != null)
+            {
+                var awardedDocs = await _context.TenderDocuments
+                    .Where(doc => doc.AwardedTenderId == tender.AwardedTender.Id)
+                    .ToListAsync();
+
+                awardedDocumentList = awardedDocs.Select(doc => new TenderDocumentViewModel
+                {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    FilePath = doc.FilePath
+                }).ToList();
+            }
+
             var dto = new TenderEditDto
             {
-                Id = tender.Id,                           // Unique database ID of the tender
-                TenderType = tender.TenderType,           // Type/category of the tender
-                TenderNumber = tender.TenderNumber,       // Reference number for the tender
-                ClosingDate = tender.ClosingDate,         // Date the tender closes
-                ClosingTime = tender.ClosingTime,         // Time on closing date when the tender closes
-                Status = tender.Status,                   // Current status (e.g., Open, Closed)
-                Title = tender.Title,                     // Title of the tender
-                Description = tender.Description,         // Description/details of the tender
-                AwardedTender = tender.AwardedTender,     // Awarded tender information (if applicable)
-                                                          // Map all existing document entities to view models for display in the edit form.
-                ExistingDocuments = tender.Documents?.Select(doc => new TenderDocumentViewModel
-                {
-                    Id = doc.Id,                         // Unique ID of the document
-                    FileName = doc.FileName,             // Original file name for display
-                    FilePath = doc.FilePath              // Path or URL to the file in storage
-                }).ToList() ?? new List<TenderDocumentViewModel>() // If no documents, provide an empty list so the view doesn't break
+                Id = tender.Id,
+                TenderType = tender.TenderType,
+                TenderNumber = tender.TenderNumber,
+                ClosingDate = tender.ClosingDate,
+                ClosingTime = tender.ClosingTime,
+                Status = tender.Status,
+                Title = tender.Title,
+                Description = tender.Description,
+                AwardedTender = tender.AwardedTender?.AwardedCompanyName,
+                ExistingDocuments = mainDocumentList,
+                AwardedDocuments = awardedDocumentList
             };
 
-            // Render the "Edit" view, passing in the populated DTO so the form is pre-filled with the current tender details.
             return View("Edit", dto);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenderEditDto dto)
         {
-            // Check if the incoming form data is valid according to the model's validation rules.
-            // If not valid, re-render the Edit view with the current DTO to display validation errors.
             if (!ModelState.IsValid)
             {
                 return View("Edit", dto);
             }
 
-            // Attempt to retrieve the tender from the database, including its associated documents,
-            // using the provided tender ID. This allows us to update both the tender and its documents.
             var tender = await _context.Tenders
                 .Include(t => t.Documents)
+                .Include(t => t.AwardedTender)
+                    .ThenInclude(at => at.Documents)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            // If the tender does not exist (wrong ID or deleted), return a 404 Not Found response.
             if (tender == null)
                 return NotFound();
 
-            // Update the tender's properties with the values provided from the DTO (submitted form).
             tender.TenderType = dto.TenderType;
             tender.TenderNumber = dto.TenderNumber;
-            tender.ClosingDate = dto.ClosingDate.Value; // Ensure nullable date is set
+            tender.ClosingDate = dto.ClosingDate.Value;
             tender.ClosingTime = dto.ClosingTime;
             tender.Status = dto.Status;
             tender.Title = dto.Title;
             tender.Description = dto.Description;
-            tender.AwardedTender = dto.AwardedTender; // Update awarded tender info if provided
 
-            // Initialize the blob storage service for document upload/deletion operations.
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
 
-            // Handle document deletions:
-            // For each document ID marked for deletion, delete the file from blob storage and remove the record from the database.
+            // Handle document deletions
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
             {
-                // Find documents to remove by matching IDs from the DTO.
-                var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
-                foreach (var doc in docsToRemove)
+                if (dto.Status == "Awarded Tender" && tender.AwardedTender != null)
                 {
-                    // Delete the file from Azure Blob Storage.
-                    await blobService.DeleteFileAsync(doc.FilePath);
-                    // Remove the document entity from the database context.
-                    _context.TenderDocuments.Remove(doc);
-                }
-            }
-
-            // Handle new PDF uploads:
-            // For each uploaded file, upload it to blob storage and add a new document entry to the tender.
-            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
-            {
-                foreach (var file in dto.UploadedFiles)
-                {
-                    if (file.Length > 0)
+                    var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
+                    foreach (var doc in docsToRemove)
                     {
-                        // Generate a unique file name and upload the file to Azure Blob Storage.
-                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
-                        using var stream = file.OpenReadStream();
-                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
-
-                        // Create a new TenderDocument entity and associate it with the current tender.
-                        tender.Documents.Add(new TenderDocument
-                        {
-                            FileName = file.FileName,
-                            BlobName = blobFileName,    // <-- Store the full blob path used for upload
-                            FilePath = blobFileName,    // (optional) can keep for legacy, or use only as SAS URL at runtime
-                            TenderId = tender.Id
-                        });
+                        await blobService.DeleteFileAsync(doc.FilePath);
+                        _context.TenderDocuments.Remove(doc);
+                    }
+                }
+                else
+                {
+                    var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
+                    foreach (var doc in docsToRemove)
+                    {
+                        await blobService.DeleteFileAsync(doc.FilePath);
+                        _context.TenderDocuments.Remove(doc);
                     }
                 }
             }
 
-            // Persist all changes (tender updates, document deletions, and new uploads) to the database.
+            // Handle new PDF uploads
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                // If Awarded Tender, ensure AwardedTender exists and has correct Id before adding docs
+                if (dto.Status == "Awarded Tender")
+                {
+                    AwardedTender awardedTender = tender.AwardedTender;
+                    if (awardedTender == null)
+                    {
+                        // Create and save AwardedTender first to get its Id
+                        awardedTender = new AwardedTender
+                        {
+                            AwardedCompanyName = dto.AwardedTender,
+                            TenderId = tender.Id
+                        };
+                        _context.AwardedTenders.Add(awardedTender);
+                        await _context.SaveChangesAsync();
+                        tender.AwardedTenderId = awardedTender.Id;
+                        tender.AwardedTender = awardedTender; // Sync navigation property
+                    }
+                    else
+                    {
+                        awardedTender.AwardedCompanyName = dto.AwardedTender;
+                    }
+
+                    // Now upload awarded documents
+                    foreach (var file in dto.UploadedFiles)
+                    {
+                        if (file.Length > 0)
+                        {
+                            var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
+                            using var stream = file.OpenReadStream();
+                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                            var newDoc = new TenderDocument
+                            {
+                                FileName = file.FileName,
+                                BlobName = blobFileName,
+                                FilePath = blobFileName,
+                                TenderId = tender.Id,
+                                AwardedTenderId = awardedTender.Id // CORRECT: set after AwardedTender is saved!
+                            };
+                            _context.TenderDocuments.Add(newDoc);
+                        }
+                    }
+                }
+                else
+                {
+                    // Main tender documents
+                    foreach (var file in dto.UploadedFiles)
+                    {
+                        if (file.Length > 0)
+                        {
+                            var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
+                            using var stream = file.OpenReadStream();
+                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+
+                            var newDoc = new TenderDocument
+                            {
+                                FileName = file.FileName,
+                                BlobName = blobFileName,
+                                FilePath = blobFileName,
+                                TenderId = tender.Id,
+                                AwardedTenderId = null
+                            };
+                            _context.TenderDocuments.Add(newDoc);
+                        }
+                    }
+                }
+            }
+
+            // AwardedTender update logic
+            if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
+            {
+                if (tender.AwardedTender == null)
+                {
+                    // Already handled above in upload section, but just in case
+                    var awardedTender = new AwardedTender
+                    {
+                        AwardedCompanyName = dto.AwardedTender,
+                        TenderId = tender.Id
+                    };
+                    _context.AwardedTenders.Add(awardedTender);
+                    await _context.SaveChangesAsync();
+                    tender.AwardedTenderId = awardedTender.Id;
+                }
+                else
+                {
+                    tender.AwardedTender.AwardedCompanyName = dto.AwardedTender;
+                }
+            }
+            else
+            {
+                tender.AwardedTenderId = null;
+            }
+
             await _context.SaveChangesAsync();
 
-            // Check for Awarded Tender modal logic
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
                 return Json(new
@@ -554,7 +643,6 @@ namespace SABC_Phase2.Controllers
                 });
             }
 
-            // Default: redirect as usual
             return RedirectToAction("Index");
         }
 

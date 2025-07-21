@@ -3,7 +3,7 @@
 
 <div class="sidebar expanded" id="sidebar">
     <div class="menu-toggle" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
+        <i class="fas fa-bars" style="margin-right:10px"></i>
         <span class="label">Menu</span>
     </div>
     <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
@@ -25,8 +25,8 @@
 
         @if (User.Identity.IsAuthenticated)
         {
-            <span class="profile-caret">
-                <i class="fas fa-chevron-down"></i>
+            <span class="chevron-toggle">
+                <i class="fas fa-chevron-down" style="margin-left:12px;"></i>
             </span>
             <div class="profile-dropdown-menu" id="profileDropdownMenu">
                 <a href="@Url.Action("Profile", "Account")" class="dropdown-item">
@@ -40,7 +40,6 @@
                 </form>
             </div>
         }
-       
     </div>
     <div class="menu">
         @if (User.Identity.IsAuthenticated && User.IsInRole("Administrator"))
@@ -213,235 +212,221 @@
 </div>
 
 <script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        sidebar.classList.toggle("collapsed");
 
-        function toggleSidebar() {
-
-          const sidebar = document.getElementById("sidebar");
-
-          sidebar.classList.toggle("collapsed");
-
-          const menuIcon = sidebar.querySelector(".menu-toggle i.fas.fa-bars");
-
-          if (menuIcon) {
-
+        const menuIcon = sidebar.querySelector(".menu-toggle i.fas.fa-bars");
+        if (menuIcon) {
             menuIcon.classList.toggle("rotated", sidebar.classList.contains("collapsed"));
-
-          }
-
         }
 
-        function toggleSubmenu(event, element) {
-
-            const isLinkClick = event.target.closest('a');
-
-            if (isLinkClick) return; // Don't toggle submenu if clicking the link
-
-            // Close all other submenus
-
-            document.querySelectorAll('.submenu').forEach(function (submenu) {
-
-                if (submenu !== element.nextElementSibling) {
-
-                    submenu.classList.remove('visible');
-
-                    const chevron = submenu.previousElementSibling.querySelector('.chevron-toggle');
-
-                    const icon = chevron?.querySelector(".submenu-icon");
-
-                    if (chevron) chevron.style.display = "inline";
-
-                    if (icon) icon.classList.remove("rotated");
-
-                }
-
+        // Toggle chevron visibility based on sidebar state
+        const chevrons = document.querySelectorAll('.chevron-toggle');
+        if (sidebar.classList.contains("collapsed")) {
+            chevrons.forEach(chevron => {
+                chevron.style.display = "none";
             });
-
-            const submenu = element.nextElementSibling;
-
-            submenu.classList.toggle("visible");
-
-            const chevronToggle = element.querySelector('.chevron-toggle');
-
-            const icon = chevronToggle?.querySelector(".submenu-icon");
-
-            if (submenu.classList.contains("visible")) {
-
-                chevronToggle.style.display = "inline";
-
-                icon?.classList.add("rotated");
-
-            } else {
-
-                chevronToggle.style.display = "inline";
-
-                icon?.classList.remove("rotated");
-
-            }
-
-        }
-
-        // On page load, set chevron visibility based on submenu state
-
-        document.addEventListener("DOMContentLoaded", function () {
-
-            var submenuTrigger = document.querySelector('.menu-section.has-submenu');
-
-            var submenu = submenuTrigger && submenuTrigger.nextElementSibling;
-
-            var chevronToggle = submenuTrigger && submenuTrigger.querySelector('.chevron-toggle');
-
-            if (submenu && chevronToggle) {
-
-                if (submenu.classList.contains('visible')) {
-
-                    chevronToggle.style.display = "inline";
-
-                    const icon = chevronToggle.querySelector(".submenu-icon");
-
-                    if (icon) icon.classList.add("rotated");
-
+        } else {
+            chevrons.forEach(chevron => {
+                chevron.style.display = "inline";
+                // Restore rotation state if submenu was open
+                const submenu = chevron.closest('.has-submenu')?.nextElementSibling;
+                const icon = chevron.querySelector(".submenu-icon");
+                if (submenu?.classList.contains('visible')) {
+                    icon?.classList.add("rotated");
                 } else {
-
-                    chevronToggle.style.display = "none";
-
+                    icon?.classList.remove("rotated");
                 }
-
-            }
-
-            // Highlight the correct menu item based on URL
-
-            document.querySelectorAll('.menu-section').forEach(function (el) {
-
-                el.classList.remove('active');
-
             });
+        }
+    }
 
-            var currentPath = window.location.pathname.toLowerCase();
+    function toggleSubmenu(event, element) {
+        const isLinkClick = event.target.closest('a');
+        if (isLinkClick) return; // Don't toggle submenu if clicking the link
 
-            var currentSearch = window.location.search.toLowerCase();
+        const submenu = element.nextElementSibling;
+        submenu.classList.toggle("visible");
+        const chevronToggle = element.querySelector('.chevron-toggle');
+        const icon = chevronToggle?.querySelector(".submenu-icon");
 
-            var foundActive = false;
+        if (submenu.classList.contains("visible")) {
+            chevronToggle.style.display = "inline";
+            icon?.classList.add("rotated");
+        } else {
+            chevronToggle.style.display = "inline";
+            icon?.classList.remove("rotated");
+        }
+    }
 
-            document.querySelectorAll('.menu-section.sub-item a').forEach(function(link) {
+    function manageSubmenus() {
+        const currentPath = window.location.pathname.toLowerCase();
+        const currentSearch = window.location.search.toLowerCase();
+        let foundActive = false;
+        let activeSubmenu = null;
+        let parentMenuItem = null;
 
-                if (link.pathname.toLowerCase() === currentPath) {
-
-                    var linkSearch = link.search.toLowerCase();
-
-                    if (linkSearch && currentSearch && linkSearch === currentSearch) {
-
-                        link.parentElement.classList.add('active');
-
-                        foundActive = true;
-
-                    }
-
-                }
-
-            });
-
-            if (!foundActive) {
-
-                document.querySelectorAll('.menu-section:not(.sub-item) a').forEach(function(link) {
-
-                    if (link.pathname && link.pathname.toLowerCase() === currentPath) {
-
-                        link.parentElement.classList.add('active');
-
-                        foundActive = true;
-
-                    }
-
-                });
-
-            }
-
+        // Reset all active states
+        document.querySelectorAll('.menu-section').forEach(function(el) {
+            el.classList.remove('active');
         });
 
-        function adjustSidebarHeight() {
-
-            const headerHeight = 120; // Same as .sidebar top
-
-            const footer = document.querySelector('footer');
-
-            const sidebar = document.querySelector('.sidebar');
-
-            if (footer && sidebar) {
-
-                const footerRect = footer.getBoundingClientRect();
-
-                const footerTop = footerRect.top + window.scrollY;
-
-                const viewportHeight = window.innerHeight;
-
-                const scrollY = window.scrollY;
-
-                const maxHeight = footerTop - scrollY - headerHeight;
-
-                sidebar.style.height = `${Math.max(0, maxHeight)}px`;
-
+        // First pass - find active item and its parent submenu
+        document.querySelectorAll('.menu-section.sub-item a').forEach(function(link) {
+            if (link.pathname.toLowerCase() === currentPath) {
+                const linkSearch = link.search.toLowerCase();
+                if ((!linkSearch && !currentSearch) || (linkSearch && currentSearch && linkSearch === currentSearch)) {
+                    link.parentElement.classList.add('active');
+                    foundActive = true;
+                    activeSubmenu = link.closest('.submenu');
+                    parentMenuItem = activeSubmenu?.previousElementSibling;
+                }
             }
+        });
 
+        // If a submenu item is active, also mark its parent menu item as active
+        if (parentMenuItem) {
+            parentMenuItem.classList.add('active');
         }
 
+        // Second pass - close all submenus except the active one
+        document.querySelectorAll('.submenu').forEach(function(submenu) {
+            const parentItem = submenu.previousElementSibling;
+            const chevron = parentItem?.querySelector('.chevron-toggle');
+            const icon = chevron?.querySelector(".submenu-icon");
 
-        @* toggleProfileDropdown toggle script *@
+            if (submenu === activeSubmenu) {
+                submenu.classList.add('visible');
+                if (chevron) chevron.style.display = "inline";
+                if (icon) icon.classList.add("rotated");
+            } else {
+                submenu.classList.remove('visible');
+                if (chevron) chevron.style.display = "inline";
+                if (icon) icon.classList.remove("rotated");
+            }
+        });
 
-        function toggleProfileDropdown(e) {
-
-            e.stopPropagation();
-
-            const profile = document.getElementById('profileDropdown');
-
-            const caret = profile.querySelector('.profile-caret');
-
-            const menu = document.getElementById('profileDropdownMenu');
-
-            const isOpen = profile.classList.contains('open');
-
-            profile.classList.toggle('open', !isOpen);
-
-            if (caret) caret.classList.toggle('open', !isOpen);
-
-            if (menu) menu.style.display = !isOpen ? 'flex' : 'none';
-
+        // Handle non-submenu active states
+        if (!foundActive) {
+            document.querySelectorAll('.menu-section:not(.sub-item) a').forEach(function(link) {
+                if (link.pathname && link.pathname.toLowerCase() === currentPath) {
+                    link.parentElement.classList.add('active');
+                    foundActive = true;
+                }
+            });
         }
+    }
 
-    // Close dropdown when clicking outside
-
-    document.addEventListener('click', function (event) {
+    function toggleProfileDropdown(e) {
+        e.stopPropagation();
 
         const profile = document.getElementById('profileDropdown');
+        const caret = profile.querySelector('.profile-caret');
+        const menu = document.getElementById('profileDropdownMenu');
+        const isOpen = profile.classList.contains('open');
+        profile.classList.toggle('open', !isOpen);
 
-        if (profile && profile.classList.contains('open')) {
+        if (caret) caret.classList.toggle('open', !isOpen);
+        if (menu) menu.style.display = !isOpen ? 'flex' : 'none';
+    }
 
-            if (!profile.contains(event.target)) {
+    function adjustSidebarHeight() {
+        const headerHeight = 120; // Same as .sidebar top
+        const footer = document.querySelector('footer');
+        const sidebar = document.querySelector('.sidebar');
 
-                profile.classList.remove('open');
+        if (footer && sidebar) {
+            const footerRect = footer.getBoundingClientRect();
+            const footerTop = footerRect.top + window.scrollY;
+            const viewportHeight = window.innerHeight;
+            const scrollY = window.scrollY;
+            const maxHeight = footerTop - scrollY - headerHeight;
 
-                const caret = profile.querySelector('.profile-caret');
-
-                if (caret) caret.classList.remove('open');
-
-                document.getElementById('profileDropdownMenu').style.display = 'none';
-
-            }
-
+            sidebar.style.height = `${Math.max(0, maxHeight)}px`;
         }
+    }
 
+    // Initialize on DOM load
+    document.addEventListener("DOMContentLoaded", function() {
+        manageSubmenus();
+
+        const sidebar = document.getElementById("sidebar");
+        const chevrons = document.querySelectorAll('.chevron-toggle');
+
+        if (sidebar.classList.contains("collapsed")) {
+            chevrons.forEach(chevron => {
+                chevron.style.display = "none";
+            });
+        } else {
+            chevrons.forEach(chevron => {
+                chevron.style.display = "inline";
+            });
+        }
     });
 
-        window.addEventListener('scroll', adjustSidebarHeight);
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const profile = document.getElementById('profileDropdown');
+        if (profile && profile.classList.contains('open')) {
+            if (!profile.contains(event.target)) {
+                profile.classList.remove('open');
+                const caret = profile.querySelector('.profile-caret');
+                if (caret) caret.classList.remove('open');
+                document.getElementById('profileDropdownMenu').style.display = 'none';
+            }
+        }
 
-        window.addEventListener('resize', adjustSidebarHeight);
+        // Auto-close submenus when clicking elsewhere
+        if (!event.target.closest('.has-submenu') && !event.target.closest('.submenu')) {
+            document.querySelectorAll('.submenu').forEach(submenu => {
+                if (!submenu.contains(event.target)) {
+                    submenu.classList.remove('visible');
+                    const chevron = submenu.previousElementSibling?.querySelector('.chevron-toggle');
+                    const icon = chevron?.querySelector(".submenu-icon");
+                    if (chevron) chevron.style.display = "inline";
+                    if (icon) icon.classList.remove("rotated");
+                }
+            });
+        }
+    });
 
-        window.addEventListener('load', adjustSidebarHeight);
+    // Handle navigation clicks to manage submenus
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('a') && !event.target.closest('.dropdown-item')) {
+            setTimeout(manageSubmenus, 10);
+        }
+    });
+
+    // Window event listeners
+    window.addEventListener('scroll', adjustSidebarHeight);
+    window.addEventListener('resize', adjustSidebarHeight);
+    window.addEventListener('load', adjustSidebarHeight);
 </script>
 
 
 
 <style>
 
+    /* Modify the existing .green class and add active state */
+    .menu-section.sub-item i.fa-circle-dot {
+        color: #33cc33; /* Green by default */
+    }
+
+    .menu-section.sub-item.active i.fa-circle-dot {
+        color: #fbbd08 !important; /* Yellow when active */
+    }
+
+    /* Keep all other active states normal */
+    .menu-section.sub-item.active {
+        background-color: transparent;
+        color: white; /* Keep text white */
+    }
+
+        /* Ensure the label stays white when active */
+        .menu-section.sub-item.active .label {
+            color: white;
+        }
 
     .sidebar {
         background-color: #333;
@@ -546,7 +531,6 @@
 
         .menu-section i {
             width: 50px; /* Increased from 30px for better alignment */
-
             text-align: center;
             min-width: 50px;
         }
@@ -655,9 +639,18 @@
         transition: transform 0.3s;
     }
 
-    .sidebar.collapsed .submenu-icon {
+    .chevron-toggle {
+        display: inline;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar.collapsed .chevron-toggle {
         display: none !important;
     }
+
+    /*     .sidebar.collapsed .submenu-icon {
+                display: none !important;
+            } */
 
     @*---------------------------------------------
 

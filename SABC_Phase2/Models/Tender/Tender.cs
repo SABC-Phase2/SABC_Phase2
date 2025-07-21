@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SABC_Phase2.Models.Tender
 {
@@ -39,8 +40,10 @@ namespace SABC_Phase2.Models.Tender
         public Guid? DraftId { get; set; }
         public ICollection<TenderDocument> Documents { get; set; }
 
-        // NEW COLUMN
-        public string? AwardedTender { get; set; }
+        // Foreign key to AwardedTender, nullable
+        public int? AwardedTenderId { get; set; }
+        [ForeignKey("AwardedTenderId")]
+        public AwardedTender AwardedTender { get; set; }
 
 
     }

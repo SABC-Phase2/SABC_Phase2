@@ -57,7 +57,9 @@
                         <td>
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                         </td>
-                        <td>@tender.Title</td>
+                        <td>
+                            <strong>@tender.TenderNumber</strong> : @tender.Title
+                        </td>
                         <td>
                             <span class="tender-status
                                     @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :

@@ -12,7 +12,7 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250716113348_Push1")]
+    [Migration("20250721111814_Push1")]
     partial class Push1
     {
         /// <inheritdoc />
@@ -196,6 +196,28 @@ namespace SABC_Phase2.Migrations
                     b.ToTable("Applied_For_Tenders");
                 });
 
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.AwardedTender", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AwardedCompanyName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("AwardedTenders");
+                });
+
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTender", b =>
                 {
                     b.Property<int>("Id")
@@ -275,8 +297,8 @@ namespace SABC_Phase2.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AwardedTender")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("AwardedTenderId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("ClosingDate")
                         .HasColumnType("datetime2");
@@ -312,6 +334,8 @@ namespace SABC_Phase2.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AwardedTenderId");
+
                     b.ToTable("Tenders");
                 });
 
@@ -322,6 +346,9 @@ namespace SABC_Phase2.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AwardedTenderId")
+                        .HasColumnType("int");
 
                     b.Property<string>("BlobName")
                         .IsRequired()
@@ -339,6 +366,8 @@ namespace SABC_Phase2.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AwardedTenderId");
 
                     b.HasIndex("TenderId");
 
@@ -464,6 +493,17 @@ namespace SABC_Phase2.Migrations
                     b.Navigation("Tender");
                 });
 
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.AwardedTender", b =>
+                {
+                    b.HasOne("SABC_Phase2.Models.Tender.Tender", "Tender")
+                        .WithMany()
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tender");
+                });
+
             modelBuilder.Entity("SABC_Phase2.Models.Tender.ScheduledTenderDocument", b =>
                 {
                     b.HasOne("SABC_Phase2.Models.Tender.ScheduledTender", "ScheduledTender")
@@ -475,13 +515,28 @@ namespace SABC_Phase2.Migrations
                     b.Navigation("ScheduledTender");
                 });
 
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.Tender", b =>
+                {
+                    b.HasOne("SABC_Phase2.Models.Tender.AwardedTender", "AwardedTender")
+                        .WithMany()
+                        .HasForeignKey("AwardedTenderId");
+
+                    b.Navigation("AwardedTender");
+                });
+
             modelBuilder.Entity("SABC_Phase2.Models.Tender.TenderDocument", b =>
                 {
+                    b.HasOne("SABC_Phase2.Models.Tender.AwardedTender", "AwardedTender")
+                        .WithMany("Documents")
+                        .HasForeignKey("AwardedTenderId");
+
                     b.HasOne("SABC_Phase2.Models.Tender.Tender", "Tender")
                         .WithMany("Documents")
                         .HasForeignKey("TenderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AwardedTender");
 
                     b.Navigation("Tender");
                 });
@@ -503,6 +558,11 @@ namespace SABC_Phase2.Migrations
                 });
 
             modelBuilder.Entity("SABC_Phase2.Models.OVRS.TenderApplications", b =>
+                {
+                    b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("SABC_Phase2.Models.Tender.AwardedTender", b =>
                 {
                     b.Navigation("Documents");
                 });

@@ -12,14 +12,19 @@ namespace SABC_Phase2.Models.Tender
         public string FileName { get; set; }
 
         [Required]
-        public string BlobName { get; set; } // <--- Add this property
+        public string BlobName { get; set; } // Azure blob name
 
         [Required]
-        public string FilePath { get; set; } // Local path or Azure blob URL
+        public string FilePath { get; set; } // Azure blob URL
 
+        // Foreign key to Tender (always set)
         public int TenderId { get; set; }
-
         [ForeignKey("TenderId")]
         public Tender Tender { get; set; }
+
+        // Foreign key to AwardedTender (set only if document is for awarded tender)
+        public int? AwardedTenderId { get; set; }
+        [ForeignKey("AwardedTenderId")]
+        public AwardedTender AwardedTender { get; set; }
     }
 }
