@@ -95,7 +95,7 @@ RecurringJob.AddOrUpdate<ITenderPublishingService>(
 RecurringJob.AddOrUpdate<ITenderClosingService>(
     "close-expired-tenders",
     service => service.CloseExpiredTendersAsync(),
-    "*/5 * * * *" // every 5 minutes
+    "*/1 * * * *" // every 1 minutes
 );
 
 // ---------------------------
@@ -103,6 +103,6 @@ RecurringJob.AddOrUpdate<ITenderClosingService>(
 // ---------------------------
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=TenderAdmin}/{action=Index}/{id?}");
+    pattern: "{controller=OVRS_User}/{action=AllTenders}/{id?}");
 
 app.Run();
