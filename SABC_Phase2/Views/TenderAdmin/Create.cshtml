@@ -80,17 +80,6 @@ ViewData["BannerText"] = "Tenders";
                     <input type="hidden" asp-for="Status" value="Open Tender" />
                     <span asp-validation-for="Status" class="text-danger"></span>
                 </div>
-                @* <div class="form-group">
-                    <label asp-for="Status">Status <span class="text-danger">*</span></label>
-                    <select asp-for="Status" class="form-control custom-dropdown">
-                        <option value="" disabled selected hidden>~Please select the status of the tender~</option>
-                        <option value="Open Tender">Open Tender</option>
-                        <option value="Closed Tender">Closed Tender</option>
-                        <option value="Awarded Tender">Awarded Tender</option>
-                        <option value="Cancelled Tender">Cancelled Tender</option>
-                    </select>
-                    <span asp-validation-for="Status" class="text-danger"></span>
-                </div> *@
 
                 <div class="form-group full-width">
                     <label asp-for="Title">Tender Title <span class="text-danger">*</span></label>
@@ -267,7 +256,7 @@ ViewData["BannerText"] = "Tenders";
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // ----- Tab logic -----
+            // Tab logic
             const tabs = ['details', 'documents', 'submit'];
             let currentTab = 'details';
 
@@ -278,7 +267,6 @@ ViewData["BannerText"] = "Tenders";
             const submitTabs = ['publish', 'schedule', 'draft'];
             let currentSubmitSubTab = 'publish';
 
-            // Tab click logic
             window.showTab = function(tabName) {
                 document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
                 document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
@@ -343,42 +331,218 @@ ViewData["BannerText"] = "Tenders";
             }
             attachDraftBtnLogic();
 
-            // ---- PDF upload logic (unchanged) ----
+            // ---- PDF upload logic (multi-batch and removable) ----
             const fileInput = document.getElementById('UploadedFiles');
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
+            let selectedFiles = [];
 
-            if (fileInput) {
-                fileInput.addEventListener('change', function () {
-                    document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
-                    const files = fileInput.files;
-                    if (files.length > 0) {
-                        Array.from(files).forEach(function (file, idx) {
-                            if (file.type !== "application/pdf") {
-                                alert("Only PDF files are allowed.");
-                                fileInput.value = "";
-                                return;
-                            }
-                            const entryDiv = document.createElement('div');
-                            entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-                            entryDiv.innerHTML = `<div>
-                                <strong>${file.name}</strong>
-                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                    <span>Selected for upload</span>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
-                            entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                                entryDiv.remove();
-                                fileInput.value = "";
-                            });
-                            uploadedFilesContainer.appendChild(entryDiv);
-                        });
+            fileInput.addEventListener('change', function () {
+                const files = Array.from(fileInput.files);
+
+                // Add new files to the selectedFiles array if not already present
+                files.forEach(file => {
+                    if (file.type !== "application/pdf") {
+                        alert("Only PDF files are allowed.");
+                        return;
                     }
+                    // Check if already present (by name + size)
+                    if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                        selectedFiles.push(file);
+                    }
+                });
+
+                updateFilesDisplay();
+                // Reset file input so the same file can be added again if needed
+                fileInput.value = "";
+            });
+
+            function updateFilesDisplay() {
+                // Remove all new uploaded entries (not existing ones)
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+                selectedFiles.forEach(function (file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry.new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                    entryDiv.innerHTML = `<div>
+                        <strong>${file.name}</strong>
+                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                            <span>Selected for upload</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        // Remove from selectedFiles and update display
+                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                        updateFilesDisplay();
+                    });
+                    uploadedFilesContainer.appendChild(entryDiv);
                 });
             }
 
-            // ---- Form AJAX submit logic ----
+            // ---- Validation ----
+            function showFieldError(fieldIdOrName, message, tabName) {
+                let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
+                if (field) {
+                    let label = null;
+                    // Try to find the associated label
+                    if (field.id) {
+                        label = document.querySelector(`label[for='${field.id}']`);
+                    }
+                    // Fallback: use the closest .form-group and find label inside it
+                    if (!label) {
+                        let formGroup = field.closest('.form-group');
+                        if (formGroup) {
+                            label = formGroup.querySelector('label');
+                        }
+                    }
+                    // Remove any existing error span near this label
+                    if (label) {
+                        let oldError = label.parentNode.querySelector('.validation-custom-error');
+                        if (oldError) oldError.remove();
+
+                        let errorSpan = document.createElement('span');
+                        errorSpan.className = 'validation-custom-error text-danger';
+                        errorSpan.innerText = message;
+                        errorSpan.style.fontWeight = 'bold';
+
+                        if (tabName === 'documents') {
+                            // Insert after label
+                            label.insertAdjacentElement('afterend', errorSpan);
+                        } else {
+                            // Append next to label
+                            errorSpan.classList.add('ms-2');
+                            label.appendChild(errorSpan);
+                        }
+                    }
+                    field.classList.add('field-error-highlight');
+                } else {
+                    // Fallback error on the whole tab section
+                    let tabContent = document.getElementById(tabName);
+                    if (tabContent) {
+                        let oldError = tabContent.querySelector('.validation-custom-error');
+                        if (oldError) oldError.remove();
+                        let errorSpan = document.createElement('span');
+                        errorSpan.className = 'validation-custom-error text-danger';
+                        errorSpan.innerText = message;
+                        errorSpan.style.display = 'block';
+                        errorSpan.style.fontWeight = 'bold';
+                        errorSpan.style.marginBottom = '10px';
+                        tabContent.prepend(errorSpan);
+                    }
+                }
+            }
+
+            function clearAllCustomErrors() {
+                document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
+                document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
+            }
+
+            // Only clear the error for the field being edited, not all fields
+            function clearFieldError(e) {
+                let field = e.target;
+                let label = null;
+                if (field.id) {
+                    label = document.querySelector(`label[for='${field.id}']`);
+                }
+                if (!label) {
+                    let formGroup = field.closest('.form-group');
+                    if (formGroup) {
+                        label = formGroup.querySelector('label');
+                    }
+                }
+                if (label) {
+                    let oldError = label.parentNode.querySelector('.validation-custom-error');
+                    if (oldError) oldError.remove();
+                }
+                field.classList.remove('field-error-highlight');
+            }
+
+            document.querySelectorAll('input, textarea').forEach(e => {
+                e.addEventListener('input', clearFieldError);
+                e.addEventListener('change', clearFieldError);
+            });
+
+            // ---- Form AJAX submit logic with ALL validation errors at once ----
             doneBtn.addEventListener('click', function() {
+                clearAllCustomErrors();
+
+                // VALIDATION SECTION
+                let errors = [];
+                let errorFields = [];
+                let errorTabs = [];
+
+                // Only validate for publish and schedule, skip validation for draft
+                if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
+                    let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                    let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                    let closingDate = document.querySelector('input[name="ClosingDate"]');
+                    let closingTime = document.querySelector('input[name="ClosingTime"]');
+                    let title = document.querySelector('input[name="Title"]');
+                    let description = document.querySelector('textarea[name="Description"]');
+
+                    if (!tenderType) {
+                        errors.push({field: 'TenderType', message: 'You missed Tender Type.', tab: 'details'});
+                        errorFields.push('TenderType'); errorTabs.push('details');
+                    }
+                    if (!tenderNumber.value.trim()) {
+                        errors.push({field: 'TenderNumber', message: 'You missed Tender Number.', tab: 'details'});
+                        errorFields.push('TenderNumber'); errorTabs.push('details');
+                    }
+                    if (!closingDate.value.trim()) {
+                        errors.push({field: 'ClosingDate', message: 'You missed Closing Date.', tab: 'details'});
+                        errorFields.push('ClosingDate'); errorTabs.push('details');
+                    }
+                    if (!closingTime.value.trim()) {
+                        errors.push({field: 'ClosingTime', message: 'You missed Closing Time.', tab: 'details'});
+                        errorFields.push('ClosingTime'); errorTabs.push('details');
+                    }
+                    if (!title.value.trim()) {
+                        errors.push({field: 'Title', message: 'You missed Tender Title.', tab: 'details'});
+                        errorFields.push('Title'); errorTabs.push('details');
+                    }
+                    if (!description.value.trim()) {
+                        errors.push({field: 'Description', message: 'You missed Tender Description.', tab: 'details'});
+                        errorFields.push('Description'); errorTabs.push('details');
+                    }
+                    if (selectedFiles.length === 0) {
+                        errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
+                        errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                    }
+
+                    // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
+                    if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                        let scheduledDateField = document.getElementById('ScheduledDate');
+                        let scheduledTimeField = document.getElementById('ScheduledTime');
+                        let scheduledDate = scheduledDateField.value;
+                        let scheduledTime = scheduledTimeField.value;
+
+                        if (!scheduledDate.trim()) {
+                            errors.push({field: 'ScheduledDate', message: 'You missed Scheduled Date.', tab: 'submit'});
+                            errorFields.push('ScheduledDate'); errorTabs.push('submit');
+                        }
+                        if (!scheduledTime.trim()) {
+                            errors.push({field: 'ScheduledTime', message: 'You missed Scheduled Time.', tab: 'submit'});
+                            errorFields.push('ScheduledTime'); errorTabs.push('submit');
+                        }
+                    }
+
+                    // Show all errors next to their fields
+                    if (errors.length > 0) {
+                        errors.forEach(function(err) {
+                            showFieldError(err.field, err.message, err.tab);
+                        });
+                        // Switch to first errored tab and focus field
+                        showTab(errors[0].tab);
+                        let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                        if (firstField) {
+                            firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                            firstField.focus();
+                        }
+                        return;
+                    }
+                }
+
+                // No errors (or draft): submit form
                 var form = document.querySelector('form[asp-action="Create"]');
                 if (!form) form = document.querySelector('form[action*="Create"]');
                 if (!form) {
@@ -387,11 +551,19 @@ ViewData["BannerText"] = "Tenders";
                 }
                 var formData = new FormData(form);
 
+                // Remove any existing files from input (so we don't send duplicates)
+                formData.delete('UploadedFiles');
+
+                // Append all files from selectedFiles
+                selectedFiles.forEach(function(file) {
+                    formData.append('UploadedFiles', file, file.name);
+                });
+
                 // SCHEDULE LOGIC
                 if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                    let scheduledDate = document.getElementById('ScheduledDate').value;
+                    let scheduledTime = document.getElementById('ScheduledTime').value;
                     formData.append('IsScheduled', 'true');
-                    var scheduledDate = document.getElementById('ScheduledDate').value;
-                    var scheduledTime = document.getElementById('ScheduledTime').value;
                     formData.append('ScheduledDate', scheduledDate);
                     formData.append('ScheduledTime', scheduledTime);
 
@@ -451,7 +623,6 @@ ViewData["BannerText"] = "Tenders";
 
                 // DRAFT LOGIC
                 if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-                    // Change endpoint to SaveDraft (you must have [HttpPost] SaveDraft in your controller!)
                     var draftUrl = '/TenderAdmin/SaveDraft';
                     fetch(draftUrl, {
                         method: 'POST',
@@ -481,6 +652,12 @@ ViewData["BannerText"] = "Tenders";
                     });
                     return;
                 }
+            });
+
+            // Only clear the error for the field being edited -- NOT all fields!
+            document.querySelectorAll('input, textarea').forEach(e => {
+                e.addEventListener('input', clearFieldError);
+                e.addEventListener('change', clearFieldError);
             });
         });
     </script>

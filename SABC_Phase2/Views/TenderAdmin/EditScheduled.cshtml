@@ -191,8 +191,8 @@
 
 @section Scripts {
     <script>
-                document.addEventListener('DOMContentLoaded', function () {
-            // -------- Tab logic (same as create/edit) --------
+                  document.addEventListener('DOMContentLoaded', function () {
+            // -------- Tab logic --------
             const tabs = ['details', 'documents'];
             let currentTab = 'details';
 
@@ -208,7 +208,6 @@
                 return str.charAt(0).toUpperCase() + str.slice(1);
             }
 
-            // Initial tab setup
             showTab(currentTab);
 
             // Schedule toggle logic
@@ -226,46 +225,55 @@
                     }
                 }
                 scheduleToggle.addEventListener('change', updateScheduleFields);
-                // Initial set on page load
                 updateScheduleFields();
             }
 
-            // PDF upload logic
+            // -------- Multi PDF upload logic --------
             const fileInput = document.getElementById('UploadedFiles');
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
+            let selectedFiles = [];
 
             if (fileInput) {
                 fileInput.addEventListener('change', function () {
-                    // Remove any previous new doc previews
-                    document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
-                    const files = fileInput.files;
-                    if (files.length > 0) {
-                        Array.from(files).forEach(function (file) {
-                            if (file.type !== "application/pdf") {
-                                alert("Only PDF files are allowed.");
-                                fileInput.value = "";
-                                return;
-                            }
-                            const entryDiv = document.createElement('div');
-                            entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-                            entryDiv.innerHTML = `<div>
-                                <strong>${file.name}</strong>
-                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                    <span>Selected for upload</span>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
-                            entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                                entryDiv.remove();
-                                fileInput.value = "";
-                            });
-                            uploadedFilesContainer.appendChild(entryDiv);
-                        });
-                    }
+                    const files = Array.from(fileInput.files);
+                    files.forEach(file => {
+                        if (file.type !== "application/pdf") {
+                            alert("Only PDF files are allowed.");
+                            return;
+                        }
+                        // Avoid duplicate by name+size
+                        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                            selectedFiles.push(file);
+                        }
+                    });
+                    updateFilesDisplay();
+                    fileInput.value = "";
                 });
             }
 
-            // Save Changes/Submit logic
+            function updateFilesDisplay() {
+                // Remove all new uploaded entries
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+                selectedFiles.forEach(function (file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                    entryDiv.innerHTML = `<div>
+                        <strong>${file.name}</strong>
+                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                            <span>Selected for upload</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                        updateFilesDisplay();
+                    });
+                    uploadedFilesContainer.appendChild(entryDiv);
+                });
+            }
+
+            // -------- Save Changes/Submit logic (send all selected files) --------
             window.submitForm = function() {
                 var form = document.querySelector('form[asp-action="EditScheduled"]');
                 if (!form) form = document.querySelector('form[action*="EditScheduled"]');
@@ -274,6 +282,14 @@
                     return;
                 }
                 var formData = new FormData(form);
+
+                // Remove any existing files from input (avoid duplicate)
+                formData.delete('UploadedFiles');
+
+                // Append all files from selectedFiles
+                selectedFiles.forEach(function(file) {
+                    formData.append('UploadedFiles', file, file.name);
+                });
 
                 // If scheduled, ensure scheduled date/time is provided
                 if (scheduleToggle && scheduleToggle.checked) {
@@ -286,7 +302,7 @@
                         else document.getElementById('ScheduledTime').focus();
                         return;
                     }
-                    formData.set('IsScheduled', 'true'); // checkbox
+                    formData.set('IsScheduled', 'true');
                 } else {
                     formData.delete('IsScheduled');
                     formData.delete('ScheduledDate');
@@ -305,7 +321,6 @@
                     if (response.redirected) {
                         window.location.href = response.url;
                     } else {
-                        // If ModelState invalid, replace body with returned HTML
                         response.text().then(html => {
                             document.body.innerHTML = html;
                             window.scrollTo(0, 0);

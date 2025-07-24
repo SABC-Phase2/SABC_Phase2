@@ -229,7 +229,7 @@
 <!-- ... your markup above ... -->
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+             document.addEventListener('DOMContentLoaded', function () {
             // ---------- Tab Logic ----------
             const tabs = ['details', 'documents'];
             let currentTab = 'details';
@@ -247,11 +247,9 @@
                     if (uploadedFilesContainer) {
                         uploadedFilesContainer.style.display = (status === 'Awarded Tender') ? 'none' : '';
                     }
-
                     if (awardedDocumentsContainer) {
                         awardedDocumentsContainer.style.display = (status === 'Awarded Tender') ? 'block' : 'none';
                     }
-
                     toggleNoAwardedDocMsg();
                 }
             };
@@ -300,56 +298,64 @@
                 }
             }
 
-            // ---------- PDF Upload Preview ----------
+            // ---------- PDF Upload Logic: Multi-batch, Removable ----------
             const fileInput = document.getElementById('UploadedFiles');
+            let selectedFiles = [];
 
             if (fileInput) {
                 fileInput.addEventListener('change', function () {
-                    // Remove all previous previews of new docs from both containers
-                    document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+                    const files = Array.from(fileInput.files);
+                    files.forEach(file => {
+                        if (file.type !== "application/pdf") {
+                            alert("Only PDF files are allowed.");
+                            return;
+                        }
+                        // Check for duplicate by name+size
+                        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                            selectedFiles.push(file);
+                        }
+                    });
 
-                    const files = fileInput.files;
-                    if (files.length > 0) {
-                        Array.from(files).forEach(file => {
-                            if (file.type !== "application/pdf") {
-                                alert("Only PDF files are allowed.");
-                                fileInput.value = "";
-                                return;
-                            }
-
-                            const entryDiv = document.createElement('div');
-                            entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-                            entryDiv.innerHTML = `
-                                <div>
-                                    <strong>${file.name}</strong>
-                                    <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                        <span>Selected for upload</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>
-                            `;
-                            entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                                entryDiv.remove();
-                                fileInput.value = "";
-                                toggleNoAwardedDocMsg(); // update message visibility on remove
-                            });
-
-                            // Append to awarded or main documents container based on status
-                            if (statusDropdown.value === 'Awarded Tender') {
-                                if (awardedDocumentsContainer) awardedDocumentsContainer.appendChild(entryDiv);
-                            } else {
-                                if (uploadedFilesContainer) uploadedFilesContainer.appendChild(entryDiv);
-                            }
-
-                            toggleNoAwardedDocMsg(); // update message visibility on add
-                        });
-                    } else {
-                        toggleNoAwardedDocMsg(); // no files selected, update message
-                    }
+                    updateFilesDisplay();
+                    // Reset input so same file can be added again if needed
+                    fileInput.value = "";
                 });
             }
 
-            // ---------- Form Submission Logic ----------
+            function updateFilesDisplay() {
+                // Remove all new uploaded entries (not existing ones)
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+                selectedFiles.forEach(function (file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                    entryDiv.innerHTML = `
+                        <div>
+                            <strong>${file.name}</strong>
+                            <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                                <span>Selected for upload</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>
+                    `;
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                        updateFilesDisplay();
+                        toggleNoAwardedDocMsg();
+                    });
+
+                    // Append to awarded or main documents container based on status
+                    if (statusDropdown.value === 'Awarded Tender') {
+                        if (awardedDocumentsContainer) awardedDocumentsContainer.appendChild(entryDiv);
+                    } else {
+                        if (uploadedFilesContainer) uploadedFilesContainer.appendChild(entryDiv);
+                    }
+                });
+
+                toggleNoAwardedDocMsg();
+            }
+
+            // ---------- Form Submission Logic: Attach all selected files ----------
             window.submitForm = function() {
                 let form = document.querySelector('form[asp-action="Edit"]') || document.querySelector('form[action*="Edit"]');
                 if (!form) {
@@ -358,6 +364,14 @@
                 }
 
                 let formData = new FormData(form);
+
+                // Remove any existing files from input (to avoid duplicates)
+                formData.delete('UploadedFiles');
+
+                // Append all files from selectedFiles array
+                selectedFiles.forEach(function(file) {
+                    formData.append('UploadedFiles', file, file.name);
+                });
 
                 // Validate Awarded Note if applicable
                 if (statusDropdown.value === 'Awarded Tender') {
@@ -379,16 +393,13 @@
                 })
                 .then(async response => {
                     const contentType = response.headers.get("content-type");
-
                     if (contentType && contentType.includes("application/json")) {
                         const data = await response.json();
                         if (data.success && data.awarded) {
                             document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
                             var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
                             modal.show();
-
                             document.getElementById('awardedModalCloseBtn').onclick = function () {
-                                // Reload page to refresh awarded documents display
                                 window.location.reload();
                             };
                         } else {
