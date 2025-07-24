@@ -15,6 +15,7 @@
           "Microsoft.EntityFrameworkCore": "9.0.6",
           "Microsoft.EntityFrameworkCore.SqlServer": "9.0.6",
           "Microsoft.EntityFrameworkCore.Tools": "9.0.6",
+          "NodaTime": "3.2.2",
           "QuestPDF": "2025.5.1"
         },
         "runtime": {
@@ -890,6 +891,14 @@
           }
         }
       },
+      "NodaTime/3.2.2": {
+        "runtime": {
+          "lib/net8.0/NodaTime.dll": {
+            "assemblyVersion": "3.2.2.0",
+            "fileVersion": "3.2.2.0"
+          }
+        }
+      },
       "QuestPDF/2025.5.1": {
         "runtime": {
           "lib/net8.0/QuestPDF.dll": {
@@ -1744,6 +1753,13 @@
       "sha512": "sha512-pNN4l+J6LlpIvHOeNdXlwxv39NPJ2B5klz+Rd2UQZIx30Squ5oND1Yy3wEAUoKn0GPUj6Yxt9lxlYWQqfZcvKg==",
       "path": "newtonsoft.json/11.0.1",
       "hashPath": "newtonsoft.json.11.0.1.nupkg.sha512"
+    },
+    "NodaTime/3.2.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-dmju5W0UYC3QP/UJM0juKAZkH0HSDMp0gH91A0+mT9M0kgyM2Jm67hUZPl/WRQLq8Lijjqmdk8kyAViWFWM7dA==",
+      "path": "nodatime/3.2.2",
+      "hashPath": "nodatime.3.2.2.nupkg.sha512"
     },
     "QuestPDF/2025.5.1": {
       "type": "package",

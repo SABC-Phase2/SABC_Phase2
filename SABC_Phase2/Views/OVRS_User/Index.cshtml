@@ -8,7 +8,6 @@
     int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
     int emptyRows = pageSize - (Model?.Count ?? 0);
 
-    // Read the status filter from the query string, e.g. "open", "closed", "cancelled", "awarded"
     var tenderStatusFilter = Context.Request.Query["status"].ToString().ToLower();
     bool hasStatusFilter = !string.IsNullOrEmpty(tenderStatusFilter);
 }
@@ -50,9 +49,13 @@
             <tbody>
                 @foreach (var tender in Model)
                 {
-                    // Always make the row clickable to details, regardless of status filter.
+                    var tenderStatus = tender.Status?.ToLower();
+                    string detailsUrl = tenderStatus == "awarded tender"
+                    ? Url.Action("Awarded_Tender_Details", "OVRS_User", new { id = tender.Id })
+                    : Url.Action("View_Tender_Details", "OVRS_User", new { id = tender.Id });
+
                     <tr class="clickable-row"
-                        data-url="@Url.Action("View_Tender_Details", "OVRS_User", new { id = tender.Id })"
+                        data-url="@detailsUrl"
                         style="cursor:pointer;">
                         <td>
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
@@ -62,10 +65,10 @@
                         </td>
                         <td>
                             <span class="tender-status
-                                    @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
-                                                                     tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
-                                                                     tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
-                                                                     tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                                        @(tenderStatus == "open tender" ? "tender-status-open" :
+                                                                           tenderStatus == "closed tender" ? "tender-status-closed" :
+                                                                           tenderStatus == "awarded tender" ? "tender-status-awarded" :
+                                                                           tenderStatus == "cancelled tender" ? "tender-status-cancelled" : "")">
                             @tender.Status
                         </span>
                     </td>

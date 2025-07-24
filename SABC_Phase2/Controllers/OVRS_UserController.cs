@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using NodaTime;
 
 namespace SABC_Phase2.Controllers
 {
@@ -22,18 +23,17 @@ namespace SABC_Phase2.Controllers
         // Dependency-injected database context for EF Core operations.
         private readonly Phase2Context _context;
         private readonly LegacyDbContext _legacyContext;
-        // Configuration for reading application settings.
         private readonly IConfiguration _configuration;
-        // WebHostEnvironment for accessing environment-specific paths and settings.
         private readonly IWebHostEnvironment _env;
         private readonly BlobStorageService _blobStorageService;
-
         private readonly EmailService _emailService;
+        private readonly SouthAfricanTimeService _saTimeService;
+
 
         /// <summary>
         /// Constructor: Sets up dependencies for database access, configuration, and environment.
         /// </summary>
-        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService)
+        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService, SouthAfricanTimeService saTimeService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -51,6 +51,7 @@ namespace SABC_Phase2.Controllers
             _blobStorageService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
 
             _emailService = emailService;
+            _saTimeService = saTimeService;
         }
 
         /// <summary>
@@ -95,17 +96,29 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
+            // Get current user id from claims
+            int? userId = null;
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int uid))
+                userId = uid;
+
+            // Check if already applied
+            bool alreadyApplied = false;
+            if (userId != null)
+            {
+                alreadyApplied = _context.Applied_For_Tenders
+                    .Any(a => a.OVRS_UserId == userId && a.TenderId == id);
+            }
+
             // Generate SAS URLs for each document
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
             foreach (var doc in tender.Documents)
             {
-                // Use the full path, not just FileName!
-                // If you have a BlobName property, use it:
                 doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
-
-                // If you don't have a BlobName property, but know the folder (e.g. 0), construct it:
-                // doc.FilePath = blobService.GetBlobSasUri("0/" + doc.FileName);
             }
+
+            // Pass both tender and alreadyApplied to view
+            ViewBag.AlreadyApplied = alreadyApplied;
 
             return View(tender);
         }
@@ -214,9 +227,7 @@ namespace SABC_Phase2.Controllers
         [HttpPost]
         public async Task<IActionResult> SubmitTenderApplication(int TenderId, int LegacyUserId, List<IFormFile> UploadedFiles, Guid? DraftId)
         {
-            Console.WriteLine("SubmitTenderApplication called.");
-            Console.WriteLine($"TenderId: {TenderId}, LegacyUserId: {LegacyUserId}");
-            Console.WriteLine($"UploadedFiles: {(UploadedFiles == null ? "null" : UploadedFiles.Count.ToString())}");
+
 
             // Find the OVRS_User by LegacyUserId
             var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId);
@@ -225,49 +236,46 @@ namespace SABC_Phase2.Controllers
 
             if (tender == null)
             {
-                Console.WriteLine($"Tender with ID {TenderId} not found.");
+
                 ModelState.AddModelError("", "Invalid Tender ID.");
                 var vm = BuildTenderApplicationViewModel(TenderId, user?.Id);
                 return View("Tender_Application", vm);
             }
             if (user == null)
             {
-                Console.WriteLine($"User with LegacyUserId {LegacyUserId} not found.");
+
                 ModelState.AddModelError("", "Invalid Employee ID (not found in Users table).");
                 var vm = BuildTenderApplicationViewModel(TenderId, null);
                 return View("Tender_Application", vm);
             }
 
             // Create and persist the tender application.
+            var saLocalNow = _saTimeService.GetCurrentSouthAfricanTime();
             var application = new TenderApplications
             {
                 TenderId = TenderId,
                 OVRS_UserId = user.Id,
-                DateApplied = DateTime.UtcNow,
-                DraftId = DraftId // <--- Add this line!
+                DateApplied = saLocalNow.ToDateTimeUnspecified(), // <-- Use South African local time
+                DraftId = DraftId
             };
 
-            Console.WriteLine("Adding new TenderApplications entity to context...");
             _context.Applied_For_Tenders.Add(application);
             await _context.SaveChangesAsync();
-            Console.WriteLine($"Tender application saved with Id: {application.Id}");
+
 
             // Handle uploaded files
             if (UploadedFiles != null && UploadedFiles.Any())
             {
-                Console.WriteLine($"UploadedFiles.Count: {UploadedFiles.Count}");
                 var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
                 int fileIndex = 0;
                 foreach (var file in UploadedFiles)
                 {
-                    Console.WriteLine($"Processing file index {fileIndex}, name: {file?.FileName}, length: {file?.Length}");
+
                     if (file != null && file.Length > 0)
                     {
                         var blobFileName = $"applications/{application.Id}/{Guid.NewGuid()}_{file.FileName}";
-                        Console.WriteLine($"Uploading file to blob storage: {blobFileName}");
                         using var stream = file.OpenReadStream();
                         var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
-                        Console.WriteLine($"File uploaded. Blob URL: {blobUrl}");
 
                         var doc = new ApplicationDocument
                         {
@@ -276,26 +284,15 @@ namespace SABC_Phase2.Controllers
                             FilePath = blobFileName,
                             TenderApplicationId = application.Id
                         };
-                        Console.WriteLine($"Adding ApplicationDocument to context for file: {file.FileName}");
+
                         _context.ApplicationDocuments.Add(doc);
                     }
-                    else
-                    {
-                        Console.WriteLine($"Skipped file index {fileIndex} due to null or length 0.");
-                    }
+
                     fileIndex++;
                 }
                 await _context.SaveChangesAsync();
-                Console.WriteLine("All uploaded files processed and saved to database.");
+
             }
-            else
-            {
-                Console.WriteLine("No files uploaded with submission.");
-            }
-
-            Console.WriteLine("Submission processing complete. Redirecting to OVRS_Documents.");
-
-
 
             // ===== Add this block to delete the draft if used =====
             // Copy draft documents to main application documents, if DraftId is present
@@ -449,7 +446,7 @@ namespace SABC_Phase2.Controllers
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft( Guid? DraftId,int? LegacyUserId, int? TenderId,List<IFormFile> UploadedFiles)
+        public async Task<IActionResult> SaveTenderApplicationDraft(Guid? DraftId, int? LegacyUserId, int? TenderId, List<IFormFile> UploadedFiles)
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -468,6 +465,8 @@ namespace SABC_Phase2.Controllers
             TenderApplicationDraft draft;
 
             // Determine if this is a new draft or an update.
+            var saLocalNow = _saTimeService.GetCurrentSouthAfricanTime();
+
             if (DraftId.HasValue)
             {
                 draft = _context.TenderApplicationDrafts.Include(d => d.Documents).FirstOrDefault(d => d.DraftId == DraftId.Value);
@@ -476,8 +475,7 @@ namespace SABC_Phase2.Controllers
                     // Defensive: Draft vanished or bad id.
                     return Json(new { success = false, message = "Draft not found" });
                 }
-                draft.LastModifiedDate = DateTime.UtcNow;
-                // Ensure the OVRS_UserId is set (optional: only if you want to allow changing user on update)
+                draft.LastModifiedDate = saLocalNow.ToDateTimeUnspecified();
                 draft.OVRS_UserId = ovrsUserId;
             }
             else
@@ -485,10 +483,10 @@ namespace SABC_Phase2.Controllers
                 draft = new TenderApplicationDraft
                 {
                     DraftId = Guid.NewGuid(),
-                    CreatedDate = DateTime.UtcNow,
-                    OVRS_UserId = ovrsUserId,    // <-- Use the resolved Users.Id
+                    CreatedDate = saLocalNow.ToDateTimeUnspecified(),
+                    OVRS_UserId = ovrsUserId,
                     TenderId = TenderId,
-                    Documents = new List<TenderApplicationDraftDocument>() // Always initialize!
+                    Documents = new List<TenderApplicationDraftDocument>()
                 };
                 _context.TenderApplicationDrafts.Add(draft);
             }
@@ -688,7 +686,7 @@ namespace SABC_Phase2.Controllers
         }
 
 
-       
+
         public async Task<IActionResult> AllTenders()
         {
             var tenders = await _context.Tenders
@@ -697,5 +695,47 @@ namespace SABC_Phase2.Controllers
 
             return View(tenders);
         }
+
+
+
+        public async Task<IActionResult> Awarded_Tender_Details(int id)
+        {
+            var tender = await _context.Tenders
+                .Include(t => t.Documents)
+                .Include(t => t.AwardedTender)
+                    .ThenInclude(at => at.Documents)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tender == null)
+                return NotFound();
+
+            string awardedCompanyName = null;
+            if (tender.Status?.ToLower() == "awarded tender" && tender.AwardedTenderId.HasValue)
+            {
+                awardedCompanyName = tender.AwardedTender?.AwardedCompanyName;
+            }
+
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            // Main tender documents
+            if (tender.Documents != null)
+            {
+                foreach (var doc in tender.Documents)
+                {
+                    doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
+                }
+            }
+            // Awarded documents
+            if (tender.AwardedTender?.Documents != null)
+            {
+                foreach (var doc in tender.AwardedTender.Documents)
+                {
+                    doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
+                }
+            }
+
+            ViewBag.AwardedCompanyName = awardedCompanyName;
+            return View(tender);
+        }
+
     }
 }

@@ -81,6 +81,10 @@
               "target": "Package",
               "version": "[9.0.6, )"
             },
+            "NodaTime": {
+              "target": "Package",
+              "version": "[3.2.2, )"
+            },
             "QuestPDF": {
               "target": "Package",
               "version": "[2025.5.1, )"

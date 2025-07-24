@@ -54,6 +54,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddScoped<EmailService>();
 
+//SouthAfrican TimeService Time API (NODA Time)
+builder.Services.AddSingleton<SouthAfricanTimeService>();
+
 var app = builder.Build();
 
 // -------------------------------------

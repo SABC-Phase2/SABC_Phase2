@@ -208,10 +208,37 @@
             </div>
 
         }
+
+        <div id="sast-clock-box" class="sast-clock-box" style="padding:8px; margin:10px 0; background:#fbbd08; border-radius:8px; text-align:center;">
+            <i class="fas fa-clock" style="margin-right:6px;"></i>
+            <span id="sast-clock-label" style="font-weight:bold; display:block;">South African Time:</span>
+            <span id="sast-clock" style="font-size:1.3em; display:block; margin-top:6px;">--:--</span>
+        </div>
     </div>
 </div>
 
 <script>
+    // Clock Javascript
+        function updateSASTClock() {
+        fetch('/api/time/sast-now')
+            .then(response => response.json())
+            .then(data => {
+                // Data.time is "yyyy-MM-dd HH:mm:ss"
+                const timeStr = data.time.split(' ')[1]; // Get just HH:mm:ss
+                document.getElementById("sast-clock").textContent = timeStr;
+            })
+            .catch(() => {
+                document.getElementById("sast-clock").textContent = "--:--:--";
+            });
+    }
+
+    // Initial call
+    updateSASTClock();
+    // Update every 5 seconds for live clock
+    setInterval(updateSASTClock, 5000);
+
+    // --------------------------------------------------------------
+
     function toggleSidebar() {
         const sidebar = document.getElementById("sidebar");
         sidebar.classList.toggle("collapsed");
@@ -407,6 +434,26 @@
 
 
 <style>
+    /* --------------------------------- */
+
+    /* css for clock */
+    .sast-clock-box {
+        width: 100%;
+        box-sizing: border-box;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        background: #fbbd08 !important;
+        border: 1px solid #000;
+        margin-bottom: 12px;
+        color: #000;
+        border-radius: 8px;
+        text-align: center;
+        padding: 8px;
+        /* Remove inline margin for horizontal centering */
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    /* --------------------------------- */
 
     /* Modify the existing .green class and add active state */
     .menu-section.sub-item i.fa-circle-dot {

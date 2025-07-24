@@ -45,7 +45,7 @@
         {
             <tr>
                 <td>
-                    <a href="@Url.Action("Details", "Tenders", new { id = row.TenderId })">@row.TenderNumber</a>
+                 <a href="@Url.Action("View_Tender_Details", "OVRS_User", new { id = row.TenderId })">@row.TenderNumber</a>
                 </td>
                 <td>@row.DateSubmitted</td>
                 <td>@row.TimeSubmitted</td>

@@ -22,14 +22,14 @@ namespace SABC_Phase2.Controllers
         private readonly LegacyDbContext _legacyContext;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
-
+        private readonly SouthAfricanTimeService _saTimeService;
         private readonly TenderReportPdfService _pdfService;
 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController( Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration,IWebHostEnvironment env, TenderReportPdfService pdfService)
+        public TenderAdminController( Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration,IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -48,6 +48,9 @@ namespace SABC_Phase2.Controllers
             // Assign the injected PDF service to a private field.
             // This service is used to generate tender report PDFs as needed.
             _pdfService = pdfService;
+
+            //(NodaTime Time API))
+            _saTimeService = saTimeService;
         }
 
 
@@ -71,58 +74,48 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
-
-            // Validate the incoming model. If the model is not valid (e.g., required fields are missing or invalid),
-            // re-display the form with the user's input and validation errors.
-            // Role check
             if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
-            {
-                // Optionally: return a custom error view, message, or 403
-                return Forbid(); // or return Unauthorized(); or a custom error page
-            }
+                return Forbid();
 
-            // Initialize the Azure Blob Storage service for file uploads.
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
 
             // --- Scheduled Tender Logic ---
-            // If the tender should be published in the future (scheduled), handle differently.
             if (model.IsScheduled && model.ScheduledDate.HasValue && model.ScheduledTime.HasValue)
             {
-                // Combine the scheduled date and time (assumed to be in the user's local timezone).
-                DateTime localPublishDateTime = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
+                // Combine the scheduled date and time as South African local time
+                var scheduledLocal = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
+                var scheduledSaLocal = new NodaTime.LocalDateTime(
+                    scheduledLocal.Year, scheduledLocal.Month, scheduledLocal.Day,
+                    scheduledLocal.Hour, scheduledLocal.Minute, scheduledLocal.Second
+                );
+                // Convert South African local time to UTC
+                var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
+                var scheduledUtc = scheduledUtcInstant.ToDateTimeUtc();
 
-                // Convert the combined local datetime to UTC before saving to ensure consistent time handling.
-                DateTime publishDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localPublishDateTime);
-
-                // Create a new ScheduledTender entity and populate its properties from the model.
                 var scheduledTender = new ScheduledTender
                 {
                     TenderType = model.TenderType,
                     TenderNumber = model.TenderNumber,
                     ClosingDate = model.ClosingDate.Value,
                     ClosingTime = model.ClosingTime,
-                    Status = "Scheduled", // Set status to indicate it's a scheduled tender.
+                    Status = "Scheduled",
                     Title = model.Title,
                     Description = model.Description,
-                    ScheduledPublishDateTime = publishDateTimeUtc, // Store as UTC in DB.
-                    CreatedOn = DateTime.UtcNow,
+                    ScheduledPublishDateTime = scheduledUtc,
+                    CreatedOn = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified(),
                     Documents = new List<ScheduledTenderDocument>()
                 };
 
-                // Handle any uploaded files and add them to the scheduled tender.
                 if (model.UploadedFiles != null && model.UploadedFiles.Any())
                 {
                     foreach (var file in model.UploadedFiles)
                     {
                         if (file.Length > 0)
                         {
-                            // Create a unique filename for each uploaded document.
                             var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
                             using var stream = file.OpenReadStream();
-                            // Upload the file to blob storage and get its URL (not persisted here, but can be used if needed).
                             var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
 
-                            // Associate the uploaded document with the scheduled tender.
                             scheduledTender.Documents.Add(new ScheduledTenderDocument
                             {
                                 FileName = file.FileName,
@@ -132,19 +125,17 @@ namespace SABC_Phase2.Controllers
                     }
                 }
 
-                // Add the new scheduled tender to the database context and save changes.
                 _context.ScheduledTenders.Add(scheduledTender);
                 await _context.SaveChangesAsync();
 
-                // Schedule a background job (using Hangfire) to publish the tender at the scheduled UTC time.
-                var delay = publishDateTimeUtc - DateTime.UtcNow;
-                if (delay < TimeSpan.Zero) delay = TimeSpan.Zero; // Prevent negative delays (publish immediately if in the past).
+                var delay = scheduledUtc - DateTime.UtcNow;
+                if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
 
                 BackgroundJob.Schedule<ITenderPublishingService>(
-                    service => service.PublishScheduledTendersAsync(), // The service method to execute.
-                    delay);                                            // The delay before the job runs.
+                    service => service.PublishScheduledTendersAsync(),
+                    delay
+                );
 
-                // Redirect to the main index after scheduling.
                 return Json(new
                 {
                     success = true,
@@ -155,7 +146,10 @@ namespace SABC_Phase2.Controllers
             }
 
             // --- Immediate Tender Logic ---
-            // If not scheduled, create and save the tender immediately.
+            // Get authoritative South African time for publishing
+            var saNow = _saTimeService.GetCurrentSouthAfricanTime();
+            var datePublished = saNow.ToDateTimeUnspecified();
+
             var tender = new Tender
             {
                 TenderType = model.TenderType,
@@ -165,67 +159,53 @@ namespace SABC_Phase2.Controllers
                 Status = model.Status,
                 Title = model.Title,
                 Description = model.Description,
-                DatePublished = DateTime.UtcNow,
-                DraftId = model.DraftId,            // Link to draft if this was created from a draft.
+                DatePublished = datePublished,
+                DraftId = model.DraftId,
                 Documents = new List<TenderDocument>(),
-                AwardedTender = null                // Explicitly set to null (optional).
+                AwardedTender = null
             };
 
-            // Handle uploaded files for immediate tenders.
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
                 {
                     if (file.Length > 0)
                     {
-                        // Use the tender's ID and a GUID to generate a unique blob filename.
                         var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
-                        // Upload the file to blob storage.
                         var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
 
-                        // Add the document to the tender's list of documents.
                         tender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            BlobName = blobFileName,    // <-- Set this!
-                            FilePath = blobFileName,    // (optional, keep for legacy or use as SAS URL at runtime)
+                            BlobName = blobFileName,
+                            FilePath = blobFileName,
                             TenderId = tender.Id
                         });
                     }
                 }
             }
 
-            // Save the new tender to the database.
             _context.Tenders.Add(tender);
             await _context.SaveChangesAsync();
 
             // --- Draft Cleanup Logic ---
-            // If this tender was created from a draft, delete the draft and its documents.
             if (model.DraftId.HasValue)
             {
-                // Retrieve the draft (and its documents) from the database.
                 var draft = await _context.TenderAdminsDraft
                     .Include(d => d.Documents)
                     .FirstOrDefaultAsync(d => d.DraftId == model.DraftId.Value);
 
                 if (draft != null)
                 {
-                    // Remove all draft documents from the database.
                     if (draft.Documents != null && draft.Documents.Any())
-                    {
                         _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
-                    }
-                    // Remove the draft itself.
-                    _context.TenderAdminsDraft.Remove(draft);
 
-                    // Save changes after deleting the draft and documents.
+                    _context.TenderAdminsDraft.Remove(draft);
                     await _context.SaveChangesAsync();
                 }
             }
 
-            // Redirect to the tender index after successful creation.
-            // For regular publish, return JSON for modal popup
             return Json(new
             {
                 success = true,
@@ -298,7 +278,8 @@ namespace SABC_Phase2.Controllers
                 draft = new TenderDraft
                 {
                     DraftId = Guid.NewGuid(),                        // Generate a new unique DraftId
-                    CreatedDate = DateTime.UtcNow,                   // Set creation date to now (UTC)
+                    CreatedDate = _saTimeService.GetCurrentSouthAfricanTime()
+                    .ToDateTimeUnspecified(),                       // Set creation date to now (UTC)
                     Documents = new List<TenderDraftDocument>()      // Initialize the documents collection
                 };
                 _context.TenderAdminsDraft.Add(draft);               // Add the new draft to EF context for saving
@@ -306,7 +287,7 @@ namespace SABC_Phase2.Controllers
             else
             {
                 // If updating an existing draft, set the last modified date to now (UTC)
-                draft.LastModifiedDate = DateTime.UtcNow;
+                draft.LastModifiedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
 
                 // Optionally: Uncomment below lines if you want to replace old documents with new ones
                 // _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
@@ -756,12 +737,18 @@ namespace SABC_Phase2.Controllers
             // calculate the scheduled publish datetime in UTC based on the user's local time zone
             if (dto.IsScheduled && dto.ScheduledDate.HasValue && dto.ScheduledTime.HasValue)
             {
-                // Set the local timezone (change string if your region is different)
-                var userTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
-                // Combine the scheduled date and time to get the local scheduled datetime
-                var localDateTime = dto.ScheduledDate.Value.Date + dto.ScheduledTime.Value;
-                // Convert the local scheduled datetime to UTC for consistent storage and comparison
-                scheduledTender.ScheduledPublishDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, userTimeZone);
+                // Combine date and time as South African LocalDateTime
+                var scheduledSaLocal = new NodaTime.LocalDateTime(
+                    dto.ScheduledDate.Value.Year,
+                    dto.ScheduledDate.Value.Month,
+                    dto.ScheduledDate.Value.Day,
+                    dto.ScheduledTime.Value.Hours,
+                    dto.ScheduledTime.Value.Minutes,
+                    dto.ScheduledTime.Value.Seconds
+                );
+                // Convert to UTC instant using your service
+                var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
+                scheduledTender.ScheduledPublishDateTime = scheduledUtcInstant.ToDateTimeUtc();
             }
 
             // Initialize the Azure Blob Storage service for document management

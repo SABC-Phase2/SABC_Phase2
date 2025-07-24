@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "ContainingType": "SABC_Phase2.Controllers.TimeController",
+    "Method": "GetSouthAfricanTime",
+    "RelativePath": "api/Time/sast-now",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

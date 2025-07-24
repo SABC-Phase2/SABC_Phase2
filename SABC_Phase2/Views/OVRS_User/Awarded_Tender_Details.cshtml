@@ -1,7 +1,7 @@
 ﻿@model SABC_Phase2.Models.Tender.Tender
 
 @{
-    ViewData["Title"] = "Tender Details";
+    ViewData["Title"] = "Awarded Tender Details";
     bool isAuthenticated = User.Identity.IsAuthenticated;
     var tenderStatus = Model.Status?.ToLower() ?? "";
     bool isOpen = tenderStatus == "open tender";
@@ -11,6 +11,7 @@
     bool showGreyButton = isClosed || isAwarded || isCancelled;
 
     bool alreadyApplied = ViewBag.AlreadyApplied != null && (bool)ViewBag.AlreadyApplied;
+    string awardedCompanyName = ViewBag.AwardedCompanyName as string;
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -21,7 +22,7 @@
     <span>&gt;</span>
     <span>Tenders</span>
     <span>&gt;</span>
-    <span class="breadcrumb-active">Details of Tenders</span>
+    <span class="breadcrumb-active">Details of Awarded Tenders</span>
 </div>
 
 <!-- Main Card -->
@@ -31,13 +32,17 @@
         <a class="back-arrow" href="javascript:history.back()">
             <i class="fas fa-arrow-left"></i>
         </a>
-        <span class="details-title">@Model.TenderNumber</span>
+        <span class="details-title">
+            @Model.TenderNumber
+        </span>
     </div>
     <div class="upload-label-underline"></div>
     <br />
     <div class="tender-main-info">
         <div class="tender-title">
-            <b>@Model.TenderNumber: @Model.Title</b>
+            <b>
+                @($"{Model.TenderNumber}: {Model.Title}")
+            </b>
         </div>
         <br />
         <div class="tender-meta">
@@ -54,20 +59,57 @@
                 }
             </span>
         </div>
+        @if (!string.IsNullOrEmpty(awardedCompanyName))
+        {
+            <div class="tender-awarded-to" style="margin-top:10px;">
+                <label>
+                    <b>Tender Awarded to:</b> @awardedCompanyName
+                </label>
+            </div>
+        }
     </div>
 
     <div class="tender-description" style="margin-top: 22px;">
         @Model.Description
     </div>
 
-    <!-- Attachments -->
-    @if (Model.Documents != null && Model.Documents.Any())
+    <!-- Main Attachments -->
+    @if (Model.Documents != null && Model.Documents.Any(d => d.AwardedTenderId == null))
     {
         <div class="tender-attachments">
-            <h4>Attachments</h4>
+            <h4>Main Attachments</h4>
             <table>
                 <tbody>
-                    @foreach (var doc in Model.Documents)
+                    @foreach (var doc in Model.Documents.Where(d => d.AwardedTenderId == null))
+                    {
+                        <tr>
+                            <td style="width:36px;">
+                                <img src="~/lib/Images/pdficon.png" style="width:32px;" />
+                            </td>
+                            <td>
+                                @doc.FileName
+                            </td>
+                            <td>
+                                <a href="@doc.FilePath" target="_blank" class="view-btn">View</a>
+                            </td>
+                            <td>
+                                <a href="@doc.FilePath" download class="download-btn">Download</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <!-- Awarded Tender Attachments -->
+    @if (Model.AwardedTender != null && Model.AwardedTender.Documents != null && Model.AwardedTender.Documents.Any())
+    {
+        <div class="tender-attachments">
+            <h4>Awarded Tender Attachments</h4>
+            <table>
+                <tbody>
+                    @foreach (var doc in Model.AwardedTender.Documents)
                     {
                         <tr>
                             <td style="width:36px;">
@@ -195,8 +237,8 @@
             color: #000;
         }
 
-/* ------------------------------------------------------------------------- */
-        /* Respond button greyed out for closed, canceled and awarded content */
+    /* ------------------------------------------------------------------------- */
+    /* Respond button greyed out for closed, canceled and awarded content */
     .respond-btn.disabled-respond,
     .respond-btn:disabled {
         background-color: #aaa !important;
@@ -222,7 +264,7 @@
 
 
 
- /* ------------------------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------------------------ */
 
     .upload-label-underline {
         width: 100%;
