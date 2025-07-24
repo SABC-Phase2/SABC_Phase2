@@ -33,7 +33,14 @@
             <i class="fas fa-arrow-left"></i>
         </a>
         <span class="details-title">
-            @Model.TenderNumber
+            @if (!string.IsNullOrEmpty(awardedCompanyName))
+            {
+                @awardedCompanyName
+            }
+            else
+            {
+                @Model.TenderNumber
+            }
         </span>
     </div>
     <div class="upload-label-underline"></div>
