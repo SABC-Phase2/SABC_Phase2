@@ -143,7 +143,7 @@
                         </div>
                     </div>
                 </div>
-               
+
             </div>
         </div>
 
@@ -191,7 +191,7 @@
 
 @section Scripts {
     <script>
-                  document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
             // -------- Tab logic --------
             const tabs = ['details', 'documents'];
             let currentTab = 'details';
@@ -273,8 +273,180 @@
                 });
             }
 
+            // --------- Custom Validation Utilities ---------
+            function showFieldError(fieldIdOrName, message, tabName) {
+                let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
+                if (field) {
+                    let label = null;
+                    // Try to find the associated label
+                    if (field.id) {
+                        label = document.querySelector(`label[for='${field.id}']`);
+                    }
+                    if (!label) {
+                        let formGroup = field.closest('.form-group');
+                        if (formGroup) {
+                            label = formGroup.querySelector('label');
+                        }
+                    }
+                    // Remove any existing error span near this label
+                    if (label) {
+                        let oldError = label.parentNode.querySelector('.validation-custom-error');
+                        if (oldError) oldError.remove();
+
+                        let errorSpan = document.createElement('span');
+                        errorSpan.className = 'validation-custom-error text-danger';
+                        errorSpan.innerText = message;
+                        errorSpan.style.fontWeight = 'bold';
+
+                        if (tabName === 'documents') {
+                            // Insert after label
+                            label.insertAdjacentElement('afterend', errorSpan);
+                        } else {
+                            // Append next to label
+                            errorSpan.classList.add('ms-2');
+                            label.appendChild(errorSpan);
+                        }
+                    }
+                    field.classList.add('field-error-highlight');
+                } else {
+                    // Fallback error on the whole tab section
+                    let tabContent = document.getElementById(tabName);
+                    if (tabContent) {
+                        let oldError = tabContent.querySelector('.validation-custom-error');
+                        if (oldError) oldError.remove();
+                        let errorSpan = document.createElement('span');
+                        errorSpan.className = 'validation-custom-error text-danger';
+                        errorSpan.innerText = message;
+                        errorSpan.style.display = 'block';
+                        errorSpan.style.fontWeight = 'bold';
+                        errorSpan.style.marginBottom = '10px';
+                        tabContent.prepend(errorSpan);
+                    }
+                }
+            }
+
+            function clearAllCustomErrors() {
+                document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
+                document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
+            }
+
+            function clearFieldError(e) {
+                let field = e.target;
+                let label = null;
+                if (field.id) {
+                    label = document.querySelector(`label[for='${field.id}']`);
+                }
+                if (!label) {
+                    let formGroup = field.closest('.form-group');
+                    if (formGroup) {
+                        label = formGroup.querySelector('label');
+                    }
+                }
+                if (label) {
+                    let oldError = label.parentNode.querySelector('.validation-custom-error');
+                    if (oldError) oldError.remove();
+                }
+                field.classList.remove('field-error-highlight');
+            }
+
+            document.querySelectorAll('input, textarea, select').forEach(e => {
+                e.addEventListener('input', clearFieldError);
+                e.addEventListener('change', clearFieldError);
+            });
+
             // -------- Save Changes/Submit logic (send all selected files) --------
             window.submitForm = function() {
+                clearAllCustomErrors();
+
+                // VALIDATION SECTION
+                let errors = [];
+                let errorFields = [];
+                let errorTabs = [];
+
+                // Required fields (details tab)
+                let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                let closingDate = document.querySelector('input[name="ClosingDate"]');
+                let closingTime = document.querySelector('input[name="ClosingTime"]');
+                let title = document.querySelector('input[name="Title"]');
+                let description = document.querySelector('textarea[name="Description"]');
+                let status = document.querySelector('select[name="Status"]').value;
+                let isScheduled = scheduleToggle && scheduleToggle.checked;
+
+
+                if (!tenderType) {
+                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                    errorFields.push('TenderType'); errorTabs.push('details');
+                }
+                if (!tenderNumber.value.trim()) {
+                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                    errorFields.push('TenderNumber'); errorTabs.push('details');
+                }
+                if (!closingDate.value.trim()) {
+                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                    errorFields.push('ClosingDate'); errorTabs.push('details');
+                }
+                if (!closingTime.value.trim()) {
+                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                    errorFields.push('ClosingTime'); errorTabs.push('details');
+                }
+                if (!title.value.trim()) {
+                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                    errorFields.push('Title'); errorTabs.push('details');
+                }
+                if (!description.value.trim()) {
+                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                    errorFields.push('Description'); errorTabs.push('details');
+                }
+                if (!status) {
+                    errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
+                    errorFields.push('StatusDropdown'); errorTabs.push('details');
+                }
+
+                // Scheduled date/time required if scheduled
+                if (isScheduled) {
+                    var dateVal = document.getElementById('ScheduledDate').value;
+                    var timeVal = document.getElementById('ScheduledTime').value;
+                    if (!dateVal) {
+                        errors.push({field: 'ScheduledDate', message: 'You missed Scheduled Date.', tab: 'details'});
+                        errorFields.push('ScheduledDate'); errorTabs.push('details');
+                    }
+                    if (!timeVal) {
+                        errors.push({field: 'ScheduledTime', message: 'You missed Scheduled Time.', tab: 'details'});
+                        errorFields.push('ScheduledTime'); errorTabs.push('details');
+                    }
+                }
+
+                // Supporting documents required: count only those not marked for deletion + new uploads
+                const existingDocsCount =
+                    Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+                        .filter(div => {
+                            const docId = div.getAttribute('data-doc-id');
+                            const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
+                            return !(delCheckbox && delCheckbox.checked);
+                        }).length
+                    +
+                    uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+                if (existingDocsCount === 0) {
+                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
+                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                }
+
+                // Show all errors next to their fields
+                if (errors.length > 0) {
+                    errors.forEach(function(err) {
+                        showFieldError(err.field, err.message, err.tab);
+                    });
+                    // Switch to first errored tab and focus field
+                    showTab(errors[0].tab);
+                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                    if (firstField) {
+                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                        firstField.focus();
+                    }
+                    return;
+                }
+
                 var form = document.querySelector('form[asp-action="EditScheduled"]');
                 if (!form) form = document.querySelector('form[action*="EditScheduled"]');
                 if (!form) {
@@ -291,17 +463,8 @@
                     formData.append('UploadedFiles', file, file.name);
                 });
 
-                // If scheduled, ensure scheduled date/time is provided
-                if (scheduleToggle && scheduleToggle.checked) {
-                    var dateVal = document.getElementById('ScheduledDate').value;
-                    var timeVal = document.getElementById('ScheduledTime').value;
-                    if (!dateVal || !timeVal) {
-                        alert("Please specify both the scheduled date and time.");
-                        showTab('details');
-                        if (!dateVal) document.getElementById('ScheduledDate').focus();
-                        else document.getElementById('ScheduledTime').focus();
-                        return;
-                    }
+                // If scheduled, ensure scheduled date/time is provided (already validated above)
+                if (isScheduled) {
                     formData.set('IsScheduled', 'true');
                 } else {
                     formData.delete('IsScheduled');
@@ -685,4 +848,14 @@
         .schedule-fields.show {
             display: block;
         }
+
+    /* Add this to your existing styles */
+    .validation-custom-error {
+        font-size: 0.75rem !important; /* Smaller font size */
+    }
+
+    .field-error-highlight {
+        border-color: #dc2626 !important;
+        background-color: #fef2f2 !important;
+    }
 </style>

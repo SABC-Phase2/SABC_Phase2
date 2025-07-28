@@ -28,20 +28,13 @@
     <form id="tenderAppForm" asp-action="SubmitTenderApplication" enctype="multipart/form-data" method="post" autocomplete="off">
         <div class="tender-details-form">
             <div class="form-row">
-                <div class="form-group">
-                    <label>Employee ID (GUID)</label>
-                    <input type="text" class="form-control" name="LegacyUserId" readonly
-                           value="@(Model.LegacyUserId?.ToString() ?? "")" />
-                    @if (draft != null && draft.DraftId != Guid.Empty)
-                    {
-                        <input type="hidden" name="DraftId" value="@draft.DraftId" />
-                    }
-                </div>
-                <div class="form-group">
-                    <label>Tender ID</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.Id" />
-                    <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
-                </div>
+                <!-- Keep these hidden in form -->
+                <input type="hidden" name="LegacyUserId" value="@(Model.LegacyUserId?.ToString() ?? "")" />
+                @if (draft != null && draft.DraftId != Guid.Empty)
+                {
+                    <input type="hidden" name="DraftId" value="@draft.DraftId" />
+                }
+                <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
             </div>
             <div class="form-row">
                 <div class="form-group">

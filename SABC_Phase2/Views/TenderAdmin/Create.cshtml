@@ -1,5 +1,5 @@
-﻿﻿@{
-ViewData["BannerText"] = "Tenders";
+﻿@{
+    ViewData["BannerText"] = "Tenders";
 }
 
 @model SABC_Phase2.Models.Tender.TenderViewModel
@@ -7,6 +7,10 @@ ViewData["BannerText"] = "Tenders";
 @{
     ViewBag.Title = "Create Tender";
 }
+<!-- Add these to your <head> section -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 
 <div class="breadcrumb-custom">
     Dashboard <span class="breadcrumb-arrow">&#x2794;</span> Tenders <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Create Tender</span>
@@ -145,22 +149,38 @@ ViewData["BannerText"] = "Tenders";
             <div id="submitTabContentPublish" class="submit-tab-content active">
                 <p>Ready to publish your tender immediately.</p>
             </div>
+
+
             <div id="submitTabContentSchedule" class="submit-tab-content">
                 <p>Set a date and time to schedule your tender publication.</p>
                 <div class="form-group full-width">
                     <div class="schedule-container">
-                        <!-- Checkbox removed! Only show the date and time pickers -->
                         <div class="schedule-fields show" id="scheduleFields">
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="ScheduledDate">Scheduled Date</label>
-                                    <input type="date" id="ScheduledDate" name="ScheduledDate" class="form-control" />
+                                    <div class="selected-date-display" id="selectedDateDisplay">
+                                        No date selected
+                                    </div>
+                                    <div class="always-visible-calendar" id="calendarContainer"></div>
+                                    <input type="hidden" id="ScheduledDate" name="ScheduledDate" />
                                 </div>
-                                <div class="form-group">
-                                    <label for="ScheduledTime">Scheduled Time</label>
-                                    <input type="time" id="ScheduledTime" name="ScheduledTime" class="form-control" />
+                                <div class="form-group" style="margin-top: 140px;">
+                                    <!-- Added margin-top -->
+                                    <label for="timeInput">Scheduled Time</label>
+                                    <div class="time-input-container" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
+                                        <input type="number" id="hours" min="1" max="12" placeholder="HH" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                        <span style="font-size: 1.5rem;">:</span>
+                                        <input type="number" id="minutes" min="0" max="59" placeholder="MM" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                        <span style="font-size: 1.5rem;">:</span>
+                                        <input type="number" id="seconds" min="0" max="59" placeholder="SS" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                        <div class="time-period-toggle" style="margin-left: 15px;">
+                                            <button type="button" class="time-period-btn am-btn active" style="padding: 8px 12px; font-size: 0.6rem;">AM</button>
+                                            <button type="button" class="time-period-btn pm-btn" style="padding: 8px 12px; font-size: 0.6rem;">PM</button>
+                                        </div>
+                                        <input type="hidden" id="ScheduledTime" name="ScheduledTime">
+                                    </div>
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -252,10 +272,31 @@ ViewData["BannerText"] = "Tenders";
     </div>
 </div>
 
-
+<!-- Modal Popup for Empty Draft Validation -->
+<div id="emptyDraftModal" class="modal fade" tabindex="-1" aria-labelledby="emptyDraftModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="emptyDraftModalLabel" style="width:100%;text-align:center;">
+                    <span style="font-weight:bold;">Empty Draft</span>
+                </h5>
+                <div style="margin: 12px auto 0 auto; display: block; color: #e11d48;">
+                    <i class="fas fa-times-circle fa-4x"></i>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.25rem; font-weight:600;">Cannot Save Empty Draft</p>
+                <p>Please fill in at least one field before saving as a draft.</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="emptyDraftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+                       document.addEventListener('DOMContentLoaded', function () {
             // Tab logic
             const tabs = ['details', 'documents', 'submit'];
             let currentTab = 'details';
@@ -267,6 +308,136 @@ ViewData["BannerText"] = "Tenders";
             const submitTabs = ['publish', 'schedule', 'draft'];
             let currentSubmitSubTab = 'publish';
 
+            // Initialize Flatpickr calendar (always visible)
+            const initCalendar = function() {
+                const calendar = flatpickr("#calendarContainer", {
+                    inline: true,
+                    dateFormat: "Y-m-d",
+                    onChange: function(selectedDates, dateStr, instance) {
+                        document.getElementById('ScheduledDate').value = dateStr;
+                        // Update the selected date display
+                        const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
+                        document.getElementById('selectedDateDisplay').textContent = formattedDate;
+                    }
+                });
+
+                // Set today's date as default
+                calendar.setDate(new Date());
+                document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
+                // Format and display the default date
+                const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
+                document.getElementById('selectedDateDisplay').textContent = formattedDate;
+            };
+
+            // Initialize time input functionality with separate boxes
+            const initTimeInput = function() {
+                const hoursInput = document.getElementById('hours');
+                const minutesInput = document.getElementById('minutes');
+                const secondsInput = document.getElementById('seconds');
+                const amBtn = document.querySelector('.am-btn');
+                const pmBtn = document.querySelector('.pm-btn');
+                const timeHiddenInput = document.getElementById('ScheduledTime');
+                let isAM = true;
+
+                // Toggle AM/PM
+                if (amBtn) {
+                    amBtn.addEventListener('click', function() {
+                        if (!isAM) {
+                            isAM = true;
+                            amBtn.classList.add('active');
+                            pmBtn.classList.remove('active');
+                            updateHiddenTimeValue();
+                        }
+                    });
+                }
+
+                if (pmBtn) {
+                    pmBtn.addEventListener('click', function() {
+                        if (isAM) {
+                            isAM = false;
+                            pmBtn.classList.add('active');
+                            amBtn.classList.remove('active');
+                            updateHiddenTimeValue();
+                        }
+                    });
+                }
+
+                // Handle input changes for all time parts
+                [hoursInput, minutesInput, secondsInput].forEach(input => {
+                    input.addEventListener('input', function() {
+                        // Ensure values stay within valid ranges
+                        if (this.value > this.max) {
+                            this.value = this.max;
+                        }
+                        if (this.value < this.min) {
+                            this.value = this.min;
+                        }
+
+                        // Auto-advance to next field when max length reached
+                        if (this.value.length >= this.max.length) {
+                            const next = this.nextElementSibling;
+                            if (next && next.classList.contains('time-part')) {
+                                next.focus();
+                            }
+                        }
+
+                        updateHiddenTimeValue();
+                    });
+
+                    // Handle backspace to move to previous field
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Backspace' && this.value === '' && this.previousElementSibling) {
+                            const prev = this.previousElementSibling;
+                            if (prev.classList.contains('time-part')) {
+                                prev.focus();
+                            }
+                        }
+                    });
+                });
+
+                function updateHiddenTimeValue() {
+                    let hours = hoursInput.value.padStart(2, '0') || '00';
+                    let minutes = minutesInput.value.padStart(2, '0') || '00';
+                    let seconds = secondsInput.value.padStart(2, '0') || '00';
+
+                    // Convert to 24-hour format
+                    let hours24 = parseInt(hours, 10);
+                    if (!isAM && hours24 < 12) {
+                        hours24 += 12;
+                    } else if (isAM && hours24 === 12) {
+                        hours24 = 0;
+                    }
+
+                    const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
+                    timeHiddenInput.value = formattedTime;
+                }
+
+                // Also handle the closing time field if it exists
+                const closingTimeInput = document.querySelector('input[name="ClosingTime"]');
+                if (closingTimeInput) {
+                    // You can add similar separate inputs for closing time if needed
+                    closingTimeInput.addEventListener('input', function(e) {
+                        let value = e.target.value.replace(/\D/g, '');
+                        if (value.length > 4) {
+                            value = value.substring(0, 4);
+                        }
+                        if (value.length > 2) {
+                            value = value.substring(0, 2) + ':' + value.substring(2);
+                        }
+                        e.target.value = value;
+                    });
+                }
+            };
+
+            // Call calendar initialization when schedule tab is shown
+            const scheduleTabBtn = document.getElementById('submitTabSchedule');
+            if (scheduleTabBtn) {
+                scheduleTabBtn.addEventListener('click', function() {
+                    setTimeout(initCalendar, 100); // Small delay to ensure DOM is ready
+                    setTimeout(initTimeInput, 100); // Also initialize time input
+                });
+            }
+
             window.showTab = function(tabName) {
                 document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
                 document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
@@ -274,6 +445,12 @@ ViewData["BannerText"] = "Tenders";
                 document.getElementById('tab' + capitalize(tabName)).classList.add('active');
                 updateActionButtons(tabName);
                 currentTab = tabName;
+
+                // Reinitialize calendar if showing schedule tab
+                if (tabName === 'submit' && currentSubmitSubTab === 'schedule') {
+                    setTimeout(initCalendar, 100);
+                    setTimeout(initTimeInput, 100);
+                }
             }
 
             continueBtn.addEventListener('click', function() {
@@ -314,6 +491,12 @@ ViewData["BannerText"] = "Tenders";
                 document.getElementById('submitTabContent' + capitalize(subTabName)).classList.add('active');
                 document.getElementById('submitTab' + capitalize(subTabName)).classList.add('active');
                 currentSubmitSubTab = subTabName;
+
+                // Reinitialize calendar if showing schedule tab
+                if (subTabName === 'schedule') {
+                    setTimeout(initCalendar, 100);
+                    setTimeout(initTimeInput, 100);
+                }
             }
 
             submitTabs.forEach(function(subTabName) {
@@ -330,6 +513,35 @@ ViewData["BannerText"] = "Tenders";
                 showSubmitTab('publish');
             }
             attachDraftBtnLogic();
+
+            // Initialize time input on page load if on schedule tab
+            if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                setTimeout(initTimeInput, 100);
+            }
+
+            function updateFilesDisplay() {
+                // Remove only the new uploaded file entries (not server-existing ones)
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+                // Re-render all currently selected new files
+                selectedFiles.forEach(function(file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                    entryDiv.innerHTML = `<div>
+                        <strong>${file.name}</strong>
+                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                        <span>Selected for upload</span>
+                        </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        // Remove from selectedFiles and update display
+                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                        updateFilesDisplay();
+                    });
+                    uploadedFilesContainer.appendChild(entryDiv);
+                });
+            }
 
             // ---- PDF upload logic (multi-batch and removable) ----
             const fileInput = document.getElementById('UploadedFiles');
@@ -355,29 +567,6 @@ ViewData["BannerText"] = "Tenders";
                 // Reset file input so the same file can be added again if needed
                 fileInput.value = "";
             });
-
-            function updateFilesDisplay() {
-                // Remove all new uploaded entries (not existing ones)
-                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
-
-                selectedFiles.forEach(function (file, idx) {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = "uploaded-file-entry.new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-                    entryDiv.innerHTML = `<div>
-                        <strong>${file.name}</strong>
-                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                            <span>Selected for upload</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
-                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                        // Remove from selectedFiles and update display
-                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
-                        updateFilesDisplay();
-                    });
-                    uploadedFilesContainer.appendChild(entryDiv);
-                });
-            }
 
             // ---- Validation ----
             function showFieldError(fieldIdOrName, message, tabName) {
@@ -437,7 +626,6 @@ ViewData["BannerText"] = "Tenders";
                 document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
             }
 
-            // Only clear the error for the field being edited, not all fields
             function clearFieldError(e) {
                 let field = e.target;
                 let label = null;
@@ -462,7 +650,7 @@ ViewData["BannerText"] = "Tenders";
                 e.addEventListener('change', clearFieldError);
             });
 
-            // ---- Form AJAX submit logic with ALL validation errors at once ----
+            // ---- Form AJAX submit logic ----
             doneBtn.addEventListener('click', function() {
                 clearAllCustomErrors();
 
@@ -481,27 +669,27 @@ ViewData["BannerText"] = "Tenders";
                     let description = document.querySelector('textarea[name="Description"]');
 
                     if (!tenderType) {
-                        errors.push({field: 'TenderType', message: 'You missed Tender Type.', tab: 'details'});
+                        errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
                         errorFields.push('TenderType'); errorTabs.push('details');
                     }
                     if (!tenderNumber.value.trim()) {
-                        errors.push({field: 'TenderNumber', message: 'You missed Tender Number.', tab: 'details'});
+                        errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
                         errorFields.push('TenderNumber'); errorTabs.push('details');
                     }
                     if (!closingDate.value.trim()) {
-                        errors.push({field: 'ClosingDate', message: 'You missed Closing Date.', tab: 'details'});
+                        errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
                         errorFields.push('ClosingDate'); errorTabs.push('details');
                     }
                     if (!closingTime.value.trim()) {
-                        errors.push({field: 'ClosingTime', message: 'You missed Closing Time.', tab: 'details'});
+                        errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
                         errorFields.push('ClosingTime'); errorTabs.push('details');
                     }
                     if (!title.value.trim()) {
-                        errors.push({field: 'Title', message: 'You missed Tender Title.', tab: 'details'});
+                        errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
                         errorFields.push('Title'); errorTabs.push('details');
                     }
                     if (!description.value.trim()) {
-                        errors.push({field: 'Description', message: 'You missed Tender Description.', tab: 'details'});
+                        errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
                         errorFields.push('Description'); errorTabs.push('details');
                     }
                     if (selectedFiles.length === 0) {
@@ -511,17 +699,15 @@ ViewData["BannerText"] = "Tenders";
 
                     // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
                     if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                        let scheduledDateField = document.getElementById('ScheduledDate');
-                        let scheduledTimeField = document.getElementById('ScheduledTime');
-                        let scheduledDate = scheduledDateField.value;
-                        let scheduledTime = scheduledTimeField.value;
+                        let scheduledDate = document.getElementById('ScheduledDate').value;
+                        let scheduledTime = document.getElementById('ScheduledTime').value;
 
                         if (!scheduledDate.trim()) {
-                            errors.push({field: 'ScheduledDate', message: 'You missed Scheduled Date.', tab: 'submit'});
+                            errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
                             errorFields.push('ScheduledDate'); errorTabs.push('submit');
                         }
                         if (!scheduledTime.trim()) {
-                            errors.push({field: 'ScheduledTime', message: 'You missed Scheduled Time.', tab: 'submit'});
+                            errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
                             errorFields.push('ScheduledTime'); errorTabs.push('submit');
                         }
                     }
@@ -537,6 +723,28 @@ ViewData["BannerText"] = "Tenders";
                         if (firstField) {
                             firstField.scrollIntoView({behavior: "smooth", block: "center"});
                             firstField.focus();
+                        }
+                        return;
+                    }
+                }
+
+                // Check for empty draft
+                if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+                    const hasContent = [
+                        document.querySelector('input[name="TenderType"]:checked'),
+                        document.querySelector('input[name="TenderNumber"]')?.value.trim(),
+                        document.querySelector('input[name="ClosingDate"]')?.value.trim(),
+                        document.querySelector('input[name="ClosingTime"]')?.value.trim(),
+                        document.querySelector('input[name="Title"]')?.value.trim(),
+                        document.querySelector('textarea[name="Description"]')?.value.trim(),
+                        selectedFiles.length > 0
+                    ].some(value => value);
+
+                    if (!hasContent) {
+                        var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
+                        modal.show();
+                        document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
+                            modal.hide();
                         }
                         return;
                     }
@@ -653,17 +861,162 @@ ViewData["BannerText"] = "Tenders";
                     return;
                 }
             });
-
-            // Only clear the error for the field being edited -- NOT all fields!
-            document.querySelectorAll('input, textarea').forEach(e => {
-                e.addEventListener('input', clearFieldError);
-                e.addEventListener('change', clearFieldError);
-            });
         });
     </script>
 }
 
 <style>
+
+    /* Time Input Styles */
+    .time-input-container {
+        margin: 15px auto 0 auto; /* Added top margin */
+        max-width: 450px;
+    }
+
+    .time-part {
+        text-align: center;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f9fafb;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+        .time-part:focus {
+            border-color: #1a7f37;
+            box-shadow: 0 0 0 2px #d1fae5;
+            background: #fff;
+            outline: none;
+        }
+
+    .time-period-toggle {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #d1d5db;
+    }
+
+    .time-period-btn {
+        border: none;
+        background: #f3f4f6;
+        color: #4b5563;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .time-period-btn.active {
+            background: #1a7f37;
+            color: white;
+        }
+
+        .time-period-btn:first-child {
+            border-right: 1px solid #d1d5db;
+        }
+
+    /* Remove default time picker arrows */
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        display: none;
+    }
+    /* Calendar Styles */
+    .always-visible-calendar {
+        width: 100%;
+        margin-top: 10px;
+        margin-right: 45px
+    }
+
+    .flatpickr-calendar.inline {
+        width: 100%;
+        max-width: 300px;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        background: transparent;
+        margin-left: 35px
+    }
+
+    .flatpickr-innerContainer {
+        border: none;
+        box-shadow: none;
+    }
+
+    .flatpickr-days {
+        border: none;
+    }
+
+    .flatpickr-day {
+        border-radius: 4px;
+        height: 32px;
+        line-height: 32px;
+        margin: 2px;
+    }
+
+        .flatpickr-day.selected {
+            background: #1a7f37;
+            border-color: #1a7f37;
+            color: white;
+        }
+
+        .flatpickr-day.today {
+            border-color: #1a7f37;
+        }
+
+            .flatpickr-day.today:hover {
+                background: #e2f3e5;
+                border-color: #1a7f37;
+            }
+
+    .flatpickr-months {
+        margin-bottom: 8px;
+    }
+
+    .flatpickr-month {
+        height: 36px;
+    }
+
+    .flatpickr-current-month {
+        padding-top: 4px;
+    }
+
+    .flatpickr-prev-month, .flatpickr-next-month {
+        top: 6px;
+    }
+
+    /* Selected Date Display */
+    .selected-date-display {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1a7f37;
+        background: #f0fdf4;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        display: inline-block;
+        min-width: 150px;
+        text-align: center;
+    }
+
+
+    /* X-circle icon styling */
+    .fa-times-circle {
+        color: #e11d48; /* Red color for error */
+        margin-bottom: 16px;
+        animation: pulse 1s ease-in-out;
+    }
+
+    @@keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
     .custom-dropdown {
         appearance: none;
         -webkit-appearance: none;
@@ -1090,4 +1443,15 @@ ViewData["BannerText"] = "Tenders";
     }
 
     @*---------------------------------------------------------------------------------*@
+
+    /* Add this to your existing styles */
+    .validation-custom-error {
+        font-size: 0.75rem !important; /* Smaller font size */
+    }
+
+    .field-error-highlight {
+        border-color: #dc2626 !important;
+        background-color: #fef2f2 !important;
+    }
+
 </style>
