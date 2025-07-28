@@ -1,4 +1,10 @@
 ﻿@* Sidebar Razor View for OVRS_User and Administrator roles *@
+
+
+@{
+    var supplierType = User.Identity.IsAuthenticated ? User.FindFirst("SupplierType")?.Value : null;
+}
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <div class="sidebar expanded" id="sidebar">
@@ -209,11 +215,18 @@
 
         }
 
-        <div id="sast-clock-box" class="sast-clock-box" style="padding:8px; margin:10px 0; background:#fbbd08; border-radius:8px; text-align:center;">
-            <i class="fas fa-clock" style="margin-right:6px;"></i>
-            <span id="sast-clock-label" style="font-weight:bold; display:block;">South African Time:</span>
-            <span id="sast-clock" style="font-size:1.3em; display:block; margin-top:6px;">--:--</span>
-        </div>
+
+        @if (User.Identity.IsAuthenticated && supplierType == "Foreign Supplier")
+        {
+            <div id="sast-clock-box" class="sast-clock-box" style="padding:8px; margin:10px 0; background:#fbbd08; border-radius:8px; text-align:center;">
+                <i class="fas fa-clock" style="margin-right:6px;"></i>
+                <span id="sast-clock-label" style="font-weight:bold; display:block;">South African Time:</span>
+                <span id="sast-clock" style="font-size:1.3em; display:block; margin-top:6px;">--:--</span>
+            </div>
+        }
+
+
+
     </div>
 </div>
 

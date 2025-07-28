@@ -215,7 +215,7 @@ namespace SABC_Phase2.Controllers
         }
 
         // Updated Index action to support tender status filtering
-        public IActionResult Index(string status, int page = 1, int pageSize = 9)
+        public IActionResult Index(string status, int page = 1, int pageSize = 7)
         {
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
@@ -346,17 +346,25 @@ namespace SABC_Phase2.Controllers
 
 
         [HttpGet]
-        public IActionResult DraftIndex()
+        public IActionResult DraftIndex(int page = 1, int pageSize = 7)
         {
-            // Query the TenderAdminsDraft table to retrieve all draft tenders from the database.
-            // - Include the related Documents navigation property so that each draft's attached documents are loaded.
-            // - Order the drafts by their creation date in descending order (most recently created drafts appear first).
-            var drafts = _context.TenderAdminsDraft
-                .Include(d => d.Documents)                // Eagerly load associated documents for each draft
-                .OrderByDescending(d => d.CreatedDate)    // Sort by newest drafts at the top
-                .ToList();                                // Execute the query and materialize the results as a list
+            var query = _context.TenderAdminsDraft
+                .Include(d => d.Documents)
+                .OrderByDescending(d => d.CreatedDate);
 
-            // Pass the list of draft tenders (with their documents) to the corresponding view for display.
+            var totalItems = query.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var drafts = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
+
             return View(drafts);
         }
 
@@ -628,7 +636,7 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
-        public IActionResult ScheduledIndex(int page = 1, int pageSize = 9)
+        public IActionResult ScheduledIndex(int page = 1, int pageSize = 7)
         {
             // Get the total number of scheduled tenders in the database.
             // This is needed for pagination calculation and displaying the total count.

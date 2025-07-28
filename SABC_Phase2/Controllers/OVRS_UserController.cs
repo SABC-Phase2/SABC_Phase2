@@ -57,20 +57,16 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Main OVRS tender listing with optional status filtering and pagination.
         /// </summary>
-        public IActionResult Index(string status, int page = 1, int pageSize = 9)
+        public IActionResult Index(string status, int page = 1, int pageSize = 7)
         {
-            // Query tenders and their documents from DB
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
-            // If a status filter is provided, filter the query
             if (!string.IsNullOrEmpty(status))
             {
-                // Adjust this logic if your tender.Status values differ
-                // Normalize status for comparison
                 string statusFilter = status.Trim().ToLower();
                 query = query.Where(t => t.Status.ToLower().Contains(statusFilter));
             }
-            // Pagination
+
             var totalItems = query.Count();
             var tenders = query
                 .OrderByDescending(t => t.DatePublished)
@@ -78,8 +74,11 @@ namespace SABC_Phase2.Controllers
                 .Take(pageSize)
                 .ToList();
 
-            // NOTE: Blob storage setup for files can be handled here if needed
-
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            ViewBag.Status = status;
 
             return View(tenders);
         }
@@ -687,11 +686,22 @@ namespace SABC_Phase2.Controllers
 
 
 
-        public async Task<IActionResult> AllTenders()
+        public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7)
         {
-            var tenders = await _context.Tenders
-        .OrderByDescending(t => t.DatePublished)
-        .ToListAsync();
+            var query = _context.Tenders.OrderByDescending(t => t.DatePublished);
+
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var tenders = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
 
             return View(tenders);
         }

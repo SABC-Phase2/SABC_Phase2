@@ -4,7 +4,7 @@
     ViewData["BannerText"] = "Draft Tenders";
 }
 @{
-    int pageSize = ViewBag.PageSize ?? 9;
+    int pageSize = ViewBag.PageSize ?? 7;
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
     int totalPages = ViewBag.TotalPages ?? 1;
@@ -73,15 +73,19 @@
     </div>
 </div>
 
-<div class="custom-pagination">
+@if (totalPages > 1){
+
+    <div class="custom-pagination">
     <ul class="pagination-list">
         <!-- Previous button -->
         <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-            <a class="page-link arrow-link" href="?page=@(currentPage - 1)" tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
+            <a class="page-link arrow-link"
+               href="?page=@(currentPage - 1)"
+               tabindex="@(currentPage == 1 ? "-1" : "0")"
+               aria-label="Previous">
                 <span aria-hidden="true">&#8592;</span>
             </a>
         </li>
-
         <!-- First page -->
         @if (currentPage > 3)
         {
@@ -93,7 +97,6 @@
                 <li class="page-item disabled"><span class="page-link">...</span></li>
             }
         }
-
         <!-- Pages around current -->
         @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
         {
@@ -110,7 +113,6 @@
                 </li>
             }
         }
-
         <!-- Last page -->
         @if (currentPage < totalPages - 2)
         {
@@ -122,16 +124,18 @@
                 <a class="page-link" href="?page=@totalPages">@totalPages</a>
             </li>
         }
-
         <!-- Next button -->
         <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-            <a class="page-link arrow-link" href="?page=@(currentPage + 1)" tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
+            <a class="page-link arrow-link"
+               href="?page=@(currentPage + 1)"
+               tabindex="@(currentPage == totalPages ? "-1" : "0")"
+               aria-label="Next">
                 <span aria-hidden="true">&#8594;</span>
             </a>
         </li>
     </ul>
 </div>
-
+}
 <style>
     .breadcrumb-custom {
         color: #888;
@@ -394,10 +398,13 @@
     }
 
 
+
+    /* Pagination */
     .custom-pagination {
         display: flex;
         justify-content: center;
-        margin-bottom: 0px;
+        margin-top: -90px; /* Pull up closer to card */
+        z-index: 1;
     }
 
     .pagination-list {

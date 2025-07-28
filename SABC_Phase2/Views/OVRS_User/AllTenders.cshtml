@@ -2,7 +2,7 @@
 
 @{
     ViewData["BannerText"] = "Tenders";
-    int pageSize = ViewBag.PageSize ?? 9;
+    int pageSize = ViewBag.PageSize ?? 7;
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
@@ -85,22 +85,52 @@
 
 @if (totalPages > 1)
 {
-    <div class="pagination-container">
-        <ul class="pagination">
+    <div class="custom-pagination">
+        <ul class="pagination-list">
+            <!-- Previous button -->
             <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage - 1)" aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
+                <a class="page-link arrow-link" href="?page=@(currentPage - 1)" tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
+                    <span aria-hidden="true">&#8592;</span>
                 </a>
             </li>
-            @for (int i = 1; i <= totalPages; i++)
+            @if (currentPage > 3)
             {
-                <li class="page-item @(i == currentPage ? "active" : "")">
-                    <a class="page-link" href="?page=@i">@i</a>
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">1</a>
+                </li>
+                @if (currentPage > 4)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                if (i == currentPage)
+                {
+                    <li class="page-item active">
+                        <span class="page-link"><span class="page-number">@i</span></span>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="?page=@i">@i</a>
+                    </li>
+                }
+            }
+            @if (currentPage < totalPages - 2)
+            {
+                if (currentPage < totalPages - 3)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="?page=@totalPages">@totalPages</a>
                 </li>
             }
             <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage + 1)" aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
+                <a class="page-link arrow-link" href="?page=@(currentPage + 1)" tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
+                    <span aria-hidden="true">&#8594;</span>
                 </a>
             </li>
         </ul>
@@ -340,7 +370,8 @@
     .custom-pagination {
         display: flex;
         justify-content: center;
-        margin-top: 30px;
+        margin-top: -90px; /* Pull up closer to card */
+        z-index: 1;
     }
 
     .pagination-list {
@@ -501,4 +532,130 @@
     .page-item:last-child .page-link {
         border-radius: 50%;
     }
+
+
+    /* Pagination */
+
+    .custom-pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: -90px; /* Pull up closer to card */
+        z-index: 1;
+    }
+
+    .pagination-list {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: #fff;
+        padding: 8px 20px;
+        border-radius: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+    }
+
+    .page-item {
+        margin: 0;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .page-item.active .page-link {
+        background-color: #000;
+        color: white;
+        border-color: #000;
+        font-weight: 700;
+        transform: rotate(45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        padding: 0;
+        transition: background 0.2s, color 0.2s;
+        cursor: pointer;
+    }
+
+        .page-item.active .page-link .page-number {
+            display: inline-block;
+            transform: rotate(-45deg);
+            font-size: 1rem;
+            width: 100%;
+            text-align: center;
+            color: white;
+            transition: color 0.2s;
+        }
+
+        .page-item.active .page-link:hover,
+        .page-item.active .page-link:focus {
+            background: #fff;
+            color: #000;
+            border-color: #000;
+        }
+
+            .page-item.active .page-link:hover .page-number,
+            .page-item.active .page-link:focus .page-number {
+                color: #000 !important;
+                background: none !important;
+            }
+
+    .page-link.arrow-link {
+        font-size: 1.5rem;
+        font-weight: bold;
+        background: #f5f5f5;
+        color: #000;
+        text-decoration: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+        .page-link.arrow-link:hover:not(.disabled) {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+
+    .page-item.active .page-link span {
+        transform: rotate(-45deg);
+        display: inline-block;
+    }
+
+
+    .page-item.disabled .page-link {
+        color: #ccc !important;
+        pointer-events: none;
+        background: #f5f5f5 !important;
+        border-color: #eee !important;
+    }
+
+    .page-link:hover:not(.active):not(.disabled) {
+        background-color: #f1f1f1;
+        color: #000;
+        border-color: #000;
+    }
+
+
 </style>

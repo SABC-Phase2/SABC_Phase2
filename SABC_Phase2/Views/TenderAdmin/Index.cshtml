@@ -2,7 +2,7 @@
 
 @{
     ViewData["BannerText"] = "Tenders";
-    int pageSize = ViewBag.PageSize ?? 9;
+    int pageSize = ViewBag.PageSize ?? 7;
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
@@ -89,65 +89,73 @@
             </tbody>
         </table>
     </div>
+
+   
 </div>
-<div class="custom-pagination">
-    <ul class="pagination-list">
-        <!-- Previous button -->
-        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-            <a class="page-link arrow-link" href="?page=@(currentPage - 1)" tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
-                <span aria-hidden="true">&#8592;</span>
-            </a>
-        </li>
 
-        <!-- First page -->
-        @if (currentPage > 3)
-        {
-            <li class="page-item">
-                <a class="page-link" href="?page=1">1</a>
+@if (totalPages > 1)
+{
+    <div class="custom-pagination">
+        <ul class="pagination-list">
+            <!-- Previous button -->
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link arrow-link" href="?page=@(currentPage - 1)" tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
+                    <span aria-hidden="true">&#8592;</span>
+                </a>
             </li>
-            @if (currentPage > 4)
-            {
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-            }
-        }
 
-        <!-- Pages around current -->
-        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
-        {
-            if (i == currentPage)
-            {
-                <li class="page-item active">
-                    <span class="page-link"><span class="page-number">@i</span></span>
-                </li>
-            }
-            else
+            <!-- First page -->
+            @if (currentPage > 3)
             {
                 <li class="page-item">
-                    <a class="page-link" href="?page=@i">@i</a>
+                    <a class="page-link" href="?page=1">1</a>
+                </li>
+                @if (currentPage > 4)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+
+            <!-- Pages around current -->
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                if (i == currentPage)
+                {
+                    <li class="page-item active">
+                        <span class="page-link"><span class="page-number">@i</span></span>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="?page=@i@(hasStatusFilter ? $"&status={statusFilter}" : "")">@i</a>
+                    </li>
+                }
+            }
+
+            <!-- Last page -->
+            @if (currentPage < totalPages - 2)
+            {
+                if (currentPage < totalPages - 3)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="?page=@totalPages">@totalPages</a>
                 </li>
             }
-        }
 
-        <!-- Last page -->
-        @if (currentPage < totalPages - 2)
-        {
-            if (currentPage < totalPages - 3)
-            {
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-            }
-            <li class="page-item">
-                <a class="page-link" href="?page=@totalPages">@totalPages</a>
+            <!-- Next button -->
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link arrow-link" href="?page=@(currentPage + 1)" tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
+                    <span aria-hidden="true">&#8594;</span>
+                </a>
             </li>
-        }
+        </ul>
+    </div>
+}
 
-        <!-- Next button -->
-        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-            <a class="page-link arrow-link" href="?page=@(currentPage + 1)" tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
-                <span aria-hidden="true">&#8594;</span>
-            </a>
-        </li>
-    </ul>
-</div>
+
 <style>
     .table-container {
         margin-top: 35px;
@@ -383,7 +391,8 @@
     .custom-pagination {
         display: flex;
         justify-content: center;
-        margin-bottom: 0px;
+        margin-top: -90px; /* Pull up closer to card */
+        z-index: 1;
     }
 
     .pagination-list {
