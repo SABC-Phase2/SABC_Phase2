@@ -27,43 +27,40 @@
 
     <form id="tenderAppForm" asp-action="SubmitTenderApplication" enctype="multipart/form-data" method="post" autocomplete="off">
         <div class="tender-details-form">
-            <div class="form-row">
-                <!-- Keep these hidden in form -->
-                <input type="hidden" name="LegacyUserId" value="@(Model.LegacyUserId?.ToString() ?? "")" />
-                @if (draft != null && draft.DraftId != Guid.Empty)
-                {
-                    <input type="hidden" name="DraftId" value="@draft.DraftId" />
-                }
-                <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
-            </div>
+            <input type="hidden" name="LegacyUserId" value="@(Model.LegacyUserId?.ToString() ?? "")" />
+            <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
+            @if (draft != null && draft.DraftId != Guid.Empty)
+            {
+                <input type="hidden" name="DraftId" value="@draft.DraftId" />
+            }
             <div class="form-row">
                 <div class="form-group">
-                    <label>Tender Type</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.TenderType" />
+                    <label class="readonly-label">Tender Type</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.Tender.TenderType" />
                 </div>
                 <div class="form-group">
-                    <label>Tender Title</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.Title" />
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tender Number</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.TenderNumber" />
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" class="form-control" readonly value="@Model.CompanyEmail" />
+                    <label class="readonly-label">Tender Title</label>
+                    <input type="text" class="form-control readonly-input ellipsis-input" readonly value="@Model.Tender.Title" title="@Model.Tender.Title" />
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" class="form-control" readonly value="@Model.CompanyName" />
+                    <label class="readonly-label">Tender Number</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.Tender.TenderNumber" />
                 </div>
                 <div class="form-group">
-                    <label>Closing Date &amp; Time</label>
-                    <input type="text" class="form-control" readonly style="color:#d32f2f;"
+                    <label class="readonly-label">Email</label>
+                    <input type="email" class="form-control readonly-input" readonly value="@Model.CompanyEmail" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="readonly-label">Company Name</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.CompanyName" />
+                </div>
+                <div class="form-group">
+                    <label class="readonly-label red-label">Closing Date &amp; Time</label>
+                    <input type="text" class="form-control readonly-input" readonly style="color:#d32f2f;"
                            value="@Model.Tender.ClosingDate.ToString("dd MMMM yyyy")@(Model.Tender.ClosingTime.HasValue ? $" @ {Model.Tender.ClosingTime.Value:hh\\:mm}" : "")" />
                 </div>
             </div>
@@ -90,13 +87,11 @@
                                     <a href="@Url.Action("ViewDocument", "OVRS_User", new { id = doc.Id })" target="_blank">View</a>
                                     <a href="#" class="delete-doc-link" data-doc-id="@doc.Id">Delete</a>
                                 </div>
-                               
                             </div>
                         </div>
                     }
                 }
-             </div>
-          
+            </div>
         </div>
 
         <div id="uploadInputGroup" class="d-flex align-items-center justify-content-between mt-3">
@@ -108,13 +103,19 @@
                 <input type="file" id="UploadedFiles" name="UploadedFiles" multiple accept=".pdf" hidden />
             </label>
         </div>
-
-        <div class="app-action-buttons" style="margin-top: 36px;">
-            <button type="button" class="app-btn draft-btn" onclick="saveAsDraft()">Save as draft</button>
-            <button type="button" class="app-btn submit-btn" id="submitBtn">Submit <span class="arrow-icon"></span></button>
-        </div>
     </form>
 </div>
+<!-- Buttons moved outside the form -->
+<div class="app-action-buttons">
+    <button type="button" class="new-tender-btn draft-btn" onclick="saveAsDraft()">
+        <i class="fas fa-save"></i> Save as draft
+    </button>
+    <button type="button" class="new-tender-btn submit-btn" id="submitBtn">
+        <i class="fas fa-paper-plane"></i> Submit
+    </button>
+</div>
+
+
 
 <!-- Modal Popups -->
 <div id="applicationSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="applicationSuccessModalLabel" aria-hidden="true" style="display:none;">
@@ -486,7 +487,7 @@
             });
         }
     </script>
-    }
+}
 
 
 <style>
@@ -496,8 +497,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0,0,0,0.5); /* Dull/dim background */
-
+        background: rgba(0,0,0,0.5);
         z-index: 1050;
         display: none;
     }
@@ -507,6 +507,10 @@
             align-items: center;
             justify-content: center;
         }
+
+    .red-label {
+        color: #d32f2f !important;
+    }
 
     .tender-app-card {
         background: #fff;
@@ -533,7 +537,7 @@
     }
 
     .details-title {
-        font-size: 1.45rem;
+        font-size: 1.65rem;
         font-weight: 600;
         color: #1a7f37;
     }
@@ -546,6 +550,13 @@
         margin-left: 0;
         margin-top: 8px;
         margin-bottom: 18px;
+    }
+
+    .ellipsis-input {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
     }
 
     .tender-details-form {
@@ -576,7 +587,7 @@
     }
 
     .upload-title {
-        font-size: 1.35rem;
+        font-size: 1.60rem;
         font-weight: 600;
         color: #1a7f37;
     }
@@ -596,14 +607,17 @@
         box-shadow: 0 2px 8px rgba(34,197,94,0.03);
     }
 
-    .bid-row {
-        background: #fbe9e7;
-        border: 1px solid #ef5350;
+    .readonly-label {
+        color: #222;
+        font-weight: 600;
     }
 
-    .upload-icon {
-        width: 28px;
-        margin-right: 10px;
+    .readonly-input {
+        background-color: #f5f5f5 !important;
+        color: #666 !important;
+        font-weight: 500;
+        border: 1.2px solid #d1d5db;
+        cursor: not-allowed;
     }
 
     .upload-input {
@@ -616,110 +630,76 @@
         width: 180px;
     }
 
-    .upload-actions {
-        margin-left: auto;
+    /* New button styles with 3D effect */
+    .new-tender-btn {
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 24px;
+        font-size: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        position: relative;
     }
 
-    .action-btn, .upload-label-action {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 14px;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 7px;
-        border: none;
-        background: #eee;
-        color: #222;
-        margin-right: 6px;
-        cursor: pointer;
-        transition: background 0.18s;
-        text-decoration: none;
-    }
-
-        .action-btn:hover, .upload-label-action:hover {
-            background: #e0f2f1;
+        .new-tender-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
         }
 
-    .btn.btn-danger {
-        background: #e53935;
-        color: #fff;
-    }
-
-        .btn.btn-danger:hover {
-            background: #b71c1c;
+        .new-tender-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 0 #007a3d;
         }
 
-    .btn.btn-secondary {
-        background: #1976d2;
-        color: #fff;
-    }
-
-        .btn.btn-secondary:hover {
-            background: #004ba0;
+        .new-tender-btn i {
+            font-size: 0.9em;
         }
 
-    .upload-label-action {
-        background: none;
-        color: #1a7f37;
-        font-weight: 600;
-        font-size: 1.01rem;
-        cursor: pointer;
-        border: none;
-        padding: 0 8px;
+    /* Draft button specific styles */
+    .draft-btn {
+        background: linear-gradient(to bottom, #f1f5f9 90%, #e2e8f0 100%);
+        color: #334155;
+        box-shadow: 0 4px 0 0 #cbd5e1, 0 8px 16px -4px rgba(148, 163, 184, 0.25);
     }
 
-    .upload-cloud {
-        font-size: 1.5rem;
-        color: #1a7f37;
-        margin-right: 5px;
-        vertical-align: middle;
+        .draft-btn:hover {
+            background: linear-gradient(to bottom, #e2e8f0 90%, #cbd5e1 100%);
+            box-shadow: 0 2px 0 0 #94a3b8, 0 4px 8px -2px rgba(148, 163, 184, 0.18);
+        }
+
+        .draft-btn:active {
+            box-shadow: 0 1px 0 0 #94a3b8;
+        }
+
+    /* Submit button specific styles */
+    .submit-btn {
+        background: linear-gradient(to bottom, #1a7f37 90%, #166534 100%);
+        box-shadow: 0 4px 0 0 #14532d, 0 8px 16px -4px rgba(22, 101, 52, 0.25);
     }
+
+        .submit-btn:hover {
+            background: linear-gradient(to bottom, #166534 90%, #14532d 100%);
+            box-shadow: 0 2px 0 0 #14532d, 0 4px 8px -2px rgba(22, 101, 52, 0.18);
+        }
+
+        .submit-btn:active {
+            box-shadow: 0 1px 0 0 #14532d;
+        }
 
     .app-action-buttons {
         display: flex;
         justify-content: center;
-        gap: 36px;
+        gap: 24px;
         margin-top: 36px;
-    }
-
-    .app-btn {
-        background: #1a7f37;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 15px 46px;
-        font-size: 1.18rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: background 0.18s;
-    }
-
-    .draft-btn {
-        background: #fff;
-        color: #1a7f37;
-        border: 2px solid #1a7f37;
-    }
-
-        .draft-btn:hover {
-            background: #e7fbe9;
-            color: #166534;
-        }
-
-    .submit-btn:hover {
-        background: #166534;
-    }
-
-    .arrow-icon {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border-top: 3px solid white;
-        border-right: 3px solid white;
-        transform: rotate(45deg);
-        margin-left: 7px;
     }
 
     .breadcrumb-custom {
@@ -745,18 +725,4 @@
         color: #1a7f37;
         font-weight: 500;
     }
-
-    .cancel-btn {
-        background-color: white;
-        color: #1a7f37;
-        border: 1.5px solid #1a7f37;
-        box-shadow: 0 8px 24px -6px rgba(34,197,94,0.18), 0 2px 8px rgba(0,0,0,0.10);
-    }
-
-        .cancel-btn:hover {
-            background-color: #f6fff8;
-            color: #15803d;
-            box-shadow: 0 12px 32px -8px rgba(34,197,94,0.22), 0 4px 12px rgba(0,0,0,0.12);
-        }
 </style>
-

@@ -9,8 +9,6 @@
     bool isAwarded = tenderStatus == "awarded tender";
     bool isCancelled = tenderStatus == "cancelled tender";
     bool showGreyButton = isClosed || isAwarded || isCancelled;
-
-    bool alreadyApplied = ViewBag.AlreadyApplied != null && (bool)ViewBag.AlreadyApplied;
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -65,29 +63,30 @@
     {
         <div class="tender-attachments">
             <h4>Attachments</h4>
-            <table>
-                <tbody>
-                    @foreach (var doc in Model.Documents)
-                    {
-                        <tr>
-                            <td style="width:36px;">
-                                <img src="~/lib/Images/pdficon.png" style="width:32px;" />
-                            </td>
-                            <td>
-                                @doc.FileName
-                            </td>
-                            <td>
-                                <a href="@doc.FilePath" target="_blank" class="view-btn">View</a>
-                            </td>
-                            <td>
-                                <a href="@doc.FilePath" download class="download-btn">Download</a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="tender-attachments-table">
+                <table>
+                    <tbody>
+                        @foreach (var doc in Model.Documents)
+                        {
+                            <tr>
+                                <td style="width:36px;">
+                                    <img src="~/lib/Images/pdficon.png" style="width:32px;" />
+                                </td>
+                                <td>
+                                    @doc.FileName
+                                </td>
+                                <td colspan="2" style="text-align: right;">
+                                    <a href="@doc.FilePath" target="_blank" class="view-btn">View</a>
+                                    <a href="@doc.FilePath" download class="download-btn"><i class="fas fa-download"></i>Download</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     }
+
 </div>
 
 <!-- Respond Button always visible, but may be disabled/greyed out -->
@@ -96,14 +95,7 @@
     {
         @if (isAuthenticated)
         {
-            if (alreadyApplied)
-            {
-                <button type="button" class="respond-btn disabled-respond" disabled title="You have already applied for this tender.">Respond</button>
-            }
-            else
-            {
-                <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
-            }
+            <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
         }
         else
         {
@@ -195,8 +187,8 @@
             color: #000;
         }
 
-/* ------------------------------------------------------------------------- */
-        /* Respond button greyed out for closed, canceled and awarded content */
+    /* ------------------------------------------------------------------------- */
+    /* Respond button greyed out for closed, canceled and awarded content */
     .respond-btn.disabled-respond,
     .respond-btn:disabled {
         background-color: #aaa !important;
@@ -222,7 +214,11 @@
 
 
 
- /* ------------------------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------------------------ */
+
+
+
+    /* ------------------------------------------------------------------------------------ */
 
     .upload-label-underline {
         width: 100%;
@@ -335,35 +331,83 @@
     }
 
         .tender-attachments h4 {
+            margin-top: 52px;
             margin-bottom: 8px;
             font-size: 1.07rem;
         }
 
-        .tender-attachments table {
+    .tender-attachments-table {
+        background-color: #ebebeb; /* slightly darker grey */
+        padding: 16px 22px;
+        border-radius: 8px;
+    }
+
+        .tender-attachments-table table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .tender-attachments td {
+        .tender-attachments-table td {
             padding: 8px 12px 8px 0;
             vertical-align: middle;
         }
 
-    .view-btn, .download-btn {
-        background: #f5c012;
-        border: none;
-        border-radius: 5px;
-        color: #222;
-        font-weight: 600;
-        padding: 5px 12px;
-        margin-right: 5px;
-        text-decoration: none;
-        transition: background 0.2s;
+    .tender-attachments td:last-child {
+        text-align: right;
     }
 
-        .view-btn:hover, .download-btn:hover {
-            background: #1a7f37;
-            color: #fff;
+    .view-btn {
+        background: #fff;
+        color: #00a651;
+        border: 1px solid #00a651; /* thin green border */
+        border-radius: 4px;
+        padding: 5px 15px;
+        font-size: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: end;
+        gap: 10px;
+        box-shadow: 0 4px 0 0 #c1e3d2, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        text-decoration: none;
+        position: relative;
+    }
+
+        .view-btn:hover {
+            background: #f4fff9;
+            color: #007a3d;
+            border-color: #007a3d;
+            box-shadow: 0 2px 0 0 #c1e3d2, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
+    .download-btn {
+        background: #fff;
+        color: #00a651;
+        border: 1px solid #00a651; /* thin green border */
+        border-radius: 4px;
+        padding: 5px 16px;
+        font-size: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 0 0 #c1e3d2, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        text-decoration: none;
+        position: relative;
+    }
+
+        .download-btn:hover {
+            background: #f4fff9;
+            color: #007a3d;
+            border-color: #007a3d;
+            box-shadow: 0 2px 0 0 #c1e3d2, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
         }
 
     .tender-respond-row {
