@@ -1,7 +1,17 @@
 ﻿@model List<SABC_Phase2.Models.OVRS.SubmissionViewModel>
 @using SABC_Phase2.Models.OVRS
 @{
-    var drafts = ViewBag.DraftTiles as List<DraftTileViewModel>; // Passed from controller
+    int pageSize = ViewBag.PageSize ?? 5;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int emptyRows = pageSize - (Model?.Count ?? 0);
+    var drafts = ViewBag.DraftTiles as List<DraftTileViewModel>;
+    var pagedDrafts = ViewBag.DraftListPaged as List<DraftTileViewModel>;
+    int draftPageSize = ViewBag.DraftPageSize ?? 5;
+    int draftCurrentPage = ViewBag.DraftCurrentPage ?? 1;
+    int draftTotalItems = ViewBag.DraftTotalItems ?? (drafts?.Count ?? 0);
+    int draftTotalPages = ViewBag.DraftTotalPages ?? 1;
 }
 
 <!-- Breadcrumb -->
@@ -81,6 +91,68 @@
                 </tbody>
             </table>
         </div>
+
+
+
+        <!-- Pagination Controls: -->
+        @if (totalPages > 1)
+        {
+            <div class="custom-pagination">
+                <ul class="pagination-list">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <a class="page-link arrow-link"
+                           href="?page=@(currentPage - 1)"
+                           tabindex="@(currentPage == 1 ? "-1" : "0")"
+                           aria-label="Previous">
+                            <span aria-hidden="true">&#8592;</span>
+                        </a>
+                    </li>
+                    @if (currentPage > 3)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">1</a>
+                        </li>
+                        @if (currentPage > 4)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                    }
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                    {
+                        if (i == currentPage)
+                        {
+                            <li class="page-item active">
+                                <span class="page-link"><span class="page-number">@i</span></span>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="?page=@i">@i</a>
+                            </li>
+                        }
+                    }
+                    @if (currentPage < totalPages - 2)
+                    {
+                        if (currentPage < totalPages - 3)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="?page=@totalPages">@totalPages</a>
+                        </li>
+                    }
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <a class="page-link arrow-link"
+                           href="?page=@(currentPage + 1)"
+                           tabindex="@(currentPage == totalPages ? "-1" : "0")"
+                           aria-label="Next">
+                            <span aria-hidden="true">&#8594;</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        }
     </div>
 </div>
 
@@ -113,7 +185,6 @@
                 <button class="carousel-arrow prev" onclick="moveCarousel(-1)">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-
                 <div class="draft-carousel-container">
                     <div class="draft-carousel" id="draftGridView">
                         @foreach (var draft in drafts)
@@ -139,7 +210,6 @@
                         }
                     </div>
                 </div>
-
                 <button class="carousel-arrow next" onclick="moveCarousel(1)">
                     <i class="fas fa-chevron-right"></i>
                 </button>
@@ -147,37 +217,105 @@
 
             <!-- List View (hidden by default) -->
             <div class="draft-list-view" id="draftListView" style="display: none;">
-                @foreach (var draft in drafts)
+                @if (pagedDrafts != null && pagedDrafts.Any())
                 {
-                    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" class="draft-list-row">
-                        <div class="draft-list-logo">
-                            <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
-                        </div>
-                        <div class="draft-list-details">
-                            <div class="draft-list-number-desc">
-                                <span class="draft-list-tender-number">@draft.TenderNumber</span>
-                                <span class="draft-list-tender-desc">: @draft.TenderTitle</span>
+                    foreach (var draft in pagedDrafts)
+                    {
+                        <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" class="draft-list-row">
+                            <div class="draft-list-logo">
+                                <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
                             </div>
-                            <div class="draft-list-meta">
-                                <span class="draft-list-closing-date">
-                                    CLOSING DATE: <span style="color:#d32f2f;">@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")</span>
-                                </span>
-                                <span class="draft-list-closing-time">
-                                    <span class="dot"></span>
-                                    TIME: <span style="color:#d32f2f;">@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")</span>
-                                </span>
-                                <span class="draft-list-status">
-                                    <span class="dot"></span>
-                                    Status:
-                                    <span class="status-badge @GetStatusClass(draft.Status)" style="font-weight:600;">
-                                        @(draft.Status?.ToUpperInvariant() ?? "DRAFT")
+                            <div class="draft-list-details">
+                                <div class="draft-list-number-desc">
+                                    <span class="draft-list-tender-number">@draft.TenderNumber</span>
+                                    <span class="draft-list-tender-desc">: @draft.TenderTitle</span>
+                                </div>
+                                <div class="draft-list-meta">
+                                    <span class="draft-list-closing-date">
+                                        CLOSING DATE: <span style="color:#d32f2f;">@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")</span>
                                     </span>
-                                </span>
+                                    <span class="draft-list-closing-time">
+                                        <span class="dot"></span>
+                                        TIME: <span style="color:#d32f2f;">@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")</span>
+                                    </span>
+                                    <span class="draft-list-status">
+                                        <span class="dot"></span>
+                                        Status:
+                                        <span class="status-badge @GetStatusClass(draft.Status)" style="font-weight:600;">
+                                            @(draft.Status?.ToUpperInvariant() ?? "DRAFT")
+                                        </span>
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    </a>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div style="color:#555; font-size:1.1rem; padding: 24px 0 0 8px;">
+                        No draft responses available.
+                    </div>
                 }
             </div>
+            @* Move pagination bar OUTSIDE of .draft-list-view, but still inside .drafts-card *@
+            @if (draftTotalPages > 1)
+            {
+                <div class="custom-pagination draft-list-pagination" style="margin-bottom: 0;">
+                    <ul class="pagination-list">
+                        <li class="page-item @(draftCurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link arrow-link"
+                               href="?draftPage=@(draftCurrentPage - 1)&section=drafts&view=list"
+                               tabindex="@(draftCurrentPage == 1 ? "-1" : "0")"
+                               aria-label="Previous">
+                                <span aria-hidden="true">&#8592;</span>
+                            </a>
+                        </li>
+                        @if (draftCurrentPage > 3)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="?draftPage=1&section=drafts&view=list">1</a>
+                            </li>
+                            @if (draftCurrentPage > 4)
+                            {
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            }
+                        }
+                        @for (int i = Math.Max(1, draftCurrentPage - 2); i <= Math.Min(draftTotalPages, draftCurrentPage + 2); i++)
+                        {
+                            if (i == draftCurrentPage)
+                            {
+                                <li class="page-item active">
+                                    <span class="page-link"><span class="page-number">@i</span></span>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?draftPage=@i&section=drafts&view=list">@i</a>
+                                </li>
+                            }
+                        }
+                        @if (draftCurrentPage < draftTotalPages - 2)
+                        {
+                            if (draftCurrentPage < draftTotalPages - 3)
+                            {
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            }
+                            <li class="page-item">
+                                <a class="page-link" href="?draftPage=@draftTotalPages&section=drafts&view=list">@draftTotalPages</a>
+                            </li>
+                        }
+                        <li class="page-item @(draftCurrentPage == draftTotalPages ? "disabled" : "")">
+                            <a class="page-link arrow-link"
+                               href="?draftPage=@(draftCurrentPage + 1)&section=drafts&view=list"
+                               tabindex="@(draftCurrentPage == draftTotalPages ? "-1" : "0")"
+                               aria-label="Next">
+                                <span aria-hidden="true">&#8594;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            }
         }
         else
         {
@@ -187,7 +325,6 @@
         }
     </div>
 </div>
-
 
 @functions {
     public string GetStatusClass(string status)
@@ -227,13 +364,11 @@
         const submissionsArrow = document.getElementById('toggleArrow');
 
         if (section === 'drafts') {
-            // Open drafts, close submissions
             draftsCard.style.display = 'block';
             draftsArrow.style.transform = 'rotate(180deg)';
             submissionsCard.style.display = 'none';
             submissionsArrow.style.transform = 'rotate(0deg)';
         } else {
-            // Open submissions (default), close drafts
             submissionsCard.style.display = 'block';
             submissionsArrow.style.transform = 'rotate(180deg)';
             draftsCard.style.display = 'none';
@@ -314,6 +449,13 @@
         const draftListView = document.getElementById('draftListView');
         const carouselArrows = document.querySelectorAll('.carousel-arrow');
 
+        function updatePaginationVisibility() {
+            const pagination = document.querySelector('.draft-list-pagination');
+            if (pagination) {
+                pagination.style.display = (draftListView.style.display !== 'none') ? 'flex' : 'none';
+            }
+        }
+
         if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
             // Show grid view by default
             gridViewBtn.classList.add('active');
@@ -321,23 +463,21 @@
             draftGridView.style.display = 'flex';
             draftListView.style.display = 'none';
 
-            // Show carousel arrows only in grid view
             carouselArrows.forEach(arrow => {
                 arrow.style.display = 'flex';
             });
+            updatePaginationVisibility();
 
             gridViewBtn.addEventListener('click', function() {
                 gridViewBtn.classList.add('active');
                 listViewBtn.classList.remove('active');
                 draftGridView.style.display = 'flex';
                 draftListView.style.display = 'none';
-
-                // Show carousel arrows
                 carouselArrows.forEach(arrow => {
                     arrow.style.display = 'flex';
                 });
-
-                carousel.init(); // Reinitialize carousel when switching back to grid view
+                carousel.init();
+                updatePaginationVisibility();
             });
 
             listViewBtn.addEventListener('click', function() {
@@ -345,18 +485,16 @@
                 gridViewBtn.classList.remove('active');
                 draftGridView.style.display = 'none';
                 draftListView.style.display = 'block';
-
-                // Hide carousel arrows
                 carouselArrows.forEach(arrow => {
                     arrow.style.display = 'none';
                 });
+                updatePaginationVisibility();
             });
         }
     }
 
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-        // Set up section toggles
         setupToggle('submissionToggle', 'submissionCard', 'toggleArrow');
         setupToggle('draftsToggle', 'draftsCard', 'draftsArrow');
 
@@ -367,6 +505,31 @@
         // Set up view toggles and carousel
         setupViewToggle();
         carousel.init();
+
+        // If drafts section and view=list, force list view active
+        const view = getQueryParam('view');
+        if (section === 'drafts' && view === 'list') {
+            const gridViewBtn = document.getElementById('gridViewBtn');
+            const listViewBtn = document.getElementById('listViewBtn');
+            const draftGridView = document.getElementById('draftGridView');
+            const draftListView = document.getElementById('draftListView');
+            const carouselArrows = document.querySelectorAll('.carousel-arrow');
+
+            if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
+                listViewBtn.classList.add('active');
+                gridViewBtn.classList.remove('active');
+                draftGridView.style.display = 'none';
+                draftListView.style.display = 'block';
+                carouselArrows.forEach(arrow => {
+                    arrow.style.display = 'none';
+                });
+                // Show pagination
+                const pagination = document.querySelector('.draft-list-pagination');
+                if (pagination) {
+                    pagination.style.display = 'flex';
+                }
+            }
+        }
     });
 
     // Expose carousel move function to global scope for HTML onclick
@@ -374,7 +537,6 @@
         carousel.move(direction);
     };
 </script>
-
 
 <style>
 
@@ -622,8 +784,9 @@
     .drafts-section {
         width: 100%;
         min-width: 1350px;
-        margin: 30px auto 0 auto;
+        margin: 30px auto 100px auto; /* <-- change last value from 0 to 40px or your preferred gap */
     }
+
 
     .drafts-toggle {
         background: #17994d;
@@ -1082,6 +1245,183 @@
 
     .draft-list-row:hover .draft-list-status {
         color: #222 !important;
+    }
+
+
+    /* Enhanced pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 5px;
+    }
+
+    .page-item {
+        margin: 0 2px;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .page-item.active .page-link {
+        background-color: #00a651;
+        color: white;
+        border-color: #00a651;
+    }
+
+    .page-item.disabled .page-link {
+        color: #ccc;
+        pointer-events: none;
+    }
+
+    .page-link:hover:not(.active) {
+        background-color: #f1f1f1;
+    }
+
+    .page-item:first-child .page-link,
+    .page-item:last-child .page-link {
+        border-radius: 50%;
+    }
+
+
+    /* Pagination */
+    .custom-pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 16px; /* space between table and pagination */
+        z-index: 1;
+    }
+
+    .pagination-list {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: #fff;
+        padding: 8px 20px;
+        border-radius: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+    }
+
+    .page-item {
+        margin: 0;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .page-item.active .page-link {
+        background-color: #000;
+        color: white;
+        border-color: #000;
+        font-weight: 700;
+        transform: rotate(45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        padding: 0;
+        transition: background 0.2s, color 0.2s;
+        cursor: pointer;
+    }
+
+        .page-item.active .page-link .page-number {
+            display: inline-block;
+            transform: rotate(-45deg);
+            font-size: 1rem;
+            width: 100%;
+            text-align: center;
+            color: white;
+            transition: color 0.2s;
+        }
+
+        .page-item.active .page-link:hover,
+        .page-item.active .page-link:focus {
+            background: #fff;
+            color: #000;
+            border-color: #000;
+        }
+
+            .page-item.active .page-link:hover .page-number,
+            .page-item.active .page-link:focus .page-number {
+                color: #000;
+            }
+
+    .page-link.arrow-link {
+        font-size: 1.5rem;
+        font-weight: bold;
+        background: #f5f5f5;
+        color: #000;
+        text-decoration: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+        .page-link.arrow-link:hover:not(.disabled) {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+
+    .page-item.active .page-link span {
+        transform: rotate(-45deg);
+        display: inline-block;
+    }
+
+
+    .page-item.disabled .page-link {
+        color: #ccc !important;
+        pointer-events: none;
+        background: #f5f5f5 !important;
+        border-color: #eee !important;
+    }
+
+    .page-link:hover:not(.active):not(.disabled) {
+        background-color: #f1f1f1;
+        color: #000;
+        border-color: #000;
     }
 </style>
 

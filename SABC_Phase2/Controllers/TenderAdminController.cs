@@ -816,16 +816,23 @@ namespace SABC_Phase2.Controllers
         //---------------------------------------------------------------------------------------------------
 
         [HttpGet]
-        public IActionResult Reports_Index()
+        public IActionResult Reports_Index(int page = 1, int pageSize = 5)
         {
-            // Retrieve all tender records from the database.
-            // This uses Entity Framework to query the Tenders table and return the results as a list.
-            // No filtering, sorting, or related data is included—this gets all tenders as-is.
-            var tenders = _context.Tenders.ToList();
+            var closedTenders = _context.Tenders
+                .Where(t => t.Status != null && t.Status.ToLower().Contains("closed"))
+                .OrderByDescending(t => t.ClosingDate)
+                .ToList();
 
-            // Pass the list of tenders to the view for display.
-            // The view can then iterate through the tenders and present them in a table or other format.
-            return View(tenders);
+            int totalItems = closedTenders.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            // Pass ALL closed tenders, NOT pagedTenders
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
+
+            return View(closedTenders);
         }
 
         [HttpGet]

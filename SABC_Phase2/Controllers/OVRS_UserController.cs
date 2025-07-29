@@ -372,37 +372,38 @@ namespace SABC_Phase2.Controllers
         /// Lists all user submissions (applications) in a view-friendly format.
         /// NOTE: In development, uses fake claims to simulate an authenticated user.
         /// </summary>
-        public IActionResult OVRS_Submissions_Drafts()
+        public IActionResult OVRS_Submissions_Drafts(int page = 1, int pageSize = 5, int draftPage = 1, int draftPageSize = 5)
         {
-            // Attempt to get Users.Id from claims FIRST (best practice!)
+            // Get userId as before...
             var userIdStr = User.FindFirst("UserId")?.Value;
             int userId;
-
             if (!int.TryParse(userIdStr, out userId))
             {
-                // If not present, try to get LegacyUserId, then look up Users.Id
                 var legacyUserIdStr = User.FindFirst("LegacyUserId")?.Value;
                 if (!int.TryParse(legacyUserIdStr, out int legacyUserId))
                     return Unauthorized();
-
                 var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == legacyUserId);
                 if (user == null)
                     return Unauthorized();
-
                 userId = user.Id;
             }
 
-            // Query applications for that user, including related Tender
-            var applications = _context.Applied_For_Tenders
+            // Submissions (paged)
+            var allApplications = _context.Applied_For_Tenders
                 .Where(a => a.OVRS_UserId == userId)
                 .Include(a => a.Tender)
-                .OrderByDescending(a => a.DateApplied)
+                .OrderByDescending(a => a.DateApplied);
+
+            int totalItems = allApplications.Count();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var pageApplications = allApplications
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
 
-            // Map to SubmissionViewModel
-            var model = applications.Select(a => new SubmissionViewModel
+            var model = pageApplications.Select(a => new SubmissionViewModel
             {
-                ApplicationId = a.Id, // <-- CRUCIAL: set to the PK for edit links!
+                ApplicationId = a.Id,
                 TenderNumber = a.Tender?.TenderNumber ?? "",
                 DateSubmitted = a.DateApplied?.ToString("dd/MM/yyyy") ?? "",
                 TimeSubmitted = a.DateApplied?.ToString("hh:mm tt") ?? "",
@@ -413,16 +414,16 @@ namespace SABC_Phase2.Controllers
                 TenderId = a.Tender?.Id ?? 0
             }).ToList();
 
-            // Only include drafts for this user
+            // Drafts (paginated for List View)
             var joinData = _context.TenderApplicationDrafts
                 .Where(d => d.OVRS_UserId == userId && d.TenderId != null)
                 .GroupJoin(_context.Tenders,
                     d => d.TenderId,
                     t => t.Id,
                     (d, tenders) => new { d, t = tenders.FirstOrDefault() })
-                .ToList(); // Materialize first
+                .ToList();
 
-            var drafts = joinData
+            var allDrafts = joinData
                 .Select(x => new DraftTileViewModel
                 {
                     DraftId = x.d.DraftId,
@@ -436,10 +437,31 @@ namespace SABC_Phase2.Controllers
                 .OrderByDescending(x => x.ClosingDate)
                 .ToList();
 
-            ViewBag.DraftTiles = drafts;
+            int draftTotalItems = allDrafts.Count;
+            int draftTotalPages = (int)Math.Ceiling(draftTotalItems / (double)draftPageSize);
+            var pagedDrafts = allDrafts
+                .Skip((draftPage - 1) * draftPageSize)
+                .Take(draftPageSize)
+                .ToList();
+
+            // For grid view: allDrafts, for list view: pagedDrafts + paging info
+            ViewBag.DraftTiles = allDrafts;            // For grid view (all)
+            ViewBag.DraftListPaged = pagedDrafts;      // For list view (paged)
+            ViewBag.DraftCurrentPage = draftPage;
+            ViewBag.DraftPageSize = draftPageSize;
+            ViewBag.DraftTotalItems = draftTotalItems;
+            ViewBag.DraftTotalPages = draftTotalPages;
+
+            // Submissions paging info
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
 
             return View(model);
         }
+
+
         /// <summary>
         /// Persists or updates a draft tender application, including draft document uploads.
         /// This allows users to save work-in-progress and resume later.
