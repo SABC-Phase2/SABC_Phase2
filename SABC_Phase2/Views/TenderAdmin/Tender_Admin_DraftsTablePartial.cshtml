@@ -1,4 +1,5 @@
-﻿@model List<SABC_Phase2.Models.Tender.TenderDraft>
+﻿﻿
+@model List<SABC_Phase2.Models.Tender.TenderDraft>
 @{
     int pageSize = ViewBag.PageSize ?? 7;
     int currentPage = ViewBag.CurrentPage ?? 1;
@@ -8,6 +9,7 @@
     string search = ViewBag.Search ?? "";
     string type = ViewBag.Type ?? "";
 }
+
 <div class="table-container">
     <div class="tender-total-label">
         Total: @totalItems

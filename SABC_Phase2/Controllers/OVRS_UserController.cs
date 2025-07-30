@@ -112,7 +112,7 @@ namespace SABC_Phase2.Controllers
             ViewBag.Search = search;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
+                return PartialView("OVRS_TendersTablePartial_Index", tenders);
 
             return View(tenders);
         }
