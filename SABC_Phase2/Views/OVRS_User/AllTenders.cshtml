@@ -1,5 +1,4 @@
 ﻿@model List<SABC_Phase2.Models.Tender.Tender>
-
 @{
     ViewData["BannerText"] = "Tenders";
     int pageSize = ViewBag.PageSize ?? 7;
@@ -7,6 +6,8 @@
     int totalItems = ViewBag.TotalItems ?? Model.Count;
     int totalPages = ViewBag.TotalPages ?? 1;
     int emptyRows = pageSize - Model.Count;
+    string search = ViewBag.Search ?? "";
+    string filter = ViewBag.Filter ?? "all";
 }
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
@@ -15,137 +16,114 @@
 </div>
 
 <div class="tender-action-bar">
-    <div class="search-wrapper">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" placeholder="Search keyword" />
-    </div>
+    <form method="get" id="filterForm" style="display: flex; align-items: center; gap: 16px;">
+        <span class="search-wrapper" style="position: relative; display: flex; align-items: center;">
+            <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
+            <input type="text" name="search" class="search-input"
+                   value="@search"
+                   placeholder="Search keyword"
+                   autocomplete="off"
+                   style="padding-left: 38px;"/>
+        </span>
+        <select name="filter" class="filter-dropdown">
+            <option value="all" selected="@(filter == "all" ? "selected" : null)">ALL</option>
+            <option value="open" selected="@(filter == "open" ? "selected" : null)">Open</option>
+            <option value="closed" selected="@(filter == "closed" ? "selected" : null)">Closed</option>
 
-    <select class="filter-dropdown">
-        <option value="all">ALL</option>
-        <option value="open">Open</option>
-        <option value="closed">Closed</option>
-    </select>
-
-    <button class="refresh-btn">
-        <i class="fas fa-sync-alt"></i>
-    </button>
+        </select>
+        <button type="submit" class="refresh-btn"
+                title="Clear search and filters"
+                formaction="@Url.Action("AllTenders", new { page = 1, pageSize = pageSize, search = "", filter = "all" })"
+                style="margin-left: 0;">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </form>
 </div>
 
-<div class="table-container">
-    <div class="table-scroll-container">
-        <table class="tender-table">
-            <thead>
-                <tr>
-                    <th>THUMBNAILS</th>
-                    <th>TITLES</th>
-                    <th>TENDER STATUS</th>
-                    <th>DATE PUBLISHED <i class="fas fa-sort"></i></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var tender in Model)
-                {
-                    var tenderStatus = tender.Status?.ToLower();
-                    string detailsUrl = tenderStatus == "awarded tender"
-                    ? Url.Action("Awarded_Tender_Details", "OVRS_User", new { id = tender.Id })
-                    : Url.Action("View_Tender_Details", "OVRS_User", new { id = tender.Id });
-
-                    <tr class="clickable-row"
-                        data-url="@detailsUrl"
-                        style="cursor:pointer;">
-                        <td>
-                            <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
-                        </td>
-                        <td>
-                            <strong>@tender.TenderNumber</strong> : @tender.Title
-                        </td>
-                        <td>
-                            <span class="tender-status
-                                    @(tenderStatus == "open tender" ? "tender-status-open" :
-                                                                    tenderStatus == "closed tender" ? "tender-status-closed" :
-                                                                    tenderStatus == "awarded tender" ? "tender-status-awarded" :
-                                                                    tenderStatus == "cancelled tender" ? "tender-status-cancelled" : "")">
-                            @tender.Status
-                        </span>
-                    </td>
-                    <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
-                </tr>
-                                }
-                @for (int i = 0; i < emptyRows; i++)
-                {
-                    <tr>
-                        <td colspan="4" style="background:transparent; border:none;"></td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+<div id="tenders-table">
+    @await Html.PartialAsync("OVRS_TendersTablePartial_AllTender", Model)
 </div>
-
-
-@if (totalPages > 1)
-{
-    <div class="custom-pagination">
-        <ul class="pagination-list">
-            <!-- Previous button -->
-            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                <a class="page-link arrow-link" href="?page=@(currentPage - 1)" tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
-                    <span aria-hidden="true">&#8592;</span>
-                </a>
-            </li>
-            @if (currentPage > 3)
-            {
-                <li class="page-item">
-                    <a class="page-link" href="?page=1">1</a>
-                </li>
-                @if (currentPage > 4)
-                {
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                }
-            }
-            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
-            {
-                if (i == currentPage)
-                {
-                    <li class="page-item active">
-                        <span class="page-link"><span class="page-number">@i</span></span>
-                    </li>
-                }
-                else
-                {
-                    <li class="page-item">
-                        <a class="page-link" href="?page=@i">@i</a>
-                    </li>
-                }
-            }
-            @if (currentPage < totalPages - 2)
-            {
-                if (currentPage < totalPages - 3)
-                {
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                }
-                <li class="page-item">
-                    <a class="page-link" href="?page=@totalPages">@totalPages</a>
-                </li>
-            }
-            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                <a class="page-link arrow-link" href="?page=@(currentPage + 1)" tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
-                    <span aria-hidden="true">&#8594;</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-}
 
 <script>
-    // Make each row clickable and navigate to details
-    document.addEventListener('DOMContentLoaded', function () {
+    // AJAX form submission for instant search/filter with debounce
+    function debounce(fn, delay) {
+        let timer = null;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    function submitForm(keepPage = false) {
+        const form = document.getElementById('filterForm');
+        // If not keepPage, reset to page=1 for a new search
+        if(!keepPage) {
+            let pageInput = document.createElement('input');
+            pageInput.type = "hidden";
+            pageInput.name = "page";
+            pageInput.value = "1";
+            form.appendChild(pageInput);
+        }
+        const data = new URLSearchParams(new FormData(form)).toString();
+        fetch('@Url.Action("AllTenders")' + '?' + data, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(resp => resp.text())
+        .then(html => {
+            document.getElementById('tenders-table').innerHTML = html;
+            // Set dropdown & search input to match query!
+            const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+            document.querySelector('.filter-dropdown').value = params.get('filter') ?? 'all';
+            document.querySelector('.search-input').value = params.get('search') ?? '';
+            // Re-hook row clicks and pagination
+            hookRowClicks();
+            hookPaginationLinks();
+        });
+    }
+
+    const debouncedSubmit = debounce(() => submitForm(false), 300);
+
+    function hookRowClicks() {
         document.querySelectorAll('.clickable-row').forEach(function(row) {
-            row.addEventListener('click', function() {
+            row.onclick = function() {
                 var url = row.getAttribute('data-url');
                 if (url) window.location.href = url;
-            });
+            };
         });
+    }
+    function hookPaginationLinks() {
+        document.querySelectorAll('.pagination-list a.page-link').forEach(function(link) {
+            link.onclick = function(e) {
+                e.preventDefault();
+                const url = new URL(link.href);
+                const params = new URLSearchParams(url.search);
+                document.querySelector('.search-input').value = params.get('search') ?? '';
+                document.querySelector('.filter-dropdown').value = params.get('filter') ?? 'all';
+
+                fetch(link.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(resp => resp.text())
+                .then(html => {
+                    document.getElementById('tenders-table').innerHTML = html;
+                    // Set dropdown & search input to match query!
+                    document.querySelector('.filter-dropdown').value = params.get('filter') ?? 'all';
+                    document.querySelector('.search-input').value = params.get('search') ?? '';
+                    hookRowClicks();
+                    hookPaginationLinks();
+                });
+            };
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelector('.search-input').addEventListener('input', debouncedSubmit);
+        document.querySelector('.filter-dropdown').addEventListener('change', () => submitForm(false));
+        document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+        e.preventDefault(); // prevent default full-page submit
+        submitForm(true);   // refresh current table with current filters/page
+    });
+
+        hookRowClicks();
+        hookPaginationLinks();
     });
 </script>
 
@@ -656,6 +634,5 @@
         color: #000;
         border-color: #000;
     }
-
 
 </style>

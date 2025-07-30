@@ -64,6 +64,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT1ZSU19Vc2VyXE9WUlNfU3VibWlzc2lvbnNfRHJhZnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/OVRS_User/OVRS_TendersTablePartial_AllTender.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT1ZSU19Vc2VyXE9WUlNfVGVuZGVyc1RhYmxlUGFydGlhbF9BbGxUZW5kZXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/OVRS_User/OVRS_TendersTablePartial_Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT1ZSU19Vc2VyXE9WUlNfVGVuZGVyc1RhYmxlUGFydGlhbF9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/OVRS_User/Tender_Application.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT1ZSU19Vc2VyXFRlbmRlcl9BcHBsaWNhdGlvbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -118,6 +126,22 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/ScheduledIndex.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cU2NoZWR1bGVkSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/Tender_Admin_DraftsTablePartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cVGVuZGVyX0FkbWluX0RyYWZ0c1RhYmxlUGFydGlhbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/Tender_Admin_ReportsTablePartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cVGVuZGVyX0FkbWluX1JlcG9ydHNUYWJsZVBhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/Tender_Admin_ScheduledTendersTablePartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cVGVuZGVyX0FkbWluX1NjaGVkdWxlZFRlbmRlcnNUYWJsZVBhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/Tender_Admin_TendersTablePartial_Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGVuZGVyQWRtaW5cVGVuZGVyX0FkbWluX1RlbmRlcnNUYWJsZVBhcnRpYWxfSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/New User/source/repos/SABC_Phase2_Cleaned/SABC_Phase2/Views/TenderAdmin/tender_Report.cshtml]

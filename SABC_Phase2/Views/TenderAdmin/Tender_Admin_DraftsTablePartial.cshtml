@@ -1,0 +1,115 @@
+﻿@model List<SABC_Phase2.Models.Tender.TenderDraft>
+@{
+    int pageSize = ViewBag.PageSize ?? 7;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int emptyRows = pageSize - (Model?.Count ?? 0);
+    string search = ViewBag.Search ?? "";
+    string type = ViewBag.Type ?? "";
+}
+<div class="table-container">
+    <div class="tender-total-label">
+        Total: @totalItems
+    </div>
+    <div class="table-scroll-container">
+        <table class="tender-table">
+            <thead>
+                <tr>
+                    <th>THUMBNAIL</th>
+                    <th>TITLE</th>
+                    <th>TENDER TYPE</th>
+                    <th>DRAFT DATE <i class="fas fa-sort"></i></th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var draft in Model)
+                    {
+                        <tr>
+                            <td>
+                                <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
+                            </td>
+                            <td class="tender-title">@(!string.IsNullOrWhiteSpace(draft.Title) ? draft.Title : "(No Title)")</td>
+                            <td class="tender-type">@draft.TenderType</td>
+                            <td class="tender-date">@draft.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <a asp-controller="TenderAdmin" asp-action="EditDraft" asp-route-id="@draft.Id" class="edit-btn">
+                                    Continue <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr class="no-tenders-row">
+                        <td colspan="5">No drafts found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@if (totalPages > 1)
+{
+    <div class="custom-pagination">
+        <ul class="pagination-list">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("DraftIndex", "TenderAdmin", new { page = currentPage - 1, pageSize, search, type })"
+                   tabindex="@(currentPage == 1 ? "-1" : "0")"
+                   aria-label="Previous">
+                    <span aria-hidden="true">&#8592;</span>
+                </a>
+            </li>
+            @if (currentPage > 3)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("DraftIndex", "TenderAdmin", new { page = 1, pageSize, search, type })">1</a>
+                </li>
+                @if (currentPage > 4)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                if (i == currentPage)
+                {
+                    <li class="page-item active">
+                        <span class="page-link"><span class="page-number">@i</span></span>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="@Url.Action("DraftIndex", "TenderAdmin", new { page = i, pageSize, search, type })">@i</a>
+                    </li>
+                }
+            }
+            @if (currentPage < totalPages - 2)
+            {
+                if (currentPage < totalPages - 3)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("DraftIndex", "TenderAdmin", new { page = totalPages, pageSize, search, type })">@totalPages</a>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("DraftIndex", "TenderAdmin", new { page = currentPage + 1, pageSize, search, type })"
+                   tabindex="@(currentPage == totalPages ? "-1" : "0")"
+                   aria-label="Next">
+                    <span aria-hidden="true">&#8594;</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+}

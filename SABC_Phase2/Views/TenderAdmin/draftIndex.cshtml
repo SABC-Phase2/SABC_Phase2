@@ -1,142 +1,133 @@
 ﻿@model List<SABC_Phase2.Models.Tender.TenderDraft>
-
 @{
     ViewData["BannerText"] = "Draft Tenders";
-}
-@{
     int pageSize = ViewBag.PageSize ?? 7;
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalItems = ViewBag.TotalItems ?? (Model?.Count ?? 0);
     int totalPages = ViewBag.TotalPages ?? 1;
     int emptyRows = pageSize - (Model?.Count ?? 0);
+    string search = ViewBag.Search as string ?? "";
+    string typeFilter = ViewBag.Type as string ?? "";
 }
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-
 
 <div class="breadcrumb-custom">
     Dashboard <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Drafts</span>
 </div>
 
 <div class="tender-action-bar">
-    <div class="search-wrapper">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" placeholder="Search keyword" />
-    </div>
+    <form method="get" id="draftFilterForm" style="display: flex; align-items: center; gap: 16px;">
+        <span class="search-wrapper" style="position: relative; display: flex; align-items: center;">
+            <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
+            <input type="text" name="search" class="search-input"
+                   value="@search"
+                   placeholder="Search keyword"
+                   autocomplete="off"
+                   style="padding-left: 38px;" />
+        </span>
+        <select name="type" class="filter-dropdown" id="draftTypeDropdown">
+            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">Tender Type</option>
+            <option value="rfq" selected="@(typeFilter == "rfq" ? "selected" : null)">RFQ</option>
+            <option value="rfp" selected="@(typeFilter == "rfp" ? "selected" : null)">RFP</option>
+            <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>
+            <option value="rfo" selected="@(typeFilter == "rfo" ? "selected" : null)">RFO</option>
+        </select>
 
-    <button class="refresh-btn">
-        <i class="fas fa-sync-alt"></i>
-    </button>
-
+        <button type="submit" class="refresh-btn"
+                title="Clear search and filters"
+                formaction="@Url.Action("DraftIndex", new { page = 1, pageSize = pageSize, search = "", type = "" })"
+                style="margin-left: 0;">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </form>
 </div>
 
-<div class="table-container">
-    <div class="tender-total-label">
-        Total: @totalItems
-    </div>
-    <div class="table-scroll-container">
-        <table class="tender-table">
-            <thead>
-                <tr>
-                    <th>THUMBNAIL</th>
-                    <th>TITLE</th>
-                    <th>DRAFT DATE <i class="fas fa-sort"></i></th>
-                    <th>ACTION</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model != null && Model.Any())
-                {
-                    foreach (var draft in Model)
-                    {
-                        <tr>
-                            <td>
-                                <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
-                            </td>
-                            <td class="tender-title">@(!string.IsNullOrWhiteSpace(draft.Title) ? draft.Title : "(No Title)")</td>
-                            <td class="tender-date">@draft.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>
-                                <a asp-controller="TenderAdmin" asp-action="EditDraft" asp-route-id="@draft.Id" class="edit-btn">
-                                    Continue <i class="fas fa-edit"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr class="no-tenders-row">
-                        <td colspan="4">No drafts found.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+<div id="drafts-table">
+    @await Html.PartialAsync("Tender_Admin_DraftsTablePartial", Model)
 </div>
 
-@if (totalPages > 1){
+<script>
+    function debounce(fn, delay) {
+        let timer = null;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
 
-    <div class="custom-pagination">
-    <ul class="pagination-list">
-        <!-- Previous button -->
-        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-            <a class="page-link arrow-link"
-               href="?page=@(currentPage - 1)"
-               tabindex="@(currentPage == 1 ? "-1" : "0")"
-               aria-label="Previous">
-                <span aria-hidden="true">&#8592;</span>
-            </a>
-        </li>
-        <!-- First page -->
-        @if (currentPage > 3)
-        {
-            <li class="page-item">
-                <a class="page-link" href="?page=1">1</a>
-            </li>
-            @if (currentPage > 4)
-            {
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-            }
+    function submitDraftForm(keepPage = false) {
+        const form = document.getElementById('draftFilterForm');
+        if(!keepPage) {
+            let pageInput = document.createElement('input');
+            pageInput.type = "hidden";
+            pageInput.name = "page";
+            pageInput.value = "1";
+            form.appendChild(pageInput);
         }
-        <!-- Pages around current -->
-        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
-        {
-            if (i == currentPage)
-            {
-                <li class="page-item active">
-                    <span class="page-link"><span class="page-number">@i</span></span>
-                </li>
-            }
-            else
-            {
-                <li class="page-item">
-                    <a class="page-link" href="?page=@i">@i</a>
-                </li>
-            }
-        }
-        <!-- Last page -->
-        @if (currentPage < totalPages - 2)
-        {
-            if (currentPage < totalPages - 3)
-            {
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-            }
-            <li class="page-item">
-                <a class="page-link" href="?page=@totalPages">@totalPages</a>
-            </li>
-        }
-        <!-- Next button -->
-        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-            <a class="page-link arrow-link"
-               href="?page=@(currentPage + 1)"
-               tabindex="@(currentPage == totalPages ? "-1" : "0")"
-               aria-label="Next">
-                <span aria-hidden="true">&#8594;</span>
-            </a>
-        </li>
-    </ul>
-</div>
-}
+        const data = new URLSearchParams(new FormData(form)).toString();
+        fetch('@Url.Action("DraftIndex", "TenderAdmin")' + '?' + data, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(resp => resp.text())
+        .then(html => {
+            document.getElementById('drafts-table').innerHTML = html;
+            const params = new URLSearchParams(new FormData(document.getElementById('draftFilterForm')));
+            document.querySelector('#draftTypeDropdown').value = params.get('type') ?? '';
+            document.querySelector('.search-input').value = params.get('search') ?? '';
+            hookDraftPaginationLinks();
+        });
+    }
+
+    const debouncedDraftSubmit = debounce(() => submitDraftForm(false), 300);
+
+    function hookDraftPaginationLinks() {
+        document.querySelectorAll('.pagination-list a.page-link').forEach(function(link) {
+            link.onclick = function(e) {
+                e.preventDefault();
+                const url = new URL(link.href);
+                const params = new URLSearchParams(url.search);
+                document.querySelector('#draftTypeDropdown').value = params.get('type') ?? '';
+                document.querySelector('.search-input').value = params.get('search') ?? '';
+                fetch(link.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(resp => resp.text())
+                .then(html => {
+                    document.getElementById('drafts-table').innerHTML = html;
+                    document.querySelector('#draftTypeDropdown').value = params.get('type') ?? '';
+                    document.querySelector('.search-input').value = params.get('search') ?? '';
+                    hookDraftPaginationLinks();
+                });
+            };
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelector('.search-input').addEventListener('input', debouncedDraftSubmit);
+        document.querySelector('#draftTypeDropdown').addEventListener('change', () => submitDraftForm(false));
+        document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            submitDraftForm(true);
+        });
+        hookDraftPaginationLinks();
+    });
+</script>
 <style>
+
+    .filter-dropdown {
+        padding: 12px 36px 12px 12px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+        min-width: 180px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF8,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ccc'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 10px;
+    }
+
     .breadcrumb-custom {
         color: #888;
         font-size: 1.00rem;

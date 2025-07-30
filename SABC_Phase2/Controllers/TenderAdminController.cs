@@ -215,24 +215,40 @@ namespace SABC_Phase2.Controllers
         }
 
         // Updated Index action to support tender status filtering
-        public IActionResult Index(string status, int page = 1, int pageSize = 7)
+        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
         {
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
-            // Filter by status if provided (e.g. status = "open", "closed", "awarded", "cancelled")
-            if (!string.IsNullOrEmpty(status))
+            // Map status to DB value
+            string statusDbValue = MapStatus(status);
+            if (!string.IsNullOrEmpty(statusDbValue))
+                query = query.Where(t => t.Status.ToLower() == statusDbValue);
+
+            // Type filter
+            if (!string.IsNullOrEmpty(type))
             {
-                var filter = status.Trim().ToLower();
-                // Status values in DB are e.g. "Open Tender"
-                query = query.Where(t => t.Status.ToLower().Contains(filter));
+                string typeFilter = type.Trim().ToLower();
+                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
             }
 
-            var totalItems = query.Count();
-            var tenders = query
+            // Search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(t =>
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
+                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+                    (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+                    (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(searchLower))
+                );
+            }
+
+            var totalItems = await query.CountAsync();
+            var tenders = await query
                 .OrderByDescending(t => t.DatePublished)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             // Blob storage for document SAS URIs (optional)
             var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
@@ -248,9 +264,26 @@ namespace SABC_Phase2.Controllers
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            ViewBag.Status = status; // For pagination links
+            ViewBag.Status = status;
+            ViewBag.Type = type;
+            ViewBag.Search = search;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
 
             return View(tenders);
+        }
+
+        private string MapStatus(string status)
+        {
+            switch (status?.ToLower())
+            {
+                case "open": return "open tender";
+                case "closed": return "closed tender";
+                case "awarded": return "awarded tender";
+                case "cancelled": return "cancelled tender";
+                default: return null;
+            }
         }
 
         [HttpPost]
@@ -346,28 +379,51 @@ namespace SABC_Phase2.Controllers
 
 
         [HttpGet]
-        public IActionResult DraftIndex(int page = 1, int pageSize = 7)
+        public async Task<IActionResult> DraftIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
         {
             var query = _context.TenderAdminsDraft
                 .Include(d => d.Documents)
-                .OrderByDescending(d => d.CreatedDate);
+                .OrderByDescending(d => d.CreatedDate)
+                .AsQueryable();
 
-            var totalItems = query.Count();
+            // Tender Type filter
+            if (!string.IsNullOrEmpty(type))
+            {
+                string typeFilter = type.Trim().ToLower();
+                query = query.Where(d => d.TenderType != null && d.TenderType.ToLower() == typeFilter);
+            }
+
+            // Search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(d =>
+                    (d.Title != null && d.Title.ToLower().Contains(searchLower)) ||
+                    (d.TenderType != null && d.TenderType.ToLower().Contains(searchLower)) ||
+                    (d.CreatedDate.ToString().ToLower().Contains(searchLower))
+                );
+            }
+
+            var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            var drafts = query
+            var drafts = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = totalPages;
+            ViewBag.Search = search;
+            ViewBag.Type = type;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView("Tender_Admin_DraftsTablePartial", drafts);
 
             return View(drafts);
         }
-
 
         [HttpGet]
         public IActionResult EditDraft(int id)
@@ -636,31 +692,46 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
-        public IActionResult ScheduledIndex(int page = 1, int pageSize = 7)
+        public async Task<IActionResult> ScheduledIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
         {
-            // Get the total number of scheduled tenders in the database.
-            // This is needed for pagination calculation and displaying the total count.
-            var totalItems = _context.ScheduledTenders.Count();
+            var query = _context.ScheduledTenders.Include(t => t.Documents).AsQueryable();
 
-            // Fetch the scheduled tenders for the current page.
-            // - Includes related Documents for each tender for display in the view.
-            // - Orders tenders by their scheduled publish date/time in descending order (most recent first).
-            // - Skips tenders from previous pages to get items for the current page.
-            // - Takes only the number of items equal to the page size (for paging).
-            var scheduledTenders = _context.ScheduledTenders
-                .Include(t => t.Documents)
+            // Filter by tender type
+            if (!string.IsNullOrEmpty(type))
+            {
+                string typeFilter = type.Trim().ToLower();
+                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
+            }
+
+            // Search by keyword
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(t =>
+                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+                    (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+                    (t.TenderType != null && t.TenderType.ToLower().Contains(searchLower)) ||
+                    (t.ScheduledPublishDateTime != null && t.ScheduledPublishDateTime.ToString().ToLower().Contains(searchLower))
+                );
+            }
+
+            var totalItems = await query.CountAsync();
+            var scheduledTenders = await query
                 .OrderByDescending(t => t.ScheduledPublishDateTime)
-                .Skip((page - 1) * pageSize) // Calculate how many items to skip based on current page
-                .Take(pageSize)              // Take only the items for this page
-                .ToList();
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
-            // Store pagination and count info in ViewBag for use in the view (UI):
-            ViewBag.CurrentPage = page;                                // The current page number
-            ViewBag.PageSize = pageSize;                               // The number of items per page
-            ViewBag.TotalItems = totalItems;                           // Total number of scheduled tenders (for showing total count)
-            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize); // Total number of pages (for navigation controls)
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            ViewBag.Search = search;
+            ViewBag.Type = type;
 
-            // Return the view, passing in the list of scheduled tenders for the current page.
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView("Tender_Admin_ScheduledTendersTablePartial", scheduledTenders);
+
             return View(scheduledTenders);
         }
 
@@ -816,21 +887,45 @@ namespace SABC_Phase2.Controllers
         //---------------------------------------------------------------------------------------------------
 
         [HttpGet]
-        public IActionResult Reports_Index(int page = 1, int pageSize = 5)
+        public IActionResult Reports_Index(string search = "", string type = "", int page = 1, int pageSize = 5)
         {
-            var closedTenders = _context.Tenders
-                .Where(t => t.Status != null && t.Status.ToLower().Contains("closed"))
-                .OrderByDescending(t => t.ClosingDate)
-                .ToList();
+            var query = _context.Tenders.AsQueryable();
 
+            // Only closed tenders
+            query = query.Where(t => t.Status != null && t.Status.ToLower().Contains("closed"));
+
+            // Tender Type filter
+            if (!string.IsNullOrEmpty(type))
+            {
+                string typeFilter = type.Trim().ToLower();
+                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
+            }
+
+            // Search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(t =>
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
+                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+                    (t.TenderType != null && t.TenderType.ToLower().Contains(searchLower)) ||
+                    (t.ClosingDate != null && t.ClosingDate.ToString().ToLower().Contains(searchLower))
+                );
+            }
+
+            var closedTenders = query.OrderByDescending(t => t.ClosingDate).ToList();
             int totalItems = closedTenders.Count;
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
-            // Pass ALL closed tenders, NOT pagedTenders
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = totalPages;
+            ViewBag.Search = search;
+            ViewBag.Type = type;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView("Tender_Admin_ReportsTablePartial", closedTenders);
 
             return View(closedTenders);
         }

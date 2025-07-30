@@ -57,30 +57,76 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Main OVRS tender listing with optional status filtering and pagination.
         /// </summary>
-        public IActionResult Index(string status, int page = 1, int pageSize = 7)
+        // Your Index action, updated for partial view & AJAX
+        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
         {
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
-            if (!string.IsNullOrEmpty(status))
+            // Map status to DB value
+            string statusDbValue = MapStatus(status);
+            if (!string.IsNullOrEmpty(statusDbValue))
+                query = query.Where(t => t.Status.ToLower() == statusDbValue);
+
+            // Type filter
+            if (!string.IsNullOrEmpty(type))
             {
-                string statusFilter = status.Trim().ToLower();
-                query = query.Where(t => t.Status.ToLower().Contains(statusFilter));
+                string typeFilter = type.Trim().ToLower();
+                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
             }
 
-            var totalItems = query.Count();
-            var tenders = query
+            // Search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(t =>
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
+                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+                    (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+                    (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(searchLower))
+                );
+            }
+
+            var totalItems = await query.CountAsync();
+            var tenders = await query
                 .OrderByDescending(t => t.DatePublished)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
+
+            // Blob storage for document SAS URIs (optional)
+            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            foreach (var tender in tenders)
+            {
+                foreach (var doc in tender.Documents)
+                {
+                    doc.FilePath = blobService.GetBlobSasUri(doc.FilePath);
+                }
+            }
 
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
             ViewBag.Status = status;
+            ViewBag.Type = type;
+            ViewBag.Search = search;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
 
             return View(tenders);
+        }
+
+        private string MapStatus(string status)
+        {
+            switch (status?.ToLower())
+            {
+                case "open": return "open tender";
+                case "closed": return "closed tender";
+                case "awarded": return "awarded tender";
+                case "cancelled": return "cancelled tender";
+                default: return null;
+            }
         }
 
         /// <summary>
@@ -708,9 +754,33 @@ namespace SABC_Phase2.Controllers
 
 
 
-        public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7)
+        public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7, string search = "", string filter = "all")
         {
-            var query = _context.Tenders.OrderByDescending(t => t.DatePublished);
+            var query = _context.Tenders.AsQueryable();
+
+            // Filter by status
+            if (!string.IsNullOrEmpty(filter) && filter != "all")
+            {
+                string status = filter == "open" ? "open tender"
+                               : filter == "closed" ? "closed tender"
+                               : "";
+                if (!string.IsNullOrEmpty(status))
+                    query = query.Where(t => t.Status.ToLower() == status);
+            }
+
+            // Search
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                query = query.Where(t =>
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(search)) ||
+                    (t.Title != null && t.Title.ToLower().Contains(search)) ||
+                    (t.Status != null && t.Status.ToLower().Contains(search)) ||
+                    (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(search))
+                );
+            }
+
+            query = query.OrderByDescending(t => t.DatePublished);
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -724,6 +794,13 @@ namespace SABC_Phase2.Controllers
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = totalPages;
+            ViewBag.Search = search;
+            ViewBag.Filter = filter;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("OVRS_TendersTablePartial_AllTender", tenders);
+            }
 
             return View(tenders);
         }

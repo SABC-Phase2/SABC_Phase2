@@ -1,0 +1,119 @@
+﻿@model List<SABC_Phase2.Models.Tender.Tender>
+@{
+    int pageSize = ViewBag.PageSize ?? 7;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? Model.Count;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int emptyRows = pageSize - Model.Count;
+    string search = ViewBag.Search ?? "";
+    string status = ViewBag.Status ?? "";
+    string type = ViewBag.Type ?? "";
+}
+<div class="table-container">
+    <div class="table-scroll-container">
+        <table class="tender-table">
+            <thead>
+                <tr>
+                    <th>THUMBNAILS</th>
+                    <th>TITLES</th>
+                    <th>TENDER STATUS</th>
+                    <th>DATE PUBLISHED <i class="fas fa-sort"></i></th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tender in Model)
+                {
+                    <tr>
+                        <td>
+                            <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
+                        </td>
+                        <td>
+                            <div class="tender-title-block">
+                                <strong>@tender.TenderNumber</strong> : @tender.Title
+                            </div>
+                        </td>
+                        <td>
+                            <span class="tender-status
+                                    @(tender.Status?.ToLower() == "open tender" ? "tender-status-open" :
+                                                                      tender.Status?.ToLower() == "closed tender" ? "tender-status-closed" :
+                                                                      tender.Status?.ToLower() == "awarded tender" ? "tender-status-awarded" :
+                                                                      tender.Status?.ToLower() == "cancelled tender" ? "tender-status-cancelled" : "")">
+                            @tender.Status
+                        </span>
+                    </td>
+                    <td>@tender.DatePublished.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <a asp-controller="TenderAdmin" asp-action="Edit" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
+                    </td>
+                </tr>
+                                }
+                @for (int i = 0; i < emptyRows; i++)
+                {
+                    <tr>
+                        <td colspan="5" style="background:transparent; border:none;"></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+@if (totalPages > 1)
+{
+    <div class="custom-pagination">
+        <ul class="pagination-list">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("Index", "TenderAdmin", new { page = currentPage - 1, pageSize, status, type, search })"
+                   tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
+                    <span aria-hidden="true">&#8592;</span>
+                </a>
+            </li>
+            @if (currentPage > 3)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       href="@Url.Action("Index", "TenderAdmin", new { page = 1, pageSize, status, type, search })">1</a>
+                </li>
+                @if (currentPage > 4)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                if (i == currentPage)
+                {
+                    <li class="page-item active">
+                        <span class="page-link"><span class="page-number">@i</span></span>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="@Url.Action("Index", "TenderAdmin", new { page = i, pageSize, status, type, search })">@i</a>
+                    </li>
+                }
+            }
+            @if (currentPage < totalPages - 2)
+            {
+                if (currentPage < totalPages - 3)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link"
+                       href="@Url.Action("Index", "TenderAdmin", new { page = totalPages, pageSize, status, type, search })">@totalPages</a>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("Index", "TenderAdmin", new { page = currentPage + 1, pageSize, status, type, search })"
+                   tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
+                    <span aria-hidden="true">&#8594;</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+}
