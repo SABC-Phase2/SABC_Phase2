@@ -17,6 +17,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Graph" Version="5.88.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.74.1" />
     <PackageReference Include="NodaTime" Version="3.2.2" />
     <PackageReference Include="QuestPDF" Version="2025.5.1" />
   </ItemGroup>

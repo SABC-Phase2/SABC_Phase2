@@ -93,15 +93,7 @@ namespace SABC_Phase2.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Blob storage for document SAS URIs (optional)
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-            foreach (var tender in tenders)
-            {
-                foreach (var doc in tender.Documents)
-                {
-                    doc.FilePath = blobService.GetBlobSasUri(doc.FilePath);
-                }
-            }
+            // No more BlobName/FilePath logic! Use SharePointPath directly in your views.
 
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
@@ -155,11 +147,13 @@ namespace SABC_Phase2.Controllers
                     .Any(a => a.OVRS_UserId == userId && a.TenderId == id);
             }
 
-            // Generate SAS URLs for each document
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            // Use SharePointPath for each document for viewing/downloading
             foreach (var doc in tender.Documents)
             {
-                doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
+                // No more FilePath or BlobName! Use SharePointPath in your views.
+                // If you need to fall back or transform the path, do so here.
+                // Example: If SharePointPath is not null, nothing to do. Otherwise, handle error or fallback logic.
+                // If you only use SharePoint now, this loop can be removed.
             }
 
             // Pass both tender and alreadyApplied to view
@@ -167,7 +161,6 @@ namespace SABC_Phase2.Controllers
 
             return View(tender);
         }
-
 
         /// <summary>
         /// Presents the tender application form for a given tender.
@@ -272,23 +265,18 @@ namespace SABC_Phase2.Controllers
         [HttpPost]
         public async Task<IActionResult> SubmitTenderApplication(int TenderId, int LegacyUserId, List<IFormFile> UploadedFiles, Guid? DraftId)
         {
-
-
             // Find the OVRS_User by LegacyUserId
             var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId);
-
             var tender = _context.Tenders.Find(TenderId);
 
             if (tender == null)
             {
-
                 ModelState.AddModelError("", "Invalid Tender ID.");
                 var vm = BuildTenderApplicationViewModel(TenderId, user?.Id);
                 return View("Tender_Application", vm);
             }
             if (user == null)
             {
-
                 ModelState.AddModelError("", "Invalid Employee ID (not found in Users table).");
                 var vm = BuildTenderApplicationViewModel(TenderId, null);
                 return View("Tender_Application", vm);
@@ -300,47 +288,45 @@ namespace SABC_Phase2.Controllers
             {
                 TenderId = TenderId,
                 OVRS_UserId = user.Id,
-                DateApplied = saLocalNow.ToDateTimeUnspecified(), // <-- Use South African local time
+                DateApplied = saLocalNow.ToDateTimeUnspecified(),
                 DraftId = DraftId
             };
 
             _context.Applied_For_Tenders.Add(application);
             await _context.SaveChangesAsync();
 
+            // Get company name for SharePoint folder structure
+            var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId);
+            var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
+
+            // Use SharePointService for file uploads
+            var sharePointService = new SharePointService(_configuration);
 
             // Handle uploaded files
             if (UploadedFiles != null && UploadedFiles.Any())
             {
-                var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-                int fileIndex = 0;
                 foreach (var file in UploadedFiles)
                 {
-
                     if (file != null && file.Length > 0)
                     {
-                        var blobFileName = $"applications/{application.Id}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
-                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                        var sharePointUrl = await sharePointService
+                            .UploadUserApplicationDocumentAsync(tender.TenderNumber, companyName, stream, file.FileName); // See updated SharePointService below
 
                         var doc = new ApplicationDocument
                         {
                             FileName = file.FileName,
-                            BlobName = blobFileName,
-                            FilePath = blobFileName,
+                            SharePointPath = sharePointUrl,
                             TenderApplicationId = application.Id
                         };
 
                         _context.ApplicationDocuments.Add(doc);
                     }
-
-                    fileIndex++;
                 }
                 await _context.SaveChangesAsync();
-
             }
 
-            // ===== Add this block to delete the draft if used =====
-            // Copy draft documents to main application documents, if DraftId is present
+            // ===== Copy draft documents to main application documents, if DraftId is present =====
             if (DraftId.HasValue)
             {
                 var draft = _context.TenderApplicationDrafts
@@ -354,38 +340,30 @@ namespace SABC_Phase2.Controllers
                         var appDoc = new ApplicationDocument
                         {
                             FileName = draftDoc.FileName,
-                            BlobName = draftDoc.FilePath, // If you want the blob name to be the same as in draft
-                            FilePath = draftDoc.FilePath,
+                            SharePointPath = draftDoc.SharePointPath,
                             TenderApplicationId = application.Id
                         };
                         _context.ApplicationDocuments.Add(appDoc);
                     }
                     await _context.SaveChangesAsync();
-                }
 
-                // Now, remove the draft and its docs as before
-                if (draft.Documents != null)
-                {
+                    // Remove the draft and its docs as before
                     _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
+                    _context.TenderApplicationDrafts.Remove(draft);
+                    await _context.SaveChangesAsync();
                 }
-                _context.TenderApplicationDrafts.Remove(draft);
-                await _context.SaveChangesAsync();
             }
 
             // 1. Get logged-in user from SABC Phase2 db (already have 'user')
             // 2. Cross-reference to get email from etender-sabc-test db
             var legacyUserId = user.LegacyUserId;
-            // Use the correct context and class for tbl_users in etender-sabc-test
-            var etenderUser = _legacyContext.TblUsers
-                .FirstOrDefault(u => u.UserId == legacyUserId);
+            var etenderUser = _legacyContext.TblUsers.FirstOrDefault(u => u.UserId == legacyUserId);
 
             if (etenderUser != null && !string.IsNullOrEmpty(etenderUser.Email))
             {
                 var userName = $"{etenderUser.FirstName} {etenderUser.LastName}";
                 var tenderNumber = tender?.TenderNumber ?? "";
                 var tenderName = tender?.Title ?? "";
-                // Get the time submitted from application.DateApplied
-                // If for some reason it's null, fallback to DateTime.UtcNow
                 var timeSubmitted = application.DateApplied ?? DateTime.UtcNow;
 
                 await _emailService.SendTenderSubmissionConfirmationAsync(
@@ -396,14 +374,9 @@ namespace SABC_Phase2.Controllers
                     timeSubmitted
                 );
             }
-            else
-            {
-                // Optionally log warning: user not found in etender DB or no email
-            }
             // After handling the draft deletion (if necessary), redirect the user to the OVRS_Documents page
             return RedirectToAction("OVRS_Documents");
         }
-
 
         /// <summary>
         /// Shows documents to OVRS users (could be their own docs, or company-wide).
@@ -558,22 +531,29 @@ namespace SABC_Phase2.Controllers
                 _context.TenderApplicationDrafts.Add(draft);
             }
 
-            // Handle draft file uploads (if any).
+            // Get company name for folder structure
+            var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId);
+            var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
+            var tender = TenderId.HasValue ? _context.Tenders.FirstOrDefault(t => t.Id == TenderId.Value) : null;
+            var tenderNumber = tender?.TenderNumber ?? $"Tender_{TenderId}";
+
+            // Handle draft file uploads (if any), using SharePoint
             if (UploadedFiles != null && UploadedFiles.Any())
             {
-                var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+                var sharePointService = new SharePointService(_configuration);
                 foreach (var file in UploadedFiles)
                 {
                     if (file != null && file.Length > 0)
                     {
-                        var blobFileName = $"draftapplications/{draft.DraftId}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
-                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                        // Save under /TenderNumber/Tender Applications/CompanyName/
+                        var sharePointUrl = await sharePointService
+                            .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, file.FileName);
 
                         var doc = new TenderApplicationDraftDocument
                         {
                             FileName = file.FileName,
-                            FilePath = blobFileName
+                            SharePointPath = sharePointUrl
                         };
                         draft.Documents.Add(doc);
                     }
@@ -601,22 +581,21 @@ namespace SABC_Phase2.Controllers
             });
         }
 
+
         // GET: /OVRS_User/ViewDocument/{id}
-        // Redirects the user to a time-limited SAS URL for viewing the PDF in Azure Blob Storage
+        // Redirects the user to the SharePoint document URL for viewing the PDF in SharePoint
         public async Task<IActionResult> ViewDocument(int id)
         {
             // Look up the document in the database by its primary key (int Id)
             var doc = await _context.TenderApplicationDraftDocuments.FindAsync(id);
             if (doc == null) return NotFound();
 
-            // Generate a time-limited SAS URL for the blob so the PDF can be viewed in the browser
-            var sasUrl = _blobStorageService.GetBlobSasUri(doc.FilePath); // 'FilePath' holds the blob name/key
-                                                                          // Redirect the user to the SAS URL (opens PDF in new tab)
-            return Redirect(sasUrl);
+            // Redirect the user to the SharePoint URL (opens PDF in new tab)
+            return Redirect(doc.SharePointPath);
         }
 
         // POST: /OVRS_User/DeleteDocument/{id}
-        // Deletes the document both from Azure Blob Storage and the database
+        // Deletes the document from SharePoint and the database
         [HttpPost]
         public async Task<IActionResult> DeleteDocument(int id)
         {
@@ -624,7 +603,8 @@ namespace SABC_Phase2.Controllers
             var draftDoc = await _context.TenderApplicationDraftDocuments.FindAsync(id);
             if (draftDoc != null)
             {
-                await _blobStorageService.DeleteFileAsync(draftDoc.FilePath); // Azure blob
+                var sharePointService = new SharePointService(_configuration);
+                await sharePointService.DeleteDocumentAsync(draftDoc.SharePointPath); // SharePoint
                 _context.TenderApplicationDraftDocuments.Remove(draftDoc);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
@@ -634,7 +614,8 @@ namespace SABC_Phase2.Controllers
             var appDoc = await _context.ApplicationDocuments.FindAsync(id);
             if (appDoc != null)
             {
-                await _blobStorageService.DeleteFileAsync(appDoc.FilePath); // Azure blob
+                var sharePointService = new SharePointService(_configuration);
+                await sharePointService.DeleteDocumentAsync(appDoc.SharePointPath); // SharePoint
                 _context.ApplicationDocuments.Remove(appDoc);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
@@ -720,7 +701,18 @@ namespace SABC_Phase2.Controllers
             if (tenderApplication == null)
                 return Json(new { success = false, message = "Tender application not found." });
 
-            // 2. Save each uploaded PDF file to Azure Blob Storage and DB
+            // Get company name for SharePoint folder structure
+            var supplier = LegacyUserId.HasValue
+                ? _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId.Value)
+                : null;
+            var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
+            var tender = await _context.Tenders.FirstOrDefaultAsync(t => t.Id == TenderId);
+            var tenderNumber = tender?.TenderNumber ?? $"Tender_{TenderId}";
+
+            // Use SharePointService for file uploads
+            var sharePointService = new SharePointService(_configuration);
+
+            // 2. Save each uploaded PDF file to SharePoint and DB
             foreach (var formFile in UploadedFiles)
             {
                 if (formFile != null && formFile.Length > 0)
@@ -729,16 +721,14 @@ namespace SABC_Phase2.Controllers
                     if (!formFile.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    var blobFileName = $"{Guid.NewGuid()}_{Path.GetFileName(formFile.FileName)}";
-
-                    // Upload to Azure Blob Storage (assuming this returns the blob URL/path)
-                    var filePath = await _blobStorageService.UploadFileAsync(formFile.OpenReadStream(), blobFileName);
+                    using var stream = formFile.OpenReadStream();
+                    var sharePointUrl = await sharePointService
+                        .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, formFile.FileName);
 
                     var doc = new SABC_Phase2.Models.OVRS.ApplicationDocument
                     {
                         FileName = formFile.FileName,
-                        BlobName = blobFileName,
-                        FilePath = filePath,
+                        SharePointPath = sharePointUrl,
                         TenderApplicationId = tenderApplication.Id
                     };
 
@@ -751,7 +741,6 @@ namespace SABC_Phase2.Controllers
             // Replace the response line in your UpdateTenderSubmission POST method with:
             return Json(new { success = true, redirectUrl = Url.Action("OVRS_Submissions_Drafts", "OVRS_User") });
         }
-
 
 
         public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7, string search = "", string filter = "all")
@@ -824,23 +813,8 @@ namespace SABC_Phase2.Controllers
                 awardedCompanyName = tender.AwardedTender?.AwardedCompanyName;
             }
 
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
-            // Main tender documents
-            if (tender.Documents != null)
-            {
-                foreach (var doc in tender.Documents)
-                {
-                    doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
-                }
-            }
-            // Awarded documents
-            if (tender.AwardedTender?.Documents != null)
-            {
-                foreach (var doc in tender.AwardedTender.Documents)
-                {
-                    doc.FilePath = blobService.GetBlobSasUri(doc.BlobName);
-                }
-            }
+            // No more Blob storage logic, use SharePointPath for document URLs in your views
+            // If you need to validate or transform SharePointPath, do so here, but normally nothing is needed
 
             ViewBag.AwardedCompanyName = awardedCompanyName;
             return View(tender);

@@ -15,25 +15,25 @@ namespace SABC_Phase2.Services
     public class TenderPublishingService : ITenderPublishingService
     {
         private readonly Phase2Context _context;
-        private readonly BlobStorageService _blobService;
+        private readonly SharePointService _sharePointService;
 
         /// <summary>
-        /// Initializes the service with access to the database context and Azure Blob Storage.
+        /// Initializes the service with access to the database context and SharePoint service.
         /// </summary>
         /// <param name="context">EF Core DbContext</param>
-        /// <param name="configuration">App configuration to read Blob connection string</param>
+        /// <param name="configuration">App configuration to read SharePoint config</param>
         public TenderPublishingService(Phase2Context context, IConfiguration configuration)
         {
             _context = context;
-            // Initialize BlobStorageService using connection string from configuration
-            _blobService = new BlobStorageService(configuration["AzureBlobStorage:ConnectionString"]);
+            // Initialize SharePointService (replace BlobStorageService)
+            _sharePointService = new SharePointService(configuration);
         }
 
 
         /// <summary>
         /// Main method to publish tenders that were scheduled for publishing.
         /// - Migrates from ScheduledTenders to Tenders table.
-        /// - Copies associated documents in blob storage.
+        /// - Copies associated documents in SharePoint.
         /// - Removes the scheduled entry to avoid re-processing.
         /// </summary>
         public async Task PublishScheduledTendersAsync()
@@ -76,17 +76,27 @@ namespace SABC_Phase2.Services
                 _context.Tenders.Add(tender);
                 await _context.SaveChangesAsync(); // Save first to generate ID
 
-                // Copy documents
+                // Copy documents from ScheduledTenderDocuments to TenderDocuments and upload to SharePoint
                 foreach (var scheduledDoc in scheduledTender.Documents)
                 {
-                    var newBlobPath = $"{tender.Id}/{Guid.NewGuid()}_{scheduledDoc.FileName}";
-                    await _blobService.CopyBlobAsync(scheduledDoc.FilePath, newBlobPath);
+                    // Download the file from its original FilePath (Blob or SharePoint), upload to new SharePoint path
+                    // You may need to implement a helper in SharePointService to copy from old to new if not already present
+                    // For now, assume FilePath is a URL or local path that can be streamed
+
+                    // Replace this with a migration to SharePoint (if not already there)
+                    string sharePointUrl;
+                    using (var fileStream = await _sharePointService.GetFileStreamAsync(scheduledDoc.SharePointPath)) // You must implement this method if needed
+                    {
+                        sharePointUrl = await _sharePointService.UploadDocumentAsync(
+                            scheduledTender.TenderNumber,
+                            fileStream,
+                            scheduledDoc.FileName);
+                    }
 
                     var tenderDoc = new TenderDocument
                     {
                         FileName = scheduledDoc.FileName,
-                        BlobName = newBlobPath, // <-- Set this if you use BlobName
-                        FilePath = newBlobPath,
+                        SharePointPath = sharePointUrl,
                         TenderId = tender.Id
                     };
 

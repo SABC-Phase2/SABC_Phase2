@@ -16,8 +16,9 @@ namespace SABC_Phase2.Models.Tender
         [Required]
         public string FileName { get; set; }
 
+        // Remove FilePath, use only SharePointPath
         [Required]
-        public string FilePath { get; set; } // Azure Blob Storage URL or path
+        public string SharePointPath { get; set; }
 
         public int ScheduledTenderId { get; set; }
 

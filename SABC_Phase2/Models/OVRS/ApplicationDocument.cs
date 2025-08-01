@@ -12,10 +12,7 @@ namespace SABC_Phase2.Models.OVRS
         public string FileName { get; set; }
 
         [Required]
-        public string BlobName { get; set; }
-
-        [Required]
-        public string FilePath { get; set; }
+        public string SharePointPath { get; set; }
 
         public int TenderApplicationId { get; set; }
 

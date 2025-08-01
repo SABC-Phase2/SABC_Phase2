@@ -81,6 +81,14 @@
               "target": "Package",
               "version": "[9.0.6, )"
             },
+            "Microsoft.Graph": {
+              "target": "Package",
+              "version": "[5.88.0, )"
+            },
+            "Microsoft.Identity.Client": {
+              "target": "Package",
+              "version": "[4.74.1, )"
+            },
             "NodaTime": {
               "target": "Package",
               "version": "[3.2.2, )"

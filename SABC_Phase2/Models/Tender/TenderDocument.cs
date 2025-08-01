@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SABC_Phase2.Models.Tender
 {
+
     public class TenderDocument
     {
         [Key]
@@ -11,11 +12,9 @@ namespace SABC_Phase2.Models.Tender
         [Required]
         public string FileName { get; set; }
 
+        // Remove BlobName, add SharePointPath instead
         [Required]
-        public string BlobName { get; set; } // Azure blob name
-
-        [Required]
-        public string FilePath { get; set; } // Azure blob URL
+        public string SharePointPath { get; set; }
 
         // Foreign key to Tender (always set)
         public int TenderId { get; set; }

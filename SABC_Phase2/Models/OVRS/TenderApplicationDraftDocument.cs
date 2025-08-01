@@ -19,12 +19,14 @@ namespace SABC_Phase2.Models.OVRS
         /// <summary>
         /// Original file name as uploaded by the user.
         /// </summary>
+        [Required]
         public string FileName { get; set; }
 
         /// <summary>
-        /// Path or URL to the file in blob storage or file system.
+        /// URL to the file in SharePoint.
         /// </summary>
-        public string FilePath { get; set; } // Blob path or URL
+        [Required]
+        public string SharePointPath { get; set; }
 
         /// <summary>
         /// Foreign key to associate this document with a specific tender application draft.

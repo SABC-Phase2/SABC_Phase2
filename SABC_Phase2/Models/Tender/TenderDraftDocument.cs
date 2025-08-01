@@ -8,7 +8,10 @@ namespace SABC_Phase2.Models.Tender
         [Key]
         public int Id { get; set; }
         public string FileName { get; set; }
-        public string FilePath { get; set; } // Azure blob URL
+
+        [Required]
+        public string SharePointPath { get; set; }
+
         public int TenderDraftId { get; set; }
 
         [ForeignKey("TenderDraftId")]

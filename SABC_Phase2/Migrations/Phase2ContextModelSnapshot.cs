@@ -66,15 +66,11 @@ namespace SABC_Phase2.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BlobName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
+                    b.Property<string>("SharePointPath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -150,7 +146,7 @@ namespace SABC_Phase2.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
+                    b.Property<string>("SharePointPath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -272,12 +268,12 @@ namespace SABC_Phase2.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("ScheduledTenderId")
                         .HasColumnType("int");
+
+                    b.Property<string>("SharePointPath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -347,15 +343,11 @@ namespace SABC_Phase2.Migrations
                     b.Property<int?>("AwardedTenderId")
                         .HasColumnType("int");
 
-                    b.Property<string>("BlobName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
+                    b.Property<string>("SharePointPath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -426,7 +418,7 @@ namespace SABC_Phase2.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
+                    b.Property<string>("SharePointPath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

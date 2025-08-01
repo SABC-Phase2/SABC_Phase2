@@ -77,76 +77,91 @@ namespace SABC_Phase2.Controllers
             if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
                 return Forbid();
 
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            var sharePointService = new SharePointService(_configuration);
 
             // --- Scheduled Tender Logic ---
             if (model.IsScheduled && model.ScheduledDate.HasValue && model.ScheduledTime.HasValue)
             {
-                // Combine the scheduled date and time as South African local time
-                var scheduledLocal = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
-                var scheduledSaLocal = new NodaTime.LocalDateTime(
-                    scheduledLocal.Year, scheduledLocal.Month, scheduledLocal.Day,
-                    scheduledLocal.Hour, scheduledLocal.Minute, scheduledLocal.Second
-                );
-                // Convert South African local time to UTC
-                var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
-                var scheduledUtc = scheduledUtcInstant.ToDateTimeUtc();
-
-                var scheduledTender = new ScheduledTender
+                try
                 {
-                    TenderType = model.TenderType,
-                    TenderNumber = model.TenderNumber,
-                    ClosingDate = model.ClosingDate.Value,
-                    ClosingTime = model.ClosingTime,
-                    Status = "Scheduled",
-                    Title = model.Title,
-                    Description = model.Description,
-                    ScheduledPublishDateTime = scheduledUtc,
-                    CreatedOn = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified(),
-                    Documents = new List<ScheduledTenderDocument>()
-                };
+                    // Combine date and time as South African local time
+                    var scheduledLocal = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
+                    var scheduledSaLocal = new NodaTime.LocalDateTime(
+                        scheduledLocal.Year, scheduledLocal.Month, scheduledLocal.Day,
+                        scheduledLocal.Hour, scheduledLocal.Minute, scheduledLocal.Second
+                    );
+                    // Convert South African local time to UTC
+                    var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
+                    var scheduledUtc = scheduledUtcInstant.ToDateTimeUtc();
 
-                if (model.UploadedFiles != null && model.UploadedFiles.Any())
-                {
-                    foreach (var file in model.UploadedFiles)
+                    var scheduledTender = new ScheduledTender
                     {
-                        if (file.Length > 0)
-                        {
-                            var blobFileName = $"{Guid.NewGuid()}_{file.FileName}";
-                            using var stream = file.OpenReadStream();
-                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                        TenderType = model.TenderType,
+                        TenderNumber = model.TenderNumber,
+                        ClosingDate = model.ClosingDate.Value,
+                        ClosingTime = model.ClosingTime,
+                        Status = "Scheduled",
+                        Title = model.Title,
+                        Description = model.Description,
+                        ScheduledPublishDateTime = scheduledUtc,
+                        CreatedOn = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified(),
+                        Documents = new List<ScheduledTenderDocument>()
+                    };
 
-                            scheduledTender.Documents.Add(new ScheduledTenderDocument
+                    if (model.UploadedFiles != null && model.UploadedFiles.Any())
+                    {
+                        foreach (var file in model.UploadedFiles)
+                        {
+                            if (file.Length > 0)
                             {
-                                FileName = file.FileName,
-                                FilePath = blobFileName
-                            });
+                                using var stream = file.OpenReadStream();
+                                var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                                    scheduledTender.TenderNumber,
+                                    stream,
+                                    file.FileName);
+
+                                scheduledTender.Documents.Add(new ScheduledTenderDocument
+                                {
+                                    FileName = file.FileName,
+                                    SharePointPath = sharePointUrl
+                                    // ScheduledTenderId will be filled after SaveChanges
+                                });
+                            }
                         }
                     }
+
+                    _context.ScheduledTenders.Add(scheduledTender);
+                    await _context.SaveChangesAsync();
+
+                    var delay = scheduledUtc - DateTime.UtcNow;
+                    if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+
+                    BackgroundJob.Schedule<ITenderPublishingService>(
+                        service => service.PublishScheduledTendersAsync(),
+                        delay
+                    );
+
+                    return Json(new
+                    {
+                        success = true,
+                        tenderNumber = scheduledTender.TenderNumber,
+                        redirectUrl = Url.Action("Index", "TenderAdmin"),
+                        scheduledTendersUrl = Url.Action("ScheduledIndex", "TenderAdmin")
+                    });
                 }
-
-                _context.ScheduledTenders.Add(scheduledTender);
-                await _context.SaveChangesAsync();
-
-                var delay = scheduledUtc - DateTime.UtcNow;
-                if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
-
-                BackgroundJob.Schedule<ITenderPublishingService>(
-                    service => service.PublishScheduledTendersAsync(),
-                    delay
-                );
-
-                return Json(new
+                catch (Exception ex)
                 {
-                    success = true,
-                    tenderNumber = scheduledTender.TenderNumber,
-                    redirectUrl = Url.Action("Index", "TenderAdmin"),
-                    scheduledTendersUrl = Url.Action("ScheduledIndex", "TenderAdmin")
-                });
+                    // You can also use a logger here
+                    Console.WriteLine($"Error scheduling tender: {ex}");
+                    return Json(new
+                    {
+                        success = false,
+                        error = ex.Message
+                    });
+                }
             }
 
             // --- Immediate Tender Logic ---
-            // Get authoritative South African time for publishing
             var saNow = _saTimeService.GetCurrentSouthAfricanTime();
             var datePublished = saNow.ToDateTimeUnspecified();
 
@@ -171,15 +186,16 @@ namespace SABC_Phase2.Controllers
                 {
                     if (file.Length > 0)
                     {
-                        var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
-                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                        var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                            tender.TenderNumber,
+                            stream,
+                            file.FileName);
 
                         tender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            BlobName = blobFileName,
-                            FilePath = blobFileName,
+                            SharePointPath = sharePointUrl, // Save SharePoint URL
                             TenderId = tender.Id
                         });
                     }
@@ -250,13 +266,16 @@ namespace SABC_Phase2.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Blob storage for document SAS URIs (optional)
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            // --- Update: Use SharePointPath, no BlobService ---
             foreach (var tender in tenders)
             {
                 foreach (var doc in tender.Documents)
                 {
-                    doc.FilePath = blobService.GetBlobSasUri(doc.FilePath);
+                    // Ensure FileName and SharePointPath are correct for view
+                    // No BlobService, just keep the SharePointPath
+                    // Example: doc.FileName and doc.SharePointPath are already set
+                    // If you want to show a clickable link in your view, use doc.SharePointPath
+                    // No need to modify doc here
                 }
             }
 
@@ -290,16 +309,13 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveDraft()
         {
-            // Access the posted form data and uploaded files from the HTTP request
             var form = Request.Form;
             var files = Request.Form.Files;
 
-            // Attempt to retrieve DraftId from the form data (if it exists)
             Guid draftGuid;
             TenderDraft draft = null;
             if (Guid.TryParse(form["DraftId"], out draftGuid))
             {
-                // If DraftId is present and valid, try to fetch the existing draft (including any attached documents) from the database
                 draft = await _context.TenderAdminsDraft
                     .Include(d => d.Documents)
                     .FirstOrDefaultAsync(d => d.DraftId == draftGuid);
@@ -307,64 +323,55 @@ namespace SABC_Phase2.Controllers
 
             if (draft == null)
             {
-                // If no existing draft is found, create a new one
                 draft = new TenderDraft
                 {
-                    DraftId = Guid.NewGuid(),                        // Generate a new unique DraftId
-                    CreatedDate = _saTimeService.GetCurrentSouthAfricanTime()
-                    .ToDateTimeUnspecified(),                       // Set creation date to now (UTC)
-                    Documents = new List<TenderDraftDocument>()      // Initialize the documents collection
+                    DraftId = Guid.NewGuid(),
+                    CreatedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified(),
+                    Documents = new List<TenderDraftDocument>()
                 };
-                _context.TenderAdminsDraft.Add(draft);               // Add the new draft to EF context for saving
+                _context.TenderAdminsDraft.Add(draft);
             }
             else
             {
-                // If updating an existing draft, set the last modified date to now (UTC)
                 draft.LastModifiedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
-
-                // Optionally: Uncomment below lines if you want to replace old documents with new ones
+                // Optionally clear old documents if desired:
                 // _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
                 // draft.Documents.Clear();
             }
 
-            // Update draft fields from the form data (simple mapping; assumes all keys exist)
             draft.TenderType = form["TenderType"];
             draft.TenderNumber = form["TenderNumber"];
             draft.Status = form["Status"];
             draft.Title = form["Title"];
             draft.Description = form["Description"];
 
-            // Safely parse and assign ClosingDate and ClosingTime if provided and valid
             if (DateTime.TryParse(form["ClosingDate"], out var closingDate))
                 draft.ClosingDate = closingDate;
             if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
                 draft.ClosingTime = closingTime;
 
-            // Handle file uploads and persist them in Azure Blob Storage
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            // Use SharePointService for file uploads
+            var sharePointService = new SharePointService(_configuration);
             foreach (var file in files)
             {
                 if (file.Length > 0)
                 {
-                    // Generate a unique blob file name using the draft's ID and a new GUID
-                    var blobFileName = $"{draft.DraftId}/{Guid.NewGuid()}_{file.FileName}";
                     using var stream = file.OpenReadStream();
-                    // Upload the file to Azure Blob Storage and get the blob URL
-                    var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                    var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                        draft.TenderNumber ?? draft.DraftId.ToString(), // Use TenderNumber if present, else DraftId as folder
+                        stream,
+                        file.FileName);
 
-                    // Add a new document record to the draft's documents collection
                     draft.Documents.Add(new TenderDraftDocument
                     {
-                        FileName = file.FileName,       // Original uploaded file name
-                        FilePath = blobFileName         // Blob storage path for retrieval/deletion
+                        FileName = file.FileName,
+                        SharePointPath = sharePointUrl
                     });
                 }
             }
 
-            // Save all changes (new/updated draft and documents) to the database
             await _context.SaveChangesAsync();
 
-            // Return a JSON response indicating success, with the draft's unique ID
             return Json(new
             {
                 success = true,
@@ -428,45 +435,38 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult EditDraft(int id)
         {
-            // Attempt to retrieve the draft tender with the specified ID from the database.
-            // Include the related Documents navigation property so any attached files are available for editing.
+            // Retrieve the draft tender with documents
             var draft = _context.TenderAdminsDraft
                 .Include(d => d.Documents)
                 .FirstOrDefault(d => d.Id == id);
 
-            // If the draft is not found (invalid ID or deleted), return a 404 Not Found response.
             if (draft == null)
                 return NotFound();
 
-            // Map the retrieved draft entity to a TenderViewModel.
-            // Only map the fields that exist in the draft (leave missing fields as null/default).
-            // This view model will be used to populate the edit form in the view.
+            // Map the draft entity to the view model, reflecting SharePointPath changes
             var model = new TenderViewModel
             {
-                DraftId = draft.DraftId,                      // Unique identifier for the draft
-                TenderType = draft.TenderType,                // Type of tender (e.g., RFI, RFP)
-                TenderNumber = draft.TenderNumber,            // Reference number for the draft tender
-                ClosingDate = draft.ClosingDate, // nullable DateTime? property   // Date the tender closes; will set below if null
-                ClosingTime = draft.ClosingTime,              // Time the tender closes on the closing date
-                Status = draft.Status,                        // Current status of the draft (e.g., Draft, Pending)
-                Title = draft.Title,                          // Title for the tender
-                Description = draft.Description,              // Description/details for the tender
-                                                              // Map each existing draft document to a view model for display in the UI.
+                DraftId = draft.DraftId,
+                TenderType = draft.TenderType,
+                TenderNumber = draft.TenderNumber,
+                ClosingDate = draft.ClosingDate,
+                ClosingTime = draft.ClosingTime,
+                Status = draft.Status,
+                Title = draft.Title,
+                Description = draft.Description,
                 ExistingDocuments = draft.Documents?.Select(doc => new TenderDocumentViewModel
                 {
-                    Id = doc.Id,                             // Unique document ID
-                    FileName = doc.FileName,                 // Original filename for display
-                    FilePath = doc.FilePath                  // File path or blob storage path
-                }).ToList() ?? new List<TenderDocumentViewModel>() // If no documents, provide empty list
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    // Use SharePointPath instead of FilePath or BlobName
+                    SharePointPath = doc.SharePointPath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
             };
 
-            // If the ClosingDate is not set (null), default to today's date.
-            // This prevents validation errors in the view when rendering the edit form.
-            //if (draft.ClosingDate == null)
-            //    model.ClosingDate = DateTime.Today;
+            // Optional: If ClosingDate is null, default to today's date
+            // if (draft.ClosingDate == null)
+            //     model.ClosingDate = DateTime.Today;
 
-            // Reuse the "Create" view for editing drafts, passing in the populated model.
-            // The view will display the draft's details for editing.
             return View("Create", model);
         }
 
@@ -490,7 +490,7 @@ namespace SABC_Phase2.Controllers
             {
                 Id = doc.Id,
                 FileName = doc.FileName,
-                FilePath = doc.FilePath
+                SharePointPath = doc.SharePointPath // <-- use SharePointPath instead of FilePath
             }).ToList();
 
             // Load awarded documents if any
@@ -505,7 +505,7 @@ namespace SABC_Phase2.Controllers
                 {
                     Id = doc.Id,
                     FileName = doc.FileName,
-                    FilePath = doc.FilePath
+                    SharePointPath = doc.SharePointPath // <-- use SharePointPath instead of FilePath
                 }).ToList();
             }
 
@@ -526,8 +526,6 @@ namespace SABC_Phase2.Controllers
 
             return View("Edit", dto);
         }
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenderEditDto dto)
@@ -554,7 +552,7 @@ namespace SABC_Phase2.Controllers
             tender.Title = dto.Title;
             tender.Description = dto.Description;
 
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            var sharePointService = new SharePointService(_configuration);
 
             // Handle document deletions
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
@@ -564,7 +562,8 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        await blobService.DeleteFileAsync(doc.FilePath);
+                        // Optionally: delete file from SharePoint if required by your business logic
+                        // await sharePointService.DeleteFileAsync(doc.SharePointPath); // if implemented
                         _context.TenderDocuments.Remove(doc);
                     }
                 }
@@ -573,7 +572,8 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        await blobService.DeleteFileAsync(doc.FilePath);
+                        // Optionally: delete file from SharePoint if required by your business logic
+                        // await sharePointService.DeleteFileAsync(doc.SharePointPath); // if implemented
                         _context.TenderDocuments.Remove(doc);
                     }
                 }
@@ -582,13 +582,11 @@ namespace SABC_Phase2.Controllers
             // Handle new PDF uploads
             if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
             {
-                // If Awarded Tender, ensure AwardedTender exists and has correct Id before adding docs
                 if (dto.Status == "Awarded Tender")
                 {
                     AwardedTender awardedTender = tender.AwardedTender;
                     if (awardedTender == null)
                     {
-                        // Create and save AwardedTender first to get its Id
                         awardedTender = new AwardedTender
                         {
                             AwardedCompanyName = dto.AwardedTender,
@@ -597,29 +595,29 @@ namespace SABC_Phase2.Controllers
                         _context.AwardedTenders.Add(awardedTender);
                         await _context.SaveChangesAsync();
                         tender.AwardedTenderId = awardedTender.Id;
-                        tender.AwardedTender = awardedTender; // Sync navigation property
+                        tender.AwardedTender = awardedTender;
                     }
                     else
                     {
                         awardedTender.AwardedCompanyName = dto.AwardedTender;
                     }
 
-                    // Now upload awarded documents
                     foreach (var file in dto.UploadedFiles)
                     {
                         if (file.Length > 0)
                         {
-                            var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
                             using var stream = file.OpenReadStream();
-                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                            var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                                tender.TenderNumber,
+                                stream,
+                                file.FileName);
 
                             var newDoc = new TenderDocument
                             {
                                 FileName = file.FileName,
-                                BlobName = blobFileName,
-                                FilePath = blobFileName,
+                                SharePointPath = sharePointUrl,
                                 TenderId = tender.Id,
-                                AwardedTenderId = awardedTender.Id // CORRECT: set after AwardedTender is saved!
+                                AwardedTenderId = awardedTender.Id
                             };
                             _context.TenderDocuments.Add(newDoc);
                         }
@@ -627,20 +625,20 @@ namespace SABC_Phase2.Controllers
                 }
                 else
                 {
-                    // Main tender documents
                     foreach (var file in dto.UploadedFiles)
                     {
                         if (file.Length > 0)
                         {
-                            var blobFileName = $"{tender.Id}/{Guid.NewGuid()}_{file.FileName}";
                             using var stream = file.OpenReadStream();
-                            var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                            var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                                tender.TenderNumber,
+                                stream,
+                                file.FileName);
 
                             var newDoc = new TenderDocument
                             {
                                 FileName = file.FileName,
-                                BlobName = blobFileName,
-                                FilePath = blobFileName,
+                                SharePointPath = sharePointUrl,
                                 TenderId = tender.Id,
                                 AwardedTenderId = null
                             };
@@ -655,7 +653,6 @@ namespace SABC_Phase2.Controllers
             {
                 if (tender.AwardedTender == null)
                 {
-                    // Already handled above in upload section, but just in case
                     var awardedTender = new AwardedTender
                     {
                         AwardedCompanyName = dto.AwardedTender,
@@ -740,21 +737,14 @@ namespace SABC_Phase2.Controllers
         public async Task<IActionResult> EditScheduled(int id)
         {
             // Retrieve the scheduled tender from the database, including its associated documents,
-            // based on the provided unique tender ID.
             var scheduledTender = await _context.ScheduledTenders
                 .Include(t => t.Documents)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            // If no scheduled tender is found for the given ID, return a 404 Not Found response.
             if (scheduledTender == null)
                 return NotFound();
 
-            // Create a new DTO (Data Transfer Object) to transfer tender data to the view.
-            // Populate the DTO with all relevant tender details, including:
-            // - Tender metadata (type, number, title, description, status, etc.)
-            // - Closing date and time
-            // - Scheduled publish datetime (for display or editing)
-            // - Existing documents transformed into view models for the front end
+            // Create a DTO and map documents using SharePointPath
             var dto = new TenderEditDto
             {
                 Id = scheduledTender.Id,
@@ -765,22 +755,15 @@ namespace SABC_Phase2.Controllers
                 Status = scheduledTender.Status,
                 Title = scheduledTender.Title,
                 Description = scheduledTender.Description,
-                ScheduledPublishDateTime = scheduledTender.ScheduledPublishDateTime, // Provide the scheduled publish datetime to the view
-
-                // Map each existing document in the tender to a view model for the UI
+                ScheduledPublishDateTime = scheduledTender.ScheduledPublishDateTime,
                 ExistingDocuments = scheduledTender.Documents?.Select(doc => new TenderDocumentViewModel
                 {
                     Id = doc.Id,
                     FileName = doc.FileName,
-                    FilePath = doc.FilePath
-                }).ToList() ?? new List<TenderDocumentViewModel>() // Ensure it's never null for the view
+                    SharePointPath = doc.SharePointPath // <-- Use SharePointPath, not FilePath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
             };
 
-            // Optionally: If you want to allow editing of the scheduled date and time separately,
-            // you can extract and set ScheduledDate and ScheduledTime here for the DTO.
-
-            // Render the "EditScheduled" view, passing in the populated DTO.
-            // The view will display all tender details and existing documents for editing.
             return View("EditScheduled", dto);
         }
 
@@ -788,22 +771,18 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditScheduled(int id, TenderEditDto dto)
         {
-            // If the model state is invalid (e.g., required fields missing), redisplay the form with validation errors
             if (!ModelState.IsValid)
             {
                 return View("EditScheduled", dto);
             }
 
-            // Retrieve the scheduled tender from the database, including its associated documents, using the provided ID
             var scheduledTender = await _context.ScheduledTenders
                 .Include(t => t.Documents)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            // If no such scheduled tender exists, return a 404 Not Found response
             if (scheduledTender == null)
                 return NotFound();
 
-            // Update the scheduled tender's core fields with values from the DTO (data transfer object)
             scheduledTender.TenderType = dto.TenderType;
             scheduledTender.TenderNumber = dto.TenderNumber;
             scheduledTender.ClosingDate = dto.ClosingDate.Value;
@@ -812,11 +791,8 @@ namespace SABC_Phase2.Controllers
             scheduledTender.Title = dto.Title;
             scheduledTender.Description = dto.Description;
 
-            // If the tender is scheduled and has a scheduled date and time,
-            // calculate the scheduled publish datetime in UTC based on the user's local time zone
             if (dto.IsScheduled && dto.ScheduledDate.HasValue && dto.ScheduledTime.HasValue)
             {
-                // Combine date and time as South African LocalDateTime
                 var scheduledSaLocal = new NodaTime.LocalDateTime(
                     dto.ScheduledDate.Value.Year,
                     dto.ScheduledDate.Value.Month,
@@ -825,58 +801,51 @@ namespace SABC_Phase2.Controllers
                     dto.ScheduledTime.Value.Minutes,
                     dto.ScheduledTime.Value.Seconds
                 );
-                // Convert to UTC instant using your service
                 var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
                 scheduledTender.ScheduledPublishDateTime = scheduledUtcInstant.ToDateTimeUtc();
             }
 
-            // Initialize the Azure Blob Storage service for document management
-            var blobService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            // Use your SharePointService for document management
+            var sharePointService = new SharePointService(_configuration);
 
             // Handle deletion of documents:
-            // For each document ID marked for deletion, remove it from both blob storage and the database
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
             {
-                // Find the documents in the scheduled tender that need to be deleted
                 var docsToRemove = scheduledTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                 foreach (var doc in docsToRemove)
                 {
-                    // Delete the file from Azure Blob Storage
-                    await blobService.DeleteFileAsync(doc.FilePath);
-                    // Remove the document record from the database
+                    // Optionally: delete document from SharePoint (if needed)
+                    // await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+
                     _context.ScheduledTendersDocuments.Remove(doc);
                 }
             }
 
             // Handle upload of new documents:
-            // For each new file uploaded, upload it to blob storage and add a record to the scheduled tender's documents
             if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
             {
                 foreach (var file in dto.UploadedFiles)
                 {
                     if (file.Length > 0)
                     {
-                        // Generate a unique blob file name for storage
-                        var blobFileName = $"{scheduledTender.Id}/{Guid.NewGuid()}_{file.FileName}";
                         using var stream = file.OpenReadStream();
-                        // Upload the file to Azure Blob Storage
-                        var blobUrl = await blobService.UploadFileAsync(stream, blobFileName);
+                        var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                            scheduledTender.TenderNumber,
+                            stream,
+                            file.FileName);
 
-                        // Add the new document record to the scheduled tender
                         scheduledTender.Documents.Add(new ScheduledTenderDocument
                         {
                             FileName = file.FileName,
-                            FilePath = blobFileName,
+                            SharePointPath = sharePointUrl,
                             ScheduledTenderId = scheduledTender.Id
                         });
                     }
                 }
             }
 
-            // Persist all changes (field updates, document deletions, and additions) to the database
             await _context.SaveChangesAsync();
 
-            // Redirect the user to the index page for scheduled tenders after successful edit
             return RedirectToAction("ScheduledIndex");
         }
 
