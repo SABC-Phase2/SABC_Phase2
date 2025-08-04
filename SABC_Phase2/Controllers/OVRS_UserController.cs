@@ -25,7 +25,6 @@ namespace SABC_Phase2.Controllers
         private readonly LegacyDbContext _legacyContext;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
-        private readonly BlobStorageService _blobStorageService;
         private readonly EmailService _emailService;
         private readonly SouthAfricanTimeService _saTimeService;
 
@@ -48,7 +47,7 @@ namespace SABC_Phase2.Controllers
             // and accessing environment-specific paths or settings.
             _env = env;
 
-            _blobStorageService = new BlobStorageService(_configuration["AzureBlobStorage:ConnectionString"]);
+            
 
             _emailService = emailService;
             _saTimeService = saTimeService;
@@ -486,7 +485,13 @@ namespace SABC_Phase2.Controllers
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft(Guid? DraftId, int? LegacyUserId, int? TenderId, List<IFormFile> UploadedFiles)
+        public async Task<IActionResult> SaveTenderApplicationDraft(
+     Guid? DraftId,
+     int? LegacyUserId,
+     int? TenderId,
+     List<IFormFile> UploadedFiles,
+     [FromForm] List<int> DocumentsToDelete // <-- Accept this from the form!
+ )
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -509,7 +514,9 @@ namespace SABC_Phase2.Controllers
 
             if (DraftId.HasValue)
             {
-                draft = _context.TenderApplicationDrafts.Include(d => d.Documents).FirstOrDefault(d => d.DraftId == DraftId.Value);
+                draft = _context.TenderApplicationDrafts
+                    .Include(d => d.Documents)
+                    .FirstOrDefault(d => d.DraftId == DraftId.Value);
                 if (draft == null)
                 {
                     // Defensive: Draft vanished or bad id.
@@ -536,6 +543,25 @@ namespace SABC_Phase2.Controllers
             var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
             var tender = TenderId.HasValue ? _context.Tenders.FirstOrDefault(t => t.Id == TenderId.Value) : null;
             var tenderNumber = tender?.TenderNumber ?? $"Tender_{TenderId}";
+
+            // === Handle Deletion of Documents ===
+            if (DocumentsToDelete != null && DocumentsToDelete.Any() && draft.Documents != null)
+            {
+                var sharePointService = new SharePointService(_configuration);
+                var docsToRemove = draft.Documents.Where(d => DocumentsToDelete.Contains(d.Id)).ToList();
+                foreach (var doc in docsToRemove)
+                {
+                    try
+                    {
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Optionally log error, but proceed to remove from DB
+                    }
+                    _context.TenderApplicationDraftDocuments.Remove(doc);
+                }
+            }
 
             // Handle draft file uploads (if any), using SharePoint
             if (UploadedFiles != null && UploadedFiles.Any())
@@ -580,7 +606,6 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("OVRS_Documents")
             });
         }
-
 
         // GET: /OVRS_User/ViewDocument/{id}
         // Redirects the user to the SharePoint document URL for viewing the PDF in SharePoint
@@ -689,11 +714,13 @@ namespace SABC_Phase2.Controllers
 
 
         // Add this POST action to your OVRS_UserController
-
         [HttpPost]
-        public async Task<IActionResult> UpdateTenderSubmission(int TenderId, int? DraftId, int? LegacyUserId, [FromForm] IFormFileCollection UploadedFiles)
+        public async Task<IActionResult> UpdateTenderSubmission(
+            int TenderId, int? DraftId, int? LegacyUserId,
+            [FromForm] IFormFileCollection UploadedFiles,
+            [FromForm] List<int> DocumentsToDelete
+        )
         {
-            // 1. Find the tender application (final, not draft)
             var tenderApplication = await _context.Applied_For_Tenders
                 .Include(t => t.Documents)
                 .FirstOrDefaultAsync(t => t.TenderId == TenderId);
@@ -701,7 +728,6 @@ namespace SABC_Phase2.Controllers
             if (tenderApplication == null)
                 return Json(new { success = false, message = "Tender application not found." });
 
-            // Get company name for SharePoint folder structure
             var supplier = LegacyUserId.HasValue
                 ? _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId.Value)
                 : null;
@@ -709,15 +735,33 @@ namespace SABC_Phase2.Controllers
             var tender = await _context.Tenders.FirstOrDefaultAsync(t => t.Id == TenderId);
             var tenderNumber = tender?.TenderNumber ?? $"Tender_{TenderId}";
 
-            // Use SharePointService for file uploads
             var sharePointService = new SharePointService(_configuration);
 
-            // 2. Save each uploaded PDF file to SharePoint and DB
+            // Deletion logic
+            if (DocumentsToDelete != null && DocumentsToDelete.Any())
+            {
+                var docsToRemove = tenderApplication.Documents
+                    .Where(d => DocumentsToDelete.Contains(d.Id)).ToList();
+
+                foreach (var doc in docsToRemove)
+                {
+                    try
+                    {
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    }
+                    catch
+                    {
+                        // Log error if needed
+                    }
+                    _context.ApplicationDocuments.Remove(doc);
+                }
+            }
+
+            // Upload logic
             foreach (var formFile in UploadedFiles)
             {
                 if (formFile != null && formFile.Length > 0)
                 {
-                    // Only accept PDFs
                     if (!formFile.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         continue;
 
@@ -738,10 +782,8 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Replace the response line in your UpdateTenderSubmission POST method with:
-            return Json(new { success = true, redirectUrl = Url.Action("OVRS_Submissions_Drafts", "OVRS_User") });
+            return RedirectToAction("OVRS_Submissions_Drafts", "OVRS_User");
         }
-
 
         public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7, string search = "", string filter = "all")
         {

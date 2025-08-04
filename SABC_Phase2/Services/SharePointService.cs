@@ -150,24 +150,34 @@ namespace SABC_Phase2.Services
             return fileMeta?.WebUrl;
         }
 
-        public async Task DeleteDocumentAsync(string sharePointUrl)
+        public async Task DeleteDocumentAsync(string sharePointPath)
         {
-            // Extract the item ID from the SharePoint URL if possible, or use Graph API to locate and delete
-            // Example implementation, you may need to adjust parsing for your URL structure
+            // Example: 
+            // https://providencesoft.sharepoint.com/sites/ProvidenceInternal/SABC%20%20Phase%202/Tender5/Admin%20docs/file.pdf
+            // You want: Tender5/Admin docs/file.pdf
 
-            // If your URLs are like https://.../drives/{driveId}/items/{itemId}
-            // You might parse itemId out, or query by path, etc.
+            var uri = new Uri(sharePointPath);
+            // Get the segments after the site name
+            // Find the index of your document library name in the URL (likely "SABC  Phase 2")
+            var path = uri.AbsolutePath; // /sites/ProvidenceInternal/SABC%20%20Phase%202/Tender5/Admin%20docs/file.pdf
 
-            // For demonstration, assuming you know how to get itemId:
-            // var itemId = ExtractItemIdFromUrl(sharePointUrl);
+            // Find the SABC  Phase 2 segment
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var docLibName = "SABC  Phase 2"; // Use your config or table if this can change
+            var libraryIdx = Array.FindIndex(segments, s => Uri.UnescapeDataString(s).Equals(docLibName, StringComparison.OrdinalIgnoreCase));
 
-            // await _graphClient.Drives[_driveId].Items[itemId].DeleteAsync();
+            if (libraryIdx == -1)
+                throw new Exception($"SharePoint path does not contain document library '{docLibName}'");
 
-            // If you store the item's unique ID, use that instead of URL.
-            // If not, you may need to search by path or name (advanced: use List children API and match by name).
+            // Path after the docLibName
+            var pathParts = segments.Skip(libraryIdx + 1).Select(Uri.UnescapeDataString);
+            var relativePath = string.Join("/", pathParts);
 
-            // This is a stub. You must implement actual logic to delete from SharePoint using Microsoft Graph.
-            throw new NotImplementedException("Implement SharePoint document deletion based on your URL/itemId strategy.");
+            // Now delete using Graph API using driveId and path
+            await _graphClient.Drives[_driveId]
+                .Root
+                .ItemWithPath(relativePath)
+                .DeleteAsync();
         }
     }
 }

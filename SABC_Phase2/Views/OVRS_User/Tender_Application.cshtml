@@ -74,24 +74,22 @@
             </div>
         </div>
 
-        <div id="uploadedFilesScrollWrapper" style="max-height: 280px; overflow-y: auto;">
-            <div id="uploadedFilesContainer" class="mt-3">
-                @if (draft != null && draft.Documents != null && draft.Documents.Any())
+        <div id="uploadedFilesContainer" class="mt-3">
+            @if (draft != null && draft.Documents != null && draft.Documents.Any())
+            {
+                foreach (var doc in draft.Documents)
                 {
-                    foreach (var doc in draft.Documents)
-                    {
-                        <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
-                            <div>
-                                <strong>@doc.FileName</strong>
-                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                    <a href="@Url.Action("ViewDocument", "OVRS_User", new { id = doc.Id })" target="_blank">View</a>
-                                    <a href="#" class="delete-doc-link" data-doc-id="@doc.Id">Delete</a>
-                                </div>
-                            </div>
+                    <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
+                        <div>
+                            <strong>@doc.FileName</strong>
                         </div>
-                    }
+                        <div>
+                            <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" />
+                            <label for="delete_doc_@doc.Id" class="text-danger" style="font-size:0.9em;">Delete</label>
+                        </div>
+                    </div>
                 }
-            </div>
+            }
         </div>
 
         <div id="uploadInputGroup" class="d-flex align-items-center justify-content-between mt-3">

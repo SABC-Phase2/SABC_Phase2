@@ -63,12 +63,6 @@ namespace SABC_Phase2.Controllers
 
         }
 
-        // POST: /TenderAdmin/Create
-        /// <summary>
-        /// POST: Handles Tender creation logic.
-        /// Supports both immediate and scheduled publishing.
-        /// </summary>
-        /// 
         [Authorize(Roles = "Administrator")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -180,6 +174,7 @@ namespace SABC_Phase2.Controllers
                 AwardedTender = null
             };
 
+            // Handle new uploads first
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
@@ -198,6 +193,31 @@ namespace SABC_Phase2.Controllers
                             SharePointPath = sharePointUrl, // Save SharePoint URL
                             TenderId = tender.Id
                         });
+                    }
+                }
+            }
+
+            // --- Copy PDFs from Draft if present and not already uploaded ---
+            if (model.DraftId.HasValue)
+            {
+                var draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.DraftId == model.DraftId.Value);
+
+                if (draft != null && draft.Documents != null && draft.Documents.Any())
+                {
+                    foreach (var draftDoc in draft.Documents)
+                    {
+                        // Avoid duplicates if user re-uploaded the same file
+                        if (!tender.Documents.Any(d => d.FileName == draftDoc.FileName))
+                        {
+                            tender.Documents.Add(new TenderDocument
+                            {
+                                FileName = draftDoc.FileName,
+                                SharePointPath = draftDoc.SharePointPath,
+                                TenderId = tender.Id // will be set after SaveChanges
+                            });
+                        }
                     }
                 }
             }
@@ -334,9 +354,6 @@ namespace SABC_Phase2.Controllers
             else
             {
                 draft.LastModifiedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
-                // Optionally clear old documents if desired:
-                // _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
-                // draft.Documents.Clear();
             }
 
             draft.TenderType = form["TenderType"];
@@ -350,23 +367,63 @@ namespace SABC_Phase2.Controllers
             if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
                 draft.ClosingTime = closingTime;
 
-            // Use SharePointService for file uploads
-            var sharePointService = new SharePointService(_configuration);
-            foreach (var file in files)
+            // --- Handle Deletion of Draft Documents ---
+            // DocumentsToDelete can be a single value or comma-separated
+            var docsToDelete = form["DocumentsToDelete"];
+            if (draft.Documents != null && docsToDelete.Count > 0)
             {
-                if (file.Length > 0)
+                var idsToDelete = new HashSet<int>();
+                foreach (var val in docsToDelete)
                 {
-                    using var stream = file.OpenReadStream();
-                    var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                        draft.TenderNumber ?? draft.DraftId.ToString(), // Use TenderNumber if present, else DraftId as folder
-                        stream,
-                        file.FileName);
-
-                    draft.Documents.Add(new TenderDraftDocument
+                    // Handles multi-select (array) and CSV from browser
+                    foreach (var idStr in val.Split(',', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        FileName = file.FileName,
-                        SharePointPath = sharePointUrl
-                    });
+                        if (int.TryParse(idStr, out var id))
+                            idsToDelete.Add(id);
+                    }
+                }
+
+                if (idsToDelete.Any())
+                {
+                    var sharePointService = new SharePointService(_configuration);
+                    var docs = draft.Documents.Where(d => idsToDelete.Contains(d.Id)).ToList();
+                    foreach (var doc in docs)
+                    {
+                        try
+                        {
+                            await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Optionally log error
+                        }
+                        _context.TenderAdminsDraftDocuments.Remove(doc);
+                    }
+                    // Remove from navigation property
+                    draft.Documents = draft.Documents.Where(d => !idsToDelete.Contains(d.Id)).ToList();
+                }
+            }
+
+            // --- Handle Uploads ---
+            if (files != null && files.Count > 0)
+            {
+                var sharePointService = new SharePointService(_configuration);
+                foreach (var file in files)
+                {
+                    if (file.Length > 0)
+                    {
+                        using var stream = file.OpenReadStream();
+                        var sharePointUrl = await sharePointService.UploadDocumentAsync(
+                            draft.TenderNumber ?? draft.DraftId.ToString(), // Use TenderNumber if present, else DraftId as folder
+                            stream,
+                            file.FileName);
+
+                        draft.Documents.Add(new TenderDraftDocument
+                        {
+                            FileName = file.FileName,
+                            SharePointPath = sharePointUrl
+                        });
+                    }
                 }
             }
 
@@ -383,7 +440,6 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("Index", "TenderAdmin")
             });
         }
-
 
         [HttpGet]
         public async Task<IActionResult> DraftIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
@@ -526,6 +582,8 @@ namespace SABC_Phase2.Controllers
 
             return View("Edit", dto);
         }
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenderEditDto dto)
@@ -555,6 +613,7 @@ namespace SABC_Phase2.Controllers
             var sharePointService = new SharePointService(_configuration);
 
             // Handle document deletions
+            // Handle document deletions
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
             {
                 if (dto.Status == "Awarded Tender" && tender.AwardedTender != null)
@@ -562,8 +621,8 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        // Optionally: delete file from SharePoint if required by your business logic
-                        // await sharePointService.DeleteFileAsync(doc.SharePointPath); // if implemented
+                        // Delete from SharePoint
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
                         _context.TenderDocuments.Remove(doc);
                     }
                 }
@@ -572,8 +631,8 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        // Optionally: delete file from SharePoint if required by your business logic
-                        // await sharePointService.DeleteFileAsync(doc.SharePointPath); // if implemented
+                        // Delete from SharePoint
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
                         _context.TenderDocuments.Remove(doc);
                     }
                 }
@@ -814,9 +873,14 @@ namespace SABC_Phase2.Controllers
                 var docsToRemove = scheduledTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                 foreach (var doc in docsToRemove)
                 {
-                    // Optionally: delete document from SharePoint (if needed)
-                    // await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
-
+                    try
+                    {
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Optionally log error here, but continue to remove from DB anyway
+                    }
                     _context.ScheduledTendersDocuments.Remove(doc);
                 }
             }

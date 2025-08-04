@@ -111,7 +111,7 @@
             <div id="uploadedFilesContainer" class="mt-3">
                 @if (Model.ExistingDocuments != null && Model.ExistingDocuments.Any())
                 {
-                    foreach (var doc in Model.ExistingDocuments)
+                    @foreach (var doc in Model.ExistingDocuments)
                     {
                         <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
                             <div>
@@ -120,7 +120,10 @@
                                     <a href="@doc.SharePointPath" target="_blank">View</a>
                                 </div>
                             </div>
-                            <!-- Optionally, add a remove button here -->
+                            <div>
+                                <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" />
+                                <label for="delete_doc_@doc.Id" class="text-danger" style="font-size:0.9em;">Delete</label>
+                            </div>
                         </div>
                     }
                 }
@@ -294,6 +297,8 @@
         </div>
     </div>
 </div>
+
+
 @section Scripts {
     <script>
                        document.addEventListener('DOMContentLoaded', function () {
@@ -692,10 +697,12 @@
                         errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
                         errorFields.push('Description'); errorTabs.push('details');
                     }
-                    if (selectedFiles.length === 0) {
-                        errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
-                        errorFields.push('UploadedFiles'); errorTabs.push('documents');
-                    }
+                       // Check for at least one PDF: either new uploads or existing server PDFs
+        const existingDocs = document.querySelectorAll('.uploaded-file-entry.existing-doc');
+        if (selectedFiles.length === 0 && existingDocs.length === 0) {
+            errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
+            errorFields.push('UploadedFiles'); errorTabs.push('documents');
+        }
 
                     // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
                     if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {

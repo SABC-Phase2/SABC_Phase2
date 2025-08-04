@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -8,12 +7,12 @@ namespace SABC_Phase2.Models.Tender
 {
     public class TenderViewModel
     {
-
-       public Guid? DraftId { get; set; }
+        public Guid? DraftId { get; set; }
         public int Id { get; set; }
+
         [Required]
         public string TenderType { get; set; }
- 
+
         [Required]
         public string TenderNumber { get; set; }
 
@@ -35,17 +34,15 @@ namespace SABC_Phase2.Models.Tender
         [Required(ErrorMessage = "Please upload at least one PDF file.")]
         public List<IFormFile> UploadedFiles { get; set; }
 
-
         public bool IsScheduled { get; set; }
         public DateTime? ScheduledDate { get; set; }
         public TimeSpan? ScheduledTime { get; set; }
 
-        //public List<TenderDocumentViewModel> ExistingDocuments { get; set; }
         public List<TenderDocumentViewModel> ExistingDocuments { get; set; } = new List<TenderDocumentViewModel>();
 
-        // Add this line:
+        // Add for deletion
+        public List<int> DocumentsToDelete { get; set; } = new List<int>();
+
         public string? AwardedTender { get; set; }
     }
-    
 }
-

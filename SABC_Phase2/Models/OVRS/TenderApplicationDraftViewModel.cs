@@ -42,5 +42,7 @@ namespace SABC_Phase2.Models.OVRS
         /// These files are not yet persisted and need to be processed server-side.
         /// </summary>
         public List<IFormFile> UploadedFiles { get; set; }
+
+        public List<int> DocumentsToDelete { get; set; } = new();
     }
 }
