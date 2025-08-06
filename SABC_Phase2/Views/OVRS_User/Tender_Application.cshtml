@@ -295,23 +295,25 @@
             });
         }
 
-          submitBtn.addEventListener("click", function (e) {
+             submitBtn.addEventListener("click", function (e) {
+            // Disable the button immediately
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
             // Check if any files are uploaded (either new or existing)
             const hasNewFiles = storedFiles.length > 0;
             const hasExistingDocs = document.querySelectorAll('.existing-doc').length > 0;
             if (!hasNewFiles && !hasExistingDocs) {
                 showSubmissionErrorModal();
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
                 return;
             }
 
-            // ...rest of your existing submit logic...
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => {
                 formData.append("UploadedFiles", fileInfo.file);
             });
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Submitting... <span class="arrow-icon"></span>';
 
             fetch(form.action, {
                 method: "POST",
@@ -326,7 +328,7 @@
                         } else {
                             alert(data.message || "Submission failed.");
                             submitBtn.disabled = false;
-                            submitBtn.innerHTML = 'Submit <span class="arrow-icon"></span>';
+                            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
                         }
                     });
                 } else if (response.redirected) {
@@ -340,9 +342,10 @@
             .catch(error => {
                 alert("Error submitting application.");
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Submit <span class="arrow-icon"></span>';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
             });
         });
+
 
         function showApplicationSuccessModal() {
             const modal = document.getElementById('applicationSuccessModal');
@@ -364,16 +367,23 @@
             };
         }
 
-        function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
+             function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
             document.getElementById('ovrsDraftModalTenderNumber').innerText = tenderNumber || '';
-            document.getElementById('ovrsDraftResponsesLink').href = draftResponsesUrl || '#';
-            document.getElementById('ovrsDraftSavedModal').classList.add('show');
-            document.getElementById('ovrsDraftSavedModal').style.display = 'flex';
+            const draftsLink = document.getElementById('ovrsDraftResponsesLink');
+            draftsLink.href = draftResponsesUrl || '/OVRS_User/OVRS_Submissions_Drafts';
+
+            const modal = document.getElementById('ovrsDraftSavedModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+
             document.getElementById('ovrsDraftModalCloseBtn').onclick = function() {
-                document.getElementById('ovrsDraftSavedModal').classList.remove('show');
-                document.getElementById('ovrsDraftSavedModal').style.display = 'none';
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                // Redirect to drafts page when close button is clicked
+                window.location.href = draftsLink.href;
             };
         }
+
 
                 function showTenderClosedModal(closingDateTime) {
             document.getElementById('tenderClosedDateTime').innerText = closingDateTime
@@ -422,8 +432,7 @@
                         if (!isAuto) {
                             // Use the tender number and draft responses URL if available
                             const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
-                            const draftResponsesUrl = "/OVRS_User/OVRS_Submissions_Drafts";
-                            showOvrDraftSavedModal(tenderNumber, draftResponsesUrl);
+                            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts");
                         }
                         if (data.draftId && !draftIdField) {
                             let input = document.createElement("input");
@@ -628,74 +637,83 @@
         width: 180px;
     }
 
-    /* New button styles with 3D effect */
+    /* Button styles with equal sizing */
     .new-tender-btn {
+        min-width: 180px; /* Set a fixed minimum width for both buttons */
+        height: 48px; /* Fixed height */
+        line-height: 24px; /* Consistent line height */
         background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
         color: #fff;
         border: none;
         border-radius: 4px;
-        padding: 12px 24px;
+        padding: 12px 24px; /* Consistent padding */
         font-size: 1rem;
         font-family: 'Segoe UI', sans-serif;
         font-weight: 600;
         cursor: pointer;
-        display: flex;
+        display: inline-flex; /* Changed to inline-flex for better alignment */
         align-items: center;
+        justify-content: center;
         gap: 8px;
         box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
-        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-        position: relative;
+        transition: all 0.2s ease;
+        box-sizing: border-box; /* Ensure padding is included in height */
     }
-
-        .new-tender-btn:hover {
-            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
-            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
-            transform: translateY(2px);
-        }
-
-        .new-tender-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 0 #007a3d;
-        }
-
-        .new-tender-btn i {
-            font-size: 0.9em;
-        }
 
     /* Draft button specific styles */
     .draft-btn {
         background: linear-gradient(to bottom, #f1f5f9 90%, #e2e8f0 100%);
         color: #334155;
         box-shadow: 0 4px 0 0 #cbd5e1, 0 8px 16px -4px rgba(148, 163, 184, 0.25);
+        height: 48px; /* Explicit height */
+        line-height: 24px; /* Matching line height */
+        padding: 12px 24px; /* Matching padding */
     }
-
-        .draft-btn:hover {
-            background: linear-gradient(to bottom, #e2e8f0 90%, #cbd5e1 100%);
-            box-shadow: 0 2px 0 0 #94a3b8, 0 4px 8px -2px rgba(148, 163, 184, 0.18);
-        }
-
-        .draft-btn:active {
-            box-shadow: 0 1px 0 0 #94a3b8;
-        }
 
     /* Submit button specific styles */
     .submit-btn {
         background: linear-gradient(to bottom, #1a7f37 90%, #166534 100%);
         box-shadow: 0 4px 0 0 #14532d, 0 8px 16px -4px rgba(22, 101, 52, 0.25);
+        height: 48px; /* Explicit height */
+        line-height: 24px; /* Matching line height */
+        padding: 12px 24px; /* Matching padding */
     }
 
-        .submit-btn:hover {
-            background: linear-gradient(to bottom, #166534 90%, #14532d 100%);
-            box-shadow: 0 2px 0 0 #14532d, 0 4px 8px -2px rgba(22, 101, 52, 0.18);
-        }
+    /* Hover and active states */
+    .new-tender-btn:hover {
+        background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+        box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+        transform: translateY(2px);
+    }
 
-        .submit-btn:active {
-            box-shadow: 0 1px 0 0 #14532d;
-        }
+    .draft-btn:hover {
+        background: linear-gradient(to bottom, #e2e8f0 90%, #cbd5e1 100%);
+        box-shadow: 0 2px 0 0 #94a3b8, 0 4px 8px -2px rgba(148, 163, 184, 0.18);
+    }
 
+    .submit-btn:hover {
+        background: linear-gradient(to bottom, #166534 90%, #14532d 100%);
+        box-shadow: 0 2px 0 0 #14532d, 0 4px 8px -2px rgba(22, 101, 52, 0.18);
+    }
+
+    .new-tender-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 1px 0 0 #007a3d;
+    }
+
+    .draft-btn:active {
+        box-shadow: 0 1px 0 0 #94a3b8;
+    }
+
+    .submit-btn:active {
+        box-shadow: 0 1px 0 0 #14532d;
+    }
+
+    /* Container for buttons */
     .app-action-buttons {
         display: flex;
         justify-content: center;
+        align-items: center; /* Ensure vertical alignment */
         gap: 24px;
         margin-top: 36px;
     }
@@ -723,4 +741,17 @@
         color: #1a7f37;
         font-weight: 500;
     }
+
+    .submit-btn:disabled {
+        background: linear-gradient(to bottom, #94a3b8 90%, #64748b 100%) !important;
+        box-shadow: 0 4px 0 0 #475569, 0 8px 16px -4px rgba(100, 116, 139, 0.25) !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+        transform: none !important;
+    }
+
+        .submit-btn:disabled:hover {
+            background: linear-gradient(to bottom, #94a3b8 90%, #64748b 100%) !important;
+            box-shadow: 0 4px 0 0 #475569, 0 8px 16px -4px rgba(100, 116, 139, 0.25) !important;
+        }
 </style>

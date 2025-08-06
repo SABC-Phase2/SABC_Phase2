@@ -2,7 +2,7 @@
 
 @{
     ViewData["BannerText"] = "Reports";
-    var closedTenders = Model?.Where(t => t.Status != null && t.Status.ToLower().Contains("closed")).ToList() ?? new List<SABC_Phase2.Models.Tender.Tender>();
+    var closedTenders = Model ?? new List<SABC_Phase2.Models.Tender.Tender>();
     int tendersPerRow = 4;
 
     // For grid view carousel: use all closedTenders, but JS will show 8 at a time
@@ -15,6 +15,8 @@
     int pageSize = ViewBag.PageSize ?? 5;
     int totalItems = ViewBag.TotalItems ?? closedTenders.Count;
     int totalPages = ViewBag.TotalPages ?? (int)Math.Ceiling((double)totalItems / pageSize);
+    string typeFilter = ViewBag.Type as string ?? ""; // <-- Add this line
+    string search = ViewBag.Search as string ?? "";
     var pagedTenders = closedTenders.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
 }
 
@@ -70,104 +72,113 @@
 </div>
 
 <div class="report-action-bar">
-    <div class="search-wrapper">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" placeholder="Search keyword" />
-    </div>
+    <form method="get" id="reportFilterForm" style="display: flex; align-items: center; gap: 16px;">
+        <span class="search-wrapper" style="position: relative; display: flex; align-items: center;">
+            <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
+            <input type="text" name="search" class="search-input"
+                   value="@search"
+                   placeholder="Search keyword"
+                   autocomplete="off"
+                   style="padding-left: 38px;" />
+        </span>
+    </form>
     <button class="new-tender-btn" id="newReportBtn">
         <i class="fas fa-plus"></i> New Report
     </button>
 </div>
 
-<div class="card report-card">
-    <div class="card-header">
-        <div class="label-toggle-wrap">
-            <label class="closed-label">Closed Tenders</label>
-            <span id="totalClosedTenders" style="margin-left: 10px; font-weight: 600; color:#808080; font-size: 1.1rem;">
-                Total: @closedTenders.Count
-            </span>
-        </div>
 
-        <div class="view-toggle-buttons" style="display: flex; align-items: center; gap: 8px;">
-            <button id="gridViewBtn" class="view-toggle" title="Grid View">
-                <i class="fas fa-th"></i>
-            </button>
-            <button id="listViewBtn" class="view-toggle active" title="List View">
-                <i class="fas fa-list"></i>
-            </button>
-           
+<div id="reports-table">
+    <div class="card report-card">
+        <div class="card-header">
+            <div class="label-toggle-wrap">
+                <label class="closed-label">Closed Tenders</label>
+                <span id="totalClosedTenders" style="margin-left: 10px; font-weight: 600; color:#808080; font-size: 1.1rem;">
+                    Total: @closedTenders.Count
+                </span>
+            </div>
+
+            <div class="view-toggle-buttons" style="display: flex; align-items: center; gap: 8px;">
+                <button id="gridViewBtn" class="view-toggle" title="Grid View">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button id="listViewBtn" class="view-toggle active" title="List View">
+                    <i class="fas fa-list"></i>
+                </button>
+
+            </div>
         </div>
-    </div>
-    <div class="card-body">
-        @if (!closedTenders.Any())
-        {
-            <div class="no-tenders">No closed tenders found.</div>
-        }
-        else
-        {
-            <!-- GRID VIEW: Carousel of 8 per slide -->
-            <div class="tender-blocks-container grid-view">
-                <div class="carousel-controls-wrapper" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <button class="carousel-arrow prev" id="gridCarouselPrev" onclick="moveGridCarousel(-1)">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <div class="carousel-track" style="width: 100%;">
-                        <div class="tender-carousel-row" id="tenderGridCarouselRow" style="display: flex; flex-wrap: wrap; gap: 20px;">
-                            @for (int i = 0; i < closedTenders.Count; i++)
-                            {
-                                var tender = closedTenders[i];
-                                <div class="tender-block tender-carousel-item" style="width: 23.5%;">
-                                    <a href="@Url.Action("tender_Report", "TenderAdmin", new { id = tender.Id })" style="text-decoration:none; color:inherit;">
-                                        <div class="tender-block-logo-wrap">
-                                            <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
-                                            <span class="tender-block-status">CLOSED</span>
-                                        </div>
-                                        <div class="tender-block-content">
-                                            <div class="tender-block-number">@tender.TenderNumber</div>
-                                            <div class="tender-block-title">
-                                                @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+        <div class="card-body">
+            @if (!closedTenders.Any())
+            {
+                <div class="no-tenders">No closed tenders found.</div>
+            }
+            else
+            {
+                <!-- GRID VIEW: Carousel of 8 per slide -->
+                <div class="tender-blocks-container grid-view">
+                    <div class="carousel-controls-wrapper" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <button class="carousel-arrow prev" id="gridCarouselPrev" onclick="moveGridCarousel(-1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="carousel-track" style="width: 100%;">
+                            <div class="tender-carousel-row" id="tenderGridCarouselRow" style="display: flex; flex-wrap: wrap; gap: 20px;">
+                                @for (int i = 0; i < closedTenders.Count; i++)
+                                {
+                                    var tender = closedTenders[i];
+                                    <div class="tender-block tender-carousel-item" style="width: 23.5%;">
+                                        <a href="@Url.Action("tender_Report", "TenderAdmin", new { id = tender.Id })" style="text-decoration:none; color:inherit;">
+                                            <div class="tender-block-logo-wrap">
+                                                <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
+                                                <span class="tender-block-status">CLOSED</span>
                                             </div>
-                                            <div class="tender-block-closing">
-                                                CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
-                                                TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                            <div class="tender-block-content">
+                                                <div class="tender-block-number">@tender.TenderNumber</div>
+                                                <div class="tender-block-title">
+                                                    @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+                                                </div>
+                                                <div class="tender-block-closing">
+                                                    CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
+                                                    TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </a>
-                                </div>
-                            }
+                                        </a>
+                                    </div>
+                                }
+                            </div>
                         </div>
+                        <button class="carousel-arrow next" id="gridCarouselNext" onclick="moveGridCarousel(1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
-                    <button class="carousel-arrow next" id="gridCarouselNext" onclick="moveGridCarousel(1)">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
                 </div>
-            </div>
-            <!-- LIST VIEW: Paginated -->
-            <div class="tender-blocks-container list-view" style="display:none;">
-                @foreach (var tender in pagedTenders)
-                {
-                    <a href="@Url.Action("tender_Report", "TenderAdmin", new { id = tender.Id })" style="text-decoration:none; color:inherit;">
-                        <div class="tender-block">
-                            <div class="tender-block-logo-wrap">
-                                <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
-                                <span class="tender-block-status">CLOSED</span>
-                            </div>
-                            <div class="tender-block-content">
-                                <div class="tender-block-number">@tender.TenderNumber</div>
-                                <div class="tender-block-title">
-                                    @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+                <!-- LIST VIEW: Paginated -->
+                <div class="tender-blocks-container list-view" style="display:none;">
+                    @foreach (var tender in pagedTenders)
+                    {
+                        <a href="@Url.Action("tender_Report", "TenderAdmin", new { id = tender.Id })" style="text-decoration:none; color:inherit;">
+                            <div class="tender-block">
+                                <div class="tender-block-logo-wrap">
+                                    <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
+                                    <span class="tender-block-status">CLOSED</span>
                                 </div>
-                                <div class="tender-block-closing">
-                                    CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
-                                    TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                <div class="tender-block-content">
+                                    <div class="tender-block-number">@tender.TenderNumber</div>
+                                    <div class="tender-block-title">
+                                        @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
+                                    </div>
+                                    <div class="tender-block-closing">
+                                        CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
+                                        TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </a>
-                }
-               
-            </div>
-        }
+                        </a>
+                    }
+
+                </div>
+            }
+        </div>
     </div>
 </div>
 
@@ -231,7 +242,6 @@
     </div>
 }
 
-
 <script>
     // =========== GRID VIEW CAROUSEL (8 per slide) ===========
     let gridCurrentPage = 0;
@@ -267,7 +277,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Modal code (unchanged)
+        // Modal code
         const modal = document.getElementById("newReportModal");
         const openBtn = document.getElementById("newReportBtn");
         const closeBtn = modal.querySelector(".close");
@@ -434,43 +444,106 @@
         const listContainer = document.querySelector(".tender-blocks-container.list-view");
         const listPaginationBar = document.getElementById("listPaginationBar");
 
-    gridBtn.addEventListener("click", function () {
-        gridBtn.classList.add("active");
-        listBtn.classList.remove("active");
-        gridContainer.style.display = "";
-        listContainer.style.display = "none";
-        if (listPaginationBar) listPaginationBar.style.display = "none";
-        updateGridCarousel();
-    });
+        gridBtn.addEventListener("click", function () {
+            gridBtn.classList.add("active");
+            listBtn.classList.remove("active");
+            gridContainer.style.display = "";
+            listContainer.style.display = "none";
+            if (listPaginationBar) listPaginationBar.style.display = "none";
+            updateGridCarousel();
+        });
 
-    listBtn.addEventListener("click", function () {
-        listBtn.classList.add("active");
-        gridBtn.classList.remove("active");
-        gridContainer.style.display = "none";
-        listContainer.style.display = "";
-        if (listPaginationBar) listPaginationBar.style.display = "";
-    });
+        listBtn.addEventListener("click", function () {
+            listBtn.classList.add("active");
+            gridBtn.classList.remove("active");
+            gridContainer.style.display = "none";
+            listContainer.style.display = "";
+            if (listPaginationBar) listPaginationBar.style.display = "";
+        });
 
         // If paginated, show list view by default
         const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.has('page')) {
-        gridBtn.classList.remove("active");
-        listBtn.classList.add("active");
-        gridContainer.style.display = "none";
-        listContainer.style.display = "";
-        if (listPaginationBar) listPaginationBar.style.display = "";
-    } else {
-        gridBtn.classList.add("active");
-        listBtn.classList.remove("active");
-        gridContainer.style.display = "";
-        listContainer.style.display = "none";
-        if (listPaginationBar) listPaginationBar.style.display = "none";
-        updateGridCarousel();
-    }
+        if (urlParams.has('page')) {
+            gridBtn.classList.remove("active");
+            listBtn.classList.add("active");
+            gridContainer.style.display = "none";
+            listContainer.style.display = "";
+            if (listPaginationBar) listPaginationBar.style.display = "";
+        } else {
+            gridBtn.classList.add("active");
+            listBtn.classList.remove("active");
+            gridContainer.style.display = "";
+            listContainer.style.display = "none";
+            if (listPaginationBar) listPaginationBar.style.display = "none";
+            updateGridCarousel();
+        }
 
         // Initialize grid carousel on page load
         updateGridCarousel();
+
+        // Initialize form handling and pagination
+        hookPaginationLinks();
+        document.querySelector('.search-input')?.addEventListener('input', debouncedSubmit);
+        document.querySelector('#tenderTypeDropdown')?.addEventListener('change', () => submitForm(false));
+        document.querySelector('.refresh-btn')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            submitForm(true);
+        });
     });
+
+    // Form handling functions
+    function debounce(fn, delay) {
+        let timer = null;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    function submitForm(keepPage = false) {
+        const form = document.getElementById('filterForm');
+        if(!keepPage) {
+            let pageInput = document.createElement('input');
+            pageInput.type = "hidden";
+            pageInput.name = "page";
+            pageInput.value = "1";
+            form.appendChild(pageInput);
+        }
+        const data = new URLSearchParams(new FormData(form)).toString();
+        fetch('@Url.Action("Index", "TenderAdmin")' + '?' + data, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(resp => resp.text())
+        .then(html => {
+            document.getElementById('tenders-table').innerHTML = html;
+            const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+            document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
+            document.querySelector('.search-input').value = params.get('search') ?? '';
+            hookPaginationLinks();
+        });
+    }
+
+    const debouncedSubmit = debounce(() => submitForm(false), 300);
+
+    function hookPaginationLinks() {
+        document.querySelectorAll('.pagination-list a.page-link').forEach(function(link) {
+            link.onclick = function(e) {
+                e.preventDefault();
+                const url = new URL(link.href);
+                const params = new URLSearchParams(url.search);
+                document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
+                document.querySelector('.search-input').value = params.get('search') ?? '';
+                fetch(link.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(resp => resp.text())
+                .then(html => {
+                    document.getElementById('tenders-table').innerHTML = html;
+                    document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
+                    document.querySelector('.search-input').value = params.get('search') ?? '';
+                    hookPaginationLinks();
+                });
+            };
+        });
+    }
 </script>
 
 <style>

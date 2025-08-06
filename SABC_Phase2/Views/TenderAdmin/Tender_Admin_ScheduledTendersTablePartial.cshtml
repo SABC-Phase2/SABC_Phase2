@@ -30,7 +30,11 @@
                         <td>
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                         </td>
-                        <td>@tender.Title</td>
+                        <td>
+                            <div class="tender-title-block">
+                                <strong>@tender.TenderNumber</strong> : @tender.Title
+                            </div>
+                        </td>
                         <td>
                             <span class="tender-status tender-status-scheduled">
                                 @tender.Status

@@ -29,7 +29,7 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController( Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration,IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService)
+        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -58,7 +58,7 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-            
+
             return View(new TenderViewModel());
 
         }
@@ -102,6 +102,9 @@ namespace SABC_Phase2.Controllers
                         Documents = new List<ScheduledTenderDocument>()
                     };
 
+                    // SANITIZE tender number for SharePoint folder
+                    var safeTenderFolder = SanitizeHelper.ToSharePointSafeFolderName(scheduledTender.TenderNumber);
+
                     if (model.UploadedFiles != null && model.UploadedFiles.Any())
                     {
                         foreach (var file in model.UploadedFiles)
@@ -110,7 +113,7 @@ namespace SABC_Phase2.Controllers
                             {
                                 using var stream = file.OpenReadStream();
                                 var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                                    scheduledTender.TenderNumber,
+                                    safeTenderFolder, // Use sanitized
                                     stream,
                                     file.FileName);
 
@@ -174,6 +177,9 @@ namespace SABC_Phase2.Controllers
                 AwardedTender = null
             };
 
+            // SANITIZE tender number for SharePoint folder
+            var safeTenderFolder2 = SanitizeHelper.ToSharePointSafeFolderName(tender.TenderNumber);
+
             // Handle new uploads first
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
@@ -183,7 +189,7 @@ namespace SABC_Phase2.Controllers
                     {
                         using var stream = file.OpenReadStream();
                         var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                            tender.TenderNumber,
+                            safeTenderFolder2, // Use sanitized
                             stream,
                             file.FileName);
 
@@ -368,14 +374,12 @@ namespace SABC_Phase2.Controllers
                 draft.ClosingTime = closingTime;
 
             // --- Handle Deletion of Draft Documents ---
-            // DocumentsToDelete can be a single value or comma-separated
             var docsToDelete = form["DocumentsToDelete"];
             if (draft.Documents != null && docsToDelete.Count > 0)
             {
                 var idsToDelete = new HashSet<int>();
                 foreach (var val in docsToDelete)
                 {
-                    // Handles multi-select (array) and CSV from browser
                     foreach (var idStr in val.Split(',', StringSplitOptions.RemoveEmptyEntries))
                     {
                         if (int.TryParse(idStr, out var id))
@@ -399,7 +403,6 @@ namespace SABC_Phase2.Controllers
                         }
                         _context.TenderAdminsDraftDocuments.Remove(doc);
                     }
-                    // Remove from navigation property
                     draft.Documents = draft.Documents.Where(d => !idsToDelete.Contains(d.Id)).ToList();
                 }
             }
@@ -413,8 +416,16 @@ namespace SABC_Phase2.Controllers
                     if (file.Length > 0)
                     {
                         using var stream = file.OpenReadStream();
+
+                        // Use sanitized folder name for SharePoint
+                        string folderName = draft.TenderNumber;
+                        if (!string.IsNullOrWhiteSpace(folderName))
+                            folderName = SanitizeHelper.ToSharePointSafeFolderName(folderName);
+                        else
+                            folderName = draft.DraftId.ToString();
+
                         var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                            draft.TenderNumber ?? draft.DraftId.ToString(), // Use TenderNumber if present, else DraftId as folder
+                            folderName,
                             stream,
                             file.FileName);
 

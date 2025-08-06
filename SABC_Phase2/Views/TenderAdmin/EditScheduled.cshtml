@@ -1,7 +1,7 @@
 ﻿@{
     ViewData["BannerText"] = "Scheduled Tenders";
 }
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 @model TenderEditDto
 
 @{
@@ -125,28 +125,31 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="ScheduledDate">Scheduled Date</label>
-                                    <input type="date"
-                                           id="ScheduledDate"
-                                           name="ScheduledDate"
-                                           class="form-control"
-                                           value="@(Model.ScheduledDate.HasValue? Model.ScheduledDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                    <div class="selected-date-display" id="selectedDateDisplay">
+                                        @(Model.ScheduledDate.HasValue? Model.ScheduledDate.Value.ToString("MMMM d, yyyy") : "No date selected")
+                                    </div>
+                                    <div class="always-visible-calendar" id="calendarContainer"></div>
+                                    <input type="hidden" id="ScheduledDate" name="ScheduledDate" value="@(Model.ScheduledDate?.ToString("yyyy-MM-dd") ?? "")" />
                                 </div>
-                                <div class="form-group">
-                                    <label for="ScheduledTime">Scheduled Time</label>
-                                    <input type="time"
-                                           id="ScheduledTime"
-                                           name="ScheduledTime"
-                                           class="form-control"
-                                           value="@(Model.ScheduledTime.HasValue? Model.ScheduledTime.Value.ToString(@"hh\:mm") : "")" />
+                                <div class="form-group" style="margin-top: 140px;">
+                                    <label for="timeInput">Scheduled Time</label>
+                                    <div class="time-input-container" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
+                                        <input type="number" id="hours" min="1" max="12" placeholder="HH" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                        <span style="font-size: 1.5rem;">:</span>
+                                        <input type="number" id="minutes" min="0" max="59" placeholder="MM" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                        <div class="time-period-toggle" style="margin-left: 15px;">
+                                            <button type="button" class="time-period-btn am-btn">AM</button>
+                                            <button type="button" class="time-period-btn pm-btn">PM</button>
+                                        </div>
+                                        <input type="hidden" id="ScheduledTime" name="ScheduledTime">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
-
         <!-- Upload Documents Section -->
         <div id="documents" class="tab-content">
             <label for="UploadedFiles" class="upload-label">Upload Documents</label>
@@ -157,16 +160,20 @@
                 {
                     @foreach (var doc in Model.ExistingDocuments)
                     {
-                        <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
-                            <div>
-                                <strong>@doc.FileName</strong>
-                                <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                    <a href="@doc.SharePointPath" target="_blank">View</a>
-                                </div>
+                        <div class="uploaded-file-entry existing-doc" data-doc-id="@doc.Id">
+                            <div class="uploaded-file-entry-content">
+                                <div class="uploaded-file-name">@doc.FileName</div>
                             </div>
-                            <div>
+                            <div class="uploaded-file-actions">
+                                <button type="button" class="icon-btn view-upload-btn" onclick="window.open('@doc.SharePointPath', '_blank')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="icon-btn text-danger remove-upload-btn" onclick="document.getElementById('delete_doc_@doc.Id').checked = true;">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                            <div style="display:none;">
                                 <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" />
-                                <label for="delete_doc_@doc.Id" class="text-danger" style="font-size:0.9em;">Delete</label>
                             </div>
                         </div>
                     }
@@ -189,9 +196,64 @@
     <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Save Changes <span class="arrow-icon"></span></button>
 </div>
 
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteDocModal" class="modal fade" tabindex="-1" aria-labelledby="deleteDocModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title w-100" id="deleteDocModalLabel" style="color:#e11d48;">Delete Document</h5>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:1.1rem;">Are you sure you want to delete this document?</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center gap-2">
+                <button type="button" id="confirmDeleteDocBtn" class="btn btn-danger" style="min-width:100px;">Delete</button>
+                <button type="button" id="cancelDeleteDocBtn" class="btn btn-secondary" style="min-width:100px;" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+
+           let docToDeleteEntry = null;
+        let docToDeleteCheckbox = null;
+
+        // Attach event listeners to all existing document delete buttons (multi-step)
+        document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                docToDeleteEntry = btn.closest('.uploaded-file-entry.existing-doc');
+                docToDeleteCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
+                // Show confirmation modal
+                var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+                modal.show();
+            });
+        });
+
+        // Confirm delete
+        document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
+            if (docToDeleteCheckbox) {
+                docToDeleteCheckbox.checked = true;
+            }
+            if (docToDeleteEntry) {
+                docToDeleteEntry.style.display = 'none';
+            }
+            // Hide modal
+            var modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocModal'));
+            modal.hide();
+            // Reset
+            docToDeleteEntry = null;
+            docToDeleteCheckbox = null;
+        });
+
+        // Cancel delete (optional, modal will close automatically)
+        document.getElementById('cancelDeleteDocBtn').addEventListener('click', function() {
+            docToDeleteEntry = null;
+            docToDeleteCheckbox = null;
+        });
             // -------- Tab logic --------
             const tabs = ['details', 'documents'];
             let currentTab = 'details';
@@ -210,7 +272,7 @@
 
             showTab(currentTab);
 
-            // Schedule toggle logic
+           // --- Schedule toggle logic ---
             const scheduleToggle = document.getElementById('IsScheduled');
             const scheduleFields = document.getElementById('scheduleFields');
             if (scheduleToggle && scheduleFields) {
@@ -219,14 +281,173 @@
                         scheduleFields.classList.add('show');
                     } else {
                         scheduleFields.classList.remove('show');
-                        // Optionally clear values if not scheduled
-                        document.getElementById('ScheduledDate').value = "";
-                        document.getElementById('ScheduledTime').value = "";
                     }
                 }
+                 updateScheduleFields();
                 scheduleToggle.addEventListener('change', updateScheduleFields);
-                updateScheduleFields();
+
             }
+
+            // --- Flatpickr calendar logic ---
+            const calendarInput = document.getElementById('ScheduledDate');
+            const calendarContainer = document.getElementById('calendarContainer');
+            const selectedDateDisplay = document.getElementById('selectedDateDisplay');
+            let initialDate = calendarInput.value || null;
+
+                   const calendar = flatpickr(calendarContainer, {
+            inline: true,
+            dateFormat: "Y-m-d",
+            defaultDate: initialDate,
+            minDate: "today", // <-- Prevents selecting past dates
+            onChange: function(selectedDates, dateStr, instance) {
+                calendarInput.value = dateStr;
+                if (selectedDates.length > 0) {
+                    const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
+                    selectedDateDisplay.textContent = formattedDate;
+                } else {
+                    selectedDateDisplay.textContent = "No date selected";
+                }
+            }
+        });
+
+            // Set display if initial value exists
+            if (initialDate) {
+                const dateObj = new Date(initialDate);
+                selectedDateDisplay.textContent = calendar.formatDate(dateObj, "F j, Y");
+            }
+
+            // --- Time input logic (AM/PM) ---
+            const hoursInput = document.getElementById('hours');
+            const minutesInput = document.getElementById('minutes');
+            const amBtn = document.querySelector('.am-btn');
+            const pmBtn = document.querySelector('.pm-btn');
+            const timeHiddenInput = document.getElementById('ScheduledTime');
+
+                 // Set initial values from model
+        @if (Model.ScheduledTime.HasValue)
+        {
+                    var t = Model.ScheduledTime.Value;
+                    <text>
+                    hoursInput.value = "@((t.Hours % 12 == 0 ? 12 : t.Hours % 12).ToString().PadLeft(2, '0'))";
+                    minutesInput.value = "@t.Minutes.ToString("D2")";
+                    let isAM = @(t.Hours < 12).ToString().ToLower();
+                    </text>
+        }
+        else
+        {
+                    <text>
+                    hoursInput.value = "08";
+                    minutesInput.value = "00";
+                    let isAM = true;
+                    </text>
+        }
+
+            function updateHiddenTimeValue() {
+                let hours = hoursInput.value.padStart(2, '0') || '00';
+                let minutes = minutesInput.value.padStart(2, '0') || '00';
+                let seconds = '00';
+                let hours24 = parseInt(hours, 10);
+                if (isAM) {
+                    if (hours24 === 12) hours24 = 0;
+                } else {
+                    if (hours24 !== 12) hours24 += 12;
+                }
+                const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
+                timeHiddenInput.value = formattedTime;
+            }
+
+            // Set initial AM/PM button state
+            function setAMPMButtons() {
+                if (isAM) {
+                    amBtn.classList.add('active');
+                    pmBtn.classList.remove('active');
+                } else {
+                    pmBtn.classList.add('active');
+                    amBtn.classList.remove('active');
+                }
+                }
+            setAMPMButtons();
+            updateHiddenTimeValue();
+
+            // AM/PM toggle
+            amBtn.addEventListener('click', function() {
+                if (!isAM) {
+                    isAM = true;
+                    setAMPMButtons();
+                    updateHiddenTimeValue();
+                }
+            });
+            pmBtn.addEventListener('click', function() {
+                if (isAM) {
+                    isAM = false;
+                    setAMPMButtons();
+                    updateHiddenTimeValue();
+                }
+            });
+
+            // Input validation and update
+            hoursInput.addEventListener('input', function() {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 1 && val === '0') val = '';
+                if (val.length === 2 && parseInt(val, 10) > 12) val = '12';
+                if (val === '00') val = '';
+                this.value = val;
+                updateHiddenTimeValue();
+            });
+            hoursInput.addEventListener('blur', function() {
+                if (this.value && this.value.length === 1) {
+                    this.value = this.value.padStart(2, '0');
+                }
+                updateHiddenTimeValue();
+            });
+             minutesInput.addEventListener('input', function() {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
+                this.value = val;
+                updateHiddenTimeValue();
+            });
+            minutesInput.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = this.value.padStart(2, '0');
+                }
+                updateHiddenTimeValue();
+            });
+
+            // Keyboard up/down for hours/minutes
+            hoursInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '1', 10) || 1;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 12 ? 1 : val + 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 1 ? 12 : val - 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                }
+            });
+            minutesInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '0', 10) || 0;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 59 ? 0 : val + 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 0 ? 59 : val - 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                }
+            });
+
+            // Set initial hidden value on load
+            updateHiddenTimeValue();
+        });
 
             // -------- Multi PDF upload logic --------
             const fileInput = document.getElementById('UploadedFiles');
@@ -251,28 +472,44 @@
                 });
             }
 
-            function updateFilesDisplay() {
-                // Remove all new uploaded entries
-                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
 
-                selectedFiles.forEach(function (file, idx) {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-                    entryDiv.innerHTML = `<div>
+                    function updateFilesDisplay() {
+            // Remove only the new uploaded file entries (not server-existing ones)
+            document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+            // Re-render all currently selected new files
+            selectedFiles.forEach(function(file, idx) {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
+                entryDiv.innerHTML = `
+                    <div>
                         <strong>${file.name}</strong>
-                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                            <span>Selected for upload</span>
-                        </div>
                     </div>
-                    <button type="button" class="btn btn-danger btn-sm ms-2 remove-upload-btn">Remove</button>`;
-                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
-                        updateFilesDisplay();
-                    });
-                    uploadedFilesContainer.appendChild(entryDiv);
-                });
-            }
+                    <div class="uploaded-file-actions d-flex gap-2">
+                        <button type="button" class="icon-btn view-upload-btn" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
 
+                // View button logic
+                entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
+                    const fileURL = URL.createObjectURL(file);
+                    window.open(fileURL, '_blank');
+                });
+
+                // Remove button logic
+                entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                    selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                    updateFilesDisplay();
+                });
+
+                uploadedFilesContainer.appendChild(entryDiv);
+            });
+        }
             // --------- Custom Validation Utilities ---------
             function showFieldError(fieldIdOrName, message, tabName) {
                 let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
@@ -355,146 +592,182 @@
             });
 
             // -------- Save Changes/Submit logic (send all selected files) --------
-            window.submitForm = function() {
-                clearAllCustomErrors();
+                  window.submitForm = function() {
+            const saveBtn = document.getElementById('continueBtn');
 
-                // VALIDATION SECTION
-                let errors = [];
-                let errorFields = [];
-                let errorTabs = [];
+            // Prevent multiple submissions
+            if (saveBtn.classList.contains('loading')) {
+                return;
+            }
 
-                // Required fields (details tab)
-                let tenderType = document.querySelector('input[name="TenderType"]:checked');
-                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
-                let closingDate = document.querySelector('input[name="ClosingDate"]');
-                let closingTime = document.querySelector('input[name="ClosingTime"]');
-                let title = document.querySelector('input[name="Title"]');
-                let description = document.querySelector('textarea[name="Description"]');
-                let status = document.querySelector('select[name="Status"]').value;
-                let isScheduled = scheduleToggle && scheduleToggle.checked;
+            // Add loading state
+            saveBtn.classList.add('loading');
+            saveBtn.innerHTML = 'Saving<span class="loading-dots"></span>';
+            saveBtn.disabled = true;
 
+            clearAllCustomErrors();
 
-                if (!tenderType) {
-                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
-                    errorFields.push('TenderType'); errorTabs.push('details');
-                }
-                if (!tenderNumber.value.trim()) {
-                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
-                    errorFields.push('TenderNumber'); errorTabs.push('details');
-                }
-                if (!closingDate.value.trim()) {
-                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
-                    errorFields.push('ClosingDate'); errorTabs.push('details');
-                }
-                if (!closingTime.value.trim()) {
-                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
-                    errorFields.push('ClosingTime'); errorTabs.push('details');
-                }
-                if (!title.value.trim()) {
-                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
-                    errorFields.push('Title'); errorTabs.push('details');
-                }
-                if (!description.value.trim()) {
-                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
-                    errorFields.push('Description'); errorTabs.push('details');
-                }
-                if (!status) {
-                    errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
-                    errorFields.push('StatusDropdown'); errorTabs.push('details');
-                }
+            // VALIDATION SECTION
+            let errors = [];
+            let errorFields = [];
+            let errorTabs = [];
 
-                // Scheduled date/time required if scheduled
-                if (isScheduled) {
-                    var dateVal = document.getElementById('ScheduledDate').value;
-                    var timeVal = document.getElementById('ScheduledTime').value;
-                    if (!dateVal) {
-                        errors.push({field: 'ScheduledDate', message: 'You missed Scheduled Date.', tab: 'details'});
-                        errorFields.push('ScheduledDate'); errorTabs.push('details');
-                    }
-                    if (!timeVal) {
-                        errors.push({field: 'ScheduledTime', message: 'You missed Scheduled Time.', tab: 'details'});
-                        errorFields.push('ScheduledTime'); errorTabs.push('details');
-                    }
+            // Required fields (details tab)
+            let tenderType = document.querySelector('input[name="TenderType"]:checked');
+            let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+            let closingDate = document.querySelector('input[name="ClosingDate"]');
+            let closingTime = document.querySelector('input[name="ClosingTime"]');
+            let title = document.querySelector('input[name="Title"]');
+            let description = document.querySelector('textarea[name="Description"]');
+            let status = document.querySelector('select[name="Status"]').value;
+            let isScheduled = scheduleToggle && scheduleToggle.checked;
+
+            if (!tenderType) {
+                errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                errorFields.push('TenderType'); errorTabs.push('details');
+            }
+            if (!tenderNumber.value.trim()) {
+                errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                errorFields.push('TenderNumber'); errorTabs.push('details');
+            }
+            if (!closingDate.value.trim()) {
+                errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                errorFields.push('ClosingDate'); errorTabs.push('details');
+            }
+            if (!closingTime.value.trim()) {
+                errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                errorFields.push('ClosingTime'); errorTabs.push('details');
+            }
+            if (!title.value.trim()) {
+                errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                errorFields.push('Title'); errorTabs.push('details');
+            }
+            if (!description.value.trim()) {
+                errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                errorFields.push('Description'); errorTabs.push('details');
+            }
+            if (!status) {
+                errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
+                errorFields.push('StatusDropdown'); errorTabs.push('details');
+            }
+
+                   // Scheduled date/time required if scheduled
+        if (isScheduled) {
+            var dateVal = document.getElementById('ScheduledDate').value;
+            var timeVal = document.getElementById('ScheduledTime').value;
+            if (!dateVal) {
+                errors.push({field: 'ScheduledDate', message: 'You missed Scheduled Date.', tab: 'details'});
+                errorFields.push('ScheduledDate'); errorTabs.push('details');
+            }
+            if (!timeVal) {
+                errors.push({field: 'ScheduledTime', message: 'You missed Scheduled Time.', tab: 'details'});
+                errorFields.push('ScheduledTime'); errorTabs.push('details');
+            }
+
+            // --- Prevent scheduling in the past ---
+            if (dateVal && timeVal) {
+                // Combine date and time into a JS Date object
+                var scheduledDateTime = new Date(dateVal + 'T' + timeVal);
+                var now = new Date();
+                if (scheduledDateTime < now) {
+                    errors.push({field: 'ScheduledDate', message: 'Scheduled date and time cannot be in the past.', tab: 'details'});
+                    errorFields.push('ScheduledDate'); errorTabs.push('details');
                 }
+            }
+        }
+            // Supporting documents required: count only those not marked for deletion + new uploads
+            const existingDocsCount =
+                Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+                    .filter(div => {
+                        const docId = div.getAttribute('data-doc-id');
+                        const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
+                        return !(delCheckbox && delCheckbox.checked);
+                    }).length
+                +
+                uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+            if (existingDocsCount === 0) {
+                errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
+                errorFields.push('UploadedFiles'); errorTabs.push('documents');
+            }
 
-                // Supporting documents required: count only those not marked for deletion + new uploads
-                const existingDocsCount =
-                    Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
-                        .filter(div => {
-                            const docId = div.getAttribute('data-doc-id');
-                            const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
-                            return !(delCheckbox && delCheckbox.checked);
-                        }).length
-                    +
-                    uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
-                if (existingDocsCount === 0) {
-                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
-                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
-                }
+            // Show all errors next to their fields
+            if (errors.length > 0) {
+                // Remove loading state if validation fails
+                saveBtn.classList.remove('loading');
+                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                saveBtn.disabled = false;
 
-                // Show all errors next to their fields
-                if (errors.length > 0) {
-                    errors.forEach(function(err) {
-                        showFieldError(err.field, err.message, err.tab);
-                    });
-                    // Switch to first errored tab and focus field
-                    showTab(errors[0].tab);
-                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                    if (firstField) {
-                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                        firstField.focus();
-                    }
-                    return;
-                }
-
-                var form = document.querySelector('form[asp-action="EditScheduled"]');
-                if (!form) form = document.querySelector('form[action*="EditScheduled"]');
-                if (!form) {
-                    alert("Form not found!");
-                    return;
-                }
-                var formData = new FormData(form);
-
-                // Remove any existing files from input (avoid duplicate)
-                formData.delete('UploadedFiles');
-
-                // Append all files from selectedFiles
-                selectedFiles.forEach(function(file) {
-                    formData.append('UploadedFiles', file, file.name);
+                errors.forEach(function(err) {
+                    showFieldError(err.field, err.message, err.tab);
                 });
+                // Switch to first errored tab and focus field
+                showTab(errors[0].tab);
+                let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                if (firstField) {
+                    firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                    firstField.focus();
+                }
+                return;
+            }
 
-                // If scheduled, ensure scheduled date/time is provided (already validated above)
-                if (isScheduled) {
-                    formData.set('IsScheduled', 'true');
+            var form = document.querySelector('form[asp-action="EditScheduled"]');
+            if (!form) form = document.querySelector('form[action*="EditScheduled"]');
+            if (!form) {
+                alert("Form not found!");
+                // Remove loading state if form not found
+                saveBtn.classList.remove('loading');
+                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                saveBtn.disabled = false;
+                return;
+            }
+            var formData = new FormData(form);
+
+            // Remove any existing files from input (avoid duplicate)
+            formData.delete('UploadedFiles');
+
+            // Append all files from selectedFiles
+            selectedFiles.forEach(function(file) {
+                formData.append('UploadedFiles', file, file.name);
+            });
+
+            // If scheduled, ensure scheduled date/time is provided (already validated above)
+            if (isScheduled) {
+                formData.set('IsScheduled', 'true');
+            } else {
+                formData.delete('IsScheduled');
+                formData.delete('ScheduledDate');
+                formData.delete('ScheduledTime');
+            }
+
+            // Submit the form via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
                 } else {
-                    formData.delete('IsScheduled');
-                    formData.delete('ScheduledDate');
-                    formData.delete('ScheduledTime');
+                    response.text().then(html => {
+                        document.body.innerHTML = html;
+                        window.scrollTo(0, 0);
+                    });
                 }
+            })
+            .catch(error => {
+                alert("An error occurred while saving changes.");
+            })
+            .finally(() => {
+                // Remove loading state after response (success or error)
+                saveBtn.classList.remove('loading');
+                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                saveBtn.disabled = false;
+            });
+        };
 
-                // Submit the form via AJAX
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    }
-                })
-                .then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                    } else {
-                        response.text().then(html => {
-                            document.body.innerHTML = html;
-                            window.scrollTo(0, 0);
-                        });
-                    }
-                })
-                .catch(error => {
-                    alert("An error occurred while saving changes.");
-                });
-            };
-        });
     </script>
 }
 
@@ -857,5 +1130,425 @@
     .field-error-highlight {
         border-color: #dc2626 !important;
         background-color: #fef2f2 !important;
+    }
+
+    /* Time Input Styles */
+    .time-input-container {
+        margin: 15px auto 0 auto; /* Added top margin */
+        max-width: 450px;
+    }
+
+    .time-part {
+        text-align: center;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f9fafb;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+        .time-part:focus {
+            border-color: #1a7f37;
+            box-shadow: 0 0 0 2px #d1fae5;
+            background: #fff;
+            outline: none;
+        }
+
+    .time-period-toggle {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #d1d5db;
+    }
+
+    .time-period-btn {
+        border: none;
+        background: #f3f4f6;
+        color: #4b5563;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .time-period-btn.active {
+            background: #1a7f37;
+            color: white;
+        }
+
+        .time-period-btn:first-child {
+            border-right: 1px solid #d1d5db;
+        }
+
+    /* Remove default time picker arrows */
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        display: none;
+    }
+    /* Calendar Styles */
+    .always-visible-calendar {
+        width: 100%;
+        margin-top: 10px;
+        margin-right: 45px
+    }
+
+    .flatpickr-calendar.inline {
+        width: 100%;
+        max-width: 300px;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        background: transparent;
+        margin-left: 35px
+    }
+
+    .flatpickr-innerContainer {
+        border: none;
+        box-shadow: none;
+    }
+
+    .flatpickr-days {
+        border: none;
+    }
+
+    .flatpickr-day {
+        border-radius: 4px;
+        height: 32px;
+        line-height: 32px;
+        margin: 2px;
+    }
+
+        .flatpickr-day.selected {
+            background: #1a7f37;
+            border-color: #1a7f37;
+            color: white;
+        }
+
+        .flatpickr-day.today {
+            border-color: #1a7f37;
+        }
+
+            .flatpickr-day.today:hover {
+                background: #e2f3e5;
+                border-color: #1a7f37;
+            }
+
+    .flatpickr-months {
+        margin-bottom: 8px;
+    }
+
+    .flatpickr-month {
+        height: 36px;
+    }
+
+    .flatpickr-current-month {
+        padding-top: 4px;
+    }
+
+    .flatpickr-prev-month, .flatpickr-next-month {
+        top: 6px;
+    }
+
+    /* Selected Date Display */
+    .selected-date-display {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1a7f37;
+        background: #f0fdf4;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        display: inline-block;
+        min-width: 150px;
+        text-align: center;
+    }
+
+
+    /* X-circle icon styling */
+    .fa-times-circle {
+        color: #e11d48; /* Red color for error */
+        margin-bottom: 16px;
+        animation: pulse 1s ease-in-out;
+    }
+
+    @@keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .always-visible-calendar {
+        width: 100%;
+        margin-top: 10px;
+        margin-right: 45px
+    }
+
+    .flatpickr-calendar.inline {
+        width: 100%;
+        max-width: 300px;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        background: transparent;
+        margin-left: 35px
+    }
+
+    .flatpickr-innerContainer {
+        border: none;
+        box-shadow: none;
+    }
+
+    .flatpickr-days {
+        border: none;
+    }
+
+    .flatpickr-day {
+        border-radius: 4px;
+        height: 32px;
+        line-height: 32px;
+        margin: 2px;
+    }
+
+        .flatpickr-day.selected {
+            background: #1a7f37;
+            border-color: #1a7f37;
+            color: white;
+        }
+
+        .flatpickr-day.today {
+            border-color: #1a7f37;
+        }
+
+            .flatpickr-day.today:hover {
+                background: #e2f3e5;
+                border-color: #1a7f37;
+            }
+
+    .flatpickr-months {
+        margin-bottom: 8px;
+    }
+
+    .flatpickr-month {
+        height: 36px;
+    }
+
+    .flatpickr-current-month {
+        padding-top: 4px;
+    }
+
+    .flatpickr-prev-month, .flatpickr-next-month {
+        top: 6px;
+    }
+
+    /* Selected Date Display */
+    .selected-date-display {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1a7f37;
+        background: #f0fdf4;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        display: inline-block;
+        min-width: 150px;
+        text-align: center;
+    }
+
+    /* Center schedule section labels and their content */
+    .schedule-fields .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        justify-content: center;
+    }
+
+    .schedule-fields .form-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 320px;
+        max-width: 350px;
+        margin-bottom: 0;
+    }
+
+    .schedule-fields label {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .selected-date-display {
+        text-align: center;
+        width: 80%;
+    }
+
+    .always-visible-calendar {
+        margin-left: 0;
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    .time-input-container {
+        justify-content: center !important;
+        width: 100%;
+    }
+
+    /* Optional: make both columns the same width for perfect alignment */
+    @@media (min-width: 600px) {
+        .schedule-fields .form-group {
+            min-width: 340px;
+            max-width: 360px;
+        }
+    }
+
+    .action-btn.loading {
+        background-color: #9ca3af !important;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+        .action-btn.loading .arrow-icon {
+            display: none;
+        }
+
+    .loading-dots {
+        display: inline-block;
+        margin-left: 8px;
+    }
+
+        .loading-dots::after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+    @@keyframes dots {
+        0%, 20% {
+            content: '.';
+        }
+
+        40% {
+            content: '..';
+        }
+
+        60% {
+            content: '...';
+        }
+
+        80%, 100% {
+            content: '';
+        }
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        padding: 6px 10px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #1a7f37;
+        transition: color 0.2s, background 0.2s;
+        border-radius: 4px;
+        outline: none;
+    }
+
+        .icon-btn:focus, .icon-btn:hover {
+            background: #e2f3e5;
+            color: #15803d;
+        }
+
+        .icon-btn.text-danger {
+            color: #e11d48;
+        }
+
+            .icon-btn.text-danger:focus, .icon-btn.text-danger:hover {
+                background: #fef2f2;
+                color: #b91c1c;
+            }
+
+    .uploaded-file-entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .uploaded-file-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* Improved and smaller delete confirmation modal */
+    #deleteDocModal .modal-dialog {
+        max-width: 340px;
+        margin: 1.75rem auto;
+    }
+
+    #deleteDocModal .modal-content {
+        border-radius: 14px;
+        box-shadow: 0 6px 32px rgba(225,29,72,0.10), 0 1.5px 4px rgba(0,0,0,0.04);
+        padding: 0;
+        background: #fff;
+    }
+
+    #deleteDocModal .modal-header {
+        border-bottom: none;
+        padding: 18px 24px 0 24px;
+        text-align: center;
+    }
+
+    #deleteDocModal .modal-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #e11d48;
+        letter-spacing: 0.01em;
+    }
+
+    #deleteDocModal .modal-body {
+        padding: 12px 24px 0 24px;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    #deleteDocModal .modal-footer {
+        border-top: none;
+        padding: 16px 24px 20px 24px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    #deleteDocModal .btn-danger {
+        background: linear-gradient(90deg, #e11d48 60%, #f43f5e 100%);
+        border: none;
+        font-weight: 600;
+        padding: 8px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-shadow: 0 2px 8px rgba(225,29,72,0.08);
+    }
+
+    #deleteDocModal .btn-secondary {
+        background: #f3f4f6;
+        color: #333;
+        border: none;
+        font-weight: 600;
+        padding: 8px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    #deleteDocModal .btn-danger:hover, #deleteDocModal .btn-danger:focus {
+        background: linear-gradient(90deg, #be123c 60%, #e11d48 100%);
+        color: #fff;
+    }
+
+    #deleteDocModal .btn-secondary:hover, #deleteDocModal .btn-secondary:focus {
+        background: #e5e7eb;
+        color: #111827;
     }
 </style>

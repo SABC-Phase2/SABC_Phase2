@@ -12,6 +12,16 @@
         <i class="fas fa-bars" style="margin-right:10px"></i>
         <span class="label">Menu</span>
     </div>
+    <!-- Clock section with single divider line -->
+    @if (User.Identity.IsAuthenticated && supplierType == "Foreign Supplier")
+    {
+        <div class="divider-line"></div>
+        <div id="sast-clock-box" class="sast-clock-box">
+            <span id="sast-clock-label">South African Time</span>
+            <span id="sast-clock">--:--</span>
+        </div>
+       
+    }
     <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
         <i class="fas fa-user-circle fa-2x"></i>
         <div class="info">
@@ -47,6 +57,8 @@
             </div>
         }
     </div>
+
+
     <div class="menu">
         @if (User.Identity.IsAuthenticated && User.IsInRole("Administrator"))
         {
@@ -213,16 +225,6 @@
                 </div>
             </div>
 
-        }
-
-
-        @if (User.Identity.IsAuthenticated && supplierType == "Foreign Supplier")
-        {
-            <div id="sast-clock-box" class="sast-clock-box" style="padding:8px; margin:10px 0; background:#fbbd08; border-radius:8px; text-align:center;">
-                <i class="fas fa-clock" style="margin-right:6px;"></i>
-                <span id="sast-clock-label" style="font-weight:bold; display:block;">South African Time:</span>
-                <span id="sast-clock" style="font-size:1.3em; display:block; margin-top:6px;">--:--</span>
-            </div>
         }
 
 
@@ -449,21 +451,55 @@
 <style>
     /* --------------------------------- */
 
-    /* css for clock */
+    /* Clock Styles - Compact */
     .sast-clock-box {
         width: 100%;
-        box-sizing: border-box;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        background: #fbbd08 !important;
-        border: 1px solid #000;
-        margin-bottom: 12px;
-        color: #000;
-        border-radius: 8px;
         text-align: center;
-        padding: 8px;
-        /* Remove inline margin for horizontal centering */
-        margin-left: 0;
-        margin-right: 0;
+        padding: 8px 0;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 0px; /* Reduced from previous value, only affects top spacing */
+    }
+
+    #sast-clock-label {
+        font-size: 0.7em;
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+        text-transform: uppercase;
+        font-weight: 300;
+        margin-bottom: 1px;
+    }
+
+    #sast-clock {
+        font-size: 1.1em;
+        font-weight: 400;
+        color: #fbbd08;
+        letter-spacing: 1px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* Divider line style */
+    .divider-line {
+        height: 1px;
+        width: 100%;
+        background-color: #666;
+        margin: 1px 0 18px 0;
+        margin-top: 0px;
+    }
+
+    /* Collapsed state */
+    .sidebar.collapsed .sast-clock-box {
+        padding: 6px 0;
+    }
+
+    .sidebar.collapsed #sast-clock-label {
+        display: none;
+    }
+
+    .sidebar.collapsed #sast-clock {
+        font-size: 0.9em;
     }
 
     /* --------------------------------- */

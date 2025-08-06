@@ -18,50 +18,40 @@
 
     <form id="editTenderForm" asp-action="UpdateTenderSubmission" enctype="multipart/form-data" method="post" autocomplete="off">
         <div class="tender-details-form">
+            <input type="hidden" name="LegacyUserId" value="@(Model.LegacyUserId?.ToString() ?? "")" />
+            <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
+            @if (draft != null && draft.DraftId != Guid.Empty)
+            {
+                <input type="hidden" name="DraftId" value="@draft.DraftId" />
+            }
             <div class="form-row">
                 <div class="form-group">
-                    <label>Employee ID (GUID)</label>
-                    <input type="text" class="form-control" name="LegacyUserId" readonly
-                           value="@(Model.LegacyUserId?.ToString() ?? "")" />
-                    @if (draft != null && draft.DraftId != Guid.Empty)
-                    {
-                        <input type="hidden" name="DraftId" value="@draft.DraftId" />
-                    }
+                    <label class="readonly-label">Tender Type</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.Tender.TenderType" />
                 </div>
                 <div class="form-group">
-                    <label>Tender ID</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.Id" />
-                    <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
+                    <label class="readonly-label">Tender Title</label>
+                    <input type="text" class="form-control readonly-input ellipsis-input" readonly value="@Model.Tender.Title" title="@Model.Tender.Title" />
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Tender Type</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.TenderType" />
+                    <label class="readonly-label">Tender Number</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.Tender.TenderNumber" />
                 </div>
                 <div class="form-group">
-                    <label>Tender Title</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.Title" />
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tender Number</label>
-                    <input type="text" class="form-control" readonly value="@Model.Tender.TenderNumber" />
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" class="form-control" readonly value="@Model.CompanyEmail" />
+                    <label class="readonly-label">Email</label>
+                    <input type="email" class="form-control readonly-input" readonly value="@Model.CompanyEmail" />
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" class="form-control" readonly value="@Model.CompanyName" />
+                    <label class="readonly-label">Company Name</label>
+                    <input type="text" class="form-control readonly-input" readonly value="@Model.CompanyName" />
                 </div>
                 <div class="form-group">
-                    <label>Closing Date &amp; Time</label>
-                    <input type="text" class="form-control" readonly style="color:#d32f2f;"
+                    <label class="readonly-label red-label">Closing Date &amp; Time</label>
+                    <input type="text" class="form-control readonly-input" readonly style="color:#d32f2f;"
                            value="@Model.Tender.ClosingDate.ToString("dd MMMM yyyy")@(Model.Tender.ClosingTime.HasValue ? $" @ {Model.Tender.ClosingTime.Value:hh\\:mm}" : "")" />
                 </div>
             </div>
@@ -74,6 +64,7 @@
             </div>
         </div>
 
+        <!-- Update your HTML to remove the checkbox delete option -->
         <div id="uploadedFilesContainer" class="mt-3">
             @if (documents != null && documents.Any())
             {
@@ -82,15 +73,38 @@
                     <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
                         <div>
                             <strong>@doc.FileName</strong>
+                            @*  <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                                @(doc.FileSize > 0 ? $"{FormatFileSize(doc.FileSize)} • " : "")Uploaded @doc.CreatedDate.ToString("dd MMM yyyy HH:mm")
+                            </div> *@
                         </div>
-                        <div>
-                            <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" />
-                            <label for="delete_doc_@doc.Id" class="text-danger" style="font-size:0.9em;">Delete</label>
+                        <div class="uploaded-file-actions d-flex">
+                            <a href="@Url.Action("ViewDocument", "TenderAdmin", new { id = doc.Id })"
+                               target="_blank"
+                               class="btn btn-outline-primary btn-sm me-2"
+                               title="View Document">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm delete-existing-doc"
+                                    data-doc-id="@doc.Id"
+                                    title="Delete Document">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </div>
                 }
             }
         </div>
+
+        @functions {
+            // Helper function to format file size
+            public static string FormatFileSize(long bytes)
+            {
+                if (bytes < 1024) return $"{bytes} B";
+                else if (bytes < 1024 * 1024) return $"{(bytes / 1024).ToString("0.0")} KB";
+                else return $"{(bytes / (1024 * 1024)).ToString("0.0")} MB";
+            }
+        }
 
         <div class="d-flex align-items-center justify-content-between mt-3">
             <label class="supporting-label mb-0">
@@ -108,15 +122,79 @@
     </form>
 </div>
 
+<!-- Add these modals to your HTML (place with other modals) -->
+<div id="errorModal" class="modal fade" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="errorModalLabel" style="width:100%;text-align:center; color:#e11d48;">
+                    Error
+                </h5>
+                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage" style="font-size:1.15rem; font-weight:500; color:#1a7f37; margin-top:12px;"></p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="errorModalCloseBtn" class="btn btn-primary" style="min-width:100px;">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="validationErrorModal" class="modal fade" tabindex="-1" aria-labelledby="validationErrorModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="validationErrorModalLabel" style="width:100%;text-align:center; color:#e11d48;">
+                    Validation Error
+                </h5>
+                <i class="fas fa-exclamation-triangle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
+            </div>
+            <div class="modal-body">
+                <p id="validationErrorModalMessage" style="font-size:1.15rem; font-weight:500; color:#1a7f37; margin-top:12px;"></p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="validationErrorModalCloseBtn" class="btn btn-primary" style="min-width:100px;">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        // ======= PDF Upload Preview Logic for Edit Section =======
-        // Maximum upload size: 100MB
+        // ======= Modal Functions =======
+        function showErrorModal(message) {
+            const modal = document.getElementById('errorModal');
+            document.getElementById('errorModalMessage').textContent = message;
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+
+            document.getElementById('errorModalCloseBtn').onclick = function() {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            };
+        }
+
+        function showValidationError(message) {
+            const modal = document.getElementById('validationErrorModal');
+            document.getElementById('validationErrorModalMessage').textContent = message;
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+
+            document.getElementById('validationErrorModalCloseBtn').onclick = function() {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            };
+        }
+
+        // ======= PDF Upload Logic =======
         const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
         let storedFiles = [];
 
         const fileInput = document.getElementById("UploadedFiles");
         const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
+        const editForm = document.getElementById("editTenderForm");
 
         function formatFileSize(bytes) {
             if (bytes < 1024) return `${bytes} B`;
@@ -124,19 +202,38 @@
             else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
         }
 
+        function validateDocumentCount() {
+            const existingDocs = Array.from(document.querySelectorAll('.existing-doc'));
+            const docsToDelete = Array.from(document.querySelectorAll('input[name="DocumentsToDelete"]:checked'));
+            const remainingExistingDocs = existingDocs.length - docsToDelete.length;
+            const newFilesCount = storedFiles.length;
+            return (remainingExistingDocs + newFilesCount) > 0;
+        }
+
+        function validateDocumentCountAfterDelete(indexToRemove) {
+            const tempFiles = [...storedFiles];
+            tempFiles.splice(indexToRemove, 1);
+
+            const existingDocs = Array.from(document.querySelectorAll('.existing-doc'));
+            const docsToDelete = Array.from(document.querySelectorAll('input[name="DocumentsToDelete"]:checked'));
+            const remainingExistingDocs = existingDocs.length - docsToDelete.length;
+
+            return (remainingExistingDocs + tempFiles.length) > 0;
+        }
+
         // Handle file selection and preview logic
         fileInput.addEventListener("change", function () {
             let totalSize = storedFiles.reduce((sum, f) => sum + f.file.size, 0);
             for (const file of fileInput.files) {
                 if (!file.name.endsWith(".pdf")) {
-                    alert(`${file.name} is not a PDF.`);
+                    showValidationError(`${file.name} is not a PDF. Only PDF files are allowed.`);
                     continue;
                 }
                 if (storedFiles.some(f => f.name === file.name && f.size === file.size)) {
                     continue;
                 }
                 if (totalSize + file.size > MAX_TOTAL_SIZE) {
-                    alert(`Cannot add "${file.name}". Upload limit of 100MB will be exceeded.`);
+                    showValidationError(`Cannot add "${file.name}". The total upload size would exceed the 100MB limit.`);
                     continue;
                 }
                 storedFiles.push({ file: file, uploadedAt: new Date(), name: file.name, size: file.size });
@@ -146,48 +243,60 @@
             fileInput.value = ""; // Reset for next upload
         });
 
-        // Render uploaded PDFs preview (client-side)
+        // Render uploaded PDFs preview (updated version)
         function renderUploadedFiles() {
             // Keep server-side docs (already rendered by Razor)
             const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
             uploadedFilesContainer.innerHTML = "";
             existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
+
             // Render client-side PDFs
             storedFiles.forEach((fileInfo, index) => {
                 const { file, uploadedAt } = fileInfo;
                 const fileRow = document.createElement("div");
                 fileRow.className = "uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+
                 const fileDetails = document.createElement("div");
                 const fileName = document.createElement("strong");
                 fileName.textContent = file.name;
+
                 const fileMeta = document.createElement("div");
                 fileMeta.className = "text-muted small mt-1";
                 fileMeta.style.fontSize = "0.75rem";
-                const size = formatFileSize(file.size);
-                const time = uploadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                fileMeta.textContent = `${size} • Uploaded at ${time}`;
+                fileMeta.textContent = `${formatFileSize(file.size)} • Uploaded at ${uploadedAt.toLocaleTimeString()}`;
+
                 fileDetails.appendChild(fileName);
                 fileDetails.appendChild(fileMeta);
+
                 const actions = document.createElement("div");
                 actions.className = "uploaded-file-actions d-flex";
-                // View PDF file
+
+                // View button
                 const viewBtn = document.createElement("button");
                 viewBtn.type = "button";
                 viewBtn.className = "btn btn-outline-primary btn-sm me-2";
+                viewBtn.title = "View Document";
                 viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
                 viewBtn.onclick = () => {
                     const fileURL = URL.createObjectURL(file);
                     window.open(fileURL, "_blank");
                 };
-                // Remove PDF
+
+                // Delete button
                 const deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "btn btn-outline-danger btn-sm";
+                deleteBtn.title = "Delete Document";
                 deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
                 deleteBtn.onclick = () => {
+                    if (!validateDocumentCountAfterDelete(index)) {
+                        showValidationError("You must keep at least one document. Please upload a replacement before deleting this file.");
+                        return;
+                    }
                     storedFiles.splice(index, 1);
                     renderUploadedFiles();
                 };
+
                 actions.appendChild(viewBtn);
                 actions.appendChild(deleteBtn);
                 fileRow.appendChild(fileDetails);
@@ -196,20 +305,24 @@
             });
         }
 
-        // On form submit, append all files from storedFiles
-        const editForm = document.getElementById("editTenderForm");
+        // Form submission handler
         editForm.addEventListener("submit", function (e) {
-            // Only enhance if there are new files selected
+            if (!validateDocumentCount()) {
+                e.preventDefault();
+                showValidationError("You must keep at least one document.\n\n" +
+                    "• Keep at least one existing document, or\n" +
+                    "• Upload at least one new document");
+                return;
+            }
+
+            const submitBtn = editForm.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
             if (storedFiles.length > 0) {
                 e.preventDefault();
                 const formData = new FormData(editForm);
-                storedFiles.forEach(fileInfo => {
-                    formData.append("UploadedFiles", fileInfo.file);
-                });
-                // Show loading UI if needed
-                const submitBtn = editForm.querySelector('.submit-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = 'Updating... <span class="arrow-icon"></span>';
+                storedFiles.forEach(fileInfo => formData.append("UploadedFiles", fileInfo.file));
 
                 fetch(editForm.action, {
                     method: "POST",
@@ -224,46 +337,69 @@
                             if (data.success && data.redirectUrl) {
                                 window.location.href = data.redirectUrl;
                             } else {
-                                alert("Update succeeded, but no redirect URL provided.");
+                                showErrorModal(data.message || "Update succeeded but no redirect URL was provided.");
+                                resetSubmitButton();
                             }
                         });
-                    } else {
-                        // fallback: show new HTML
-                        return response.text().then(html => {
-                            document.body.innerHTML = html;
-                        });
                     }
+                    return response.text().then(html => document.body.innerHTML = html);
                 })
                 .catch(error => {
-                    alert("Error updating submission.");
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Update Submission <span class="arrow-icon"></span>';
+                    showErrorModal("An error occurred while updating your submission. Please try again.");
+                    resetSubmitButton();
                 });
             }
-            // If no new files, let default submit happen
+
+            function resetSubmitButton() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Update Submission <span class="arrow-icon"></span>';
+            }
         });
 
-        // Handle delete for existing docs
-        $(document).on('click', '.delete-doc-link', function (e) {
-            e.preventDefault();
-            var docId = $(this).data('doc-id');
-            if (confirm("Are you sure you want to delete this document?")) {
-                $.ajax({
-                    url: '/OVRS_User/DeleteDocument/' + docId,
-                    type: 'POST',
-                    success: function (data) {
-                        if (data.success) {
-                            $('div[data-doc-id="' + docId + '"]').remove();
-                        } else {
-                            alert(data.message || "Failed to delete document.");
-                        }
-                    },
-                    error: function () {
-                        alert("Error deleting document.");
-                    }
-                });
+        // Existing document delete checkbox handler
+        $(document).on('change', 'input[name="DocumentsToDelete"]', function() {
+            if (!validateDocumentCount()) {
+                showValidationError("You must keep at least one document. Please upload a new document before deleting this one.");
+                this.checked = false;
             }
         });
+
+        // Handle delete for existing documents
+         $(document).on('click', '.delete-existing-doc', function (e) {
+             e.preventDefault();
+             const docId = $(this).data('doc-id');
+             const docElement = $(this).closest('.existing-doc');
+
+             if (!validateDocumentCountAfterDeleteExisting(docId)) {
+                 showValidationError("You must keep at least one document. Please upload a new document before deleting this one.");
+                 return;
+             }
+
+             if (confirm("Are you sure you want to delete this document?")) {
+                 $.ajax({
+                     url: '/OVRS_User/DeleteDocument/' + docId,
+                     type: 'POST',
+                     success: function (data) {
+                         if (data.success) {
+                             docElement.remove();
+                         } else {
+                             showErrorModal(data.message || "Failed to delete document.");
+                         }
+                     },
+                     error: function () {
+                         showErrorModal("Error deleting document.");
+                     }
+                 });
+             }
+         });
+
+              // Special validation for existing doc delete operations
+        function validateDocumentCountAfterDeleteExisting(docIdToRemove) {
+            const existingDocs = Array.from(document.querySelectorAll('.existing-doc'))
+                .filter(doc => doc.dataset.docId !== docIdToRemove.toString());
+            const newFilesCount = storedFiles.length;
+            return (existingDocs.length + newFilesCount) > 0;
+        }
     </script>
 }
 <!-- Copy and reuse the styles from your application form for visual consistency -->
@@ -505,4 +641,28 @@
         color: #1a7f37;
         font-weight: 500;
     }
+
+    .readonly-label {
+        color: #222;
+        font-weight: 600;
+    }
+
+    .readonly-input {
+        background-color: #f5f5f5 !important;
+        color: #666 !important;
+        font-weight: 500;
+        border: 1.2px solid #d1d5db;
+        cursor: not-allowed;
+    }
+
+    /* Add this to your CSS section */
+    .submit-btn:disabled {
+        background: #94a3b8 !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
+
+        .submit-btn:disabled:hover {
+            background: #94a3b8 !important;
+        }
 </style>
