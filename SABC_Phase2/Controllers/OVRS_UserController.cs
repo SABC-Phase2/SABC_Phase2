@@ -261,6 +261,7 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Handles full tender application submission, including file upload and DB persistence.
         /// </summary>
+
         [HttpPost]
         public async Task<IActionResult> SubmitTenderApplication(int TenderId, int LegacyUserId, List<IFormFile> UploadedFiles, Guid? DraftId)
         {
@@ -298,6 +299,10 @@ namespace SABC_Phase2.Controllers
             var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId);
             var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
 
+            // Sanitize all SharePoint folder/file names!
+            var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tender.TenderNumber);
+            var safeCompanyName = SanitizeHelper.ToSharePointSafeFolderName(companyName);
+
             // Use SharePointService for file uploads
             var sharePointService = new SharePointService(_configuration);
 
@@ -309,12 +314,16 @@ namespace SABC_Phase2.Controllers
                     if (file != null && file.Length > 0)
                     {
                         using var stream = file.OpenReadStream();
+
+                        // Sanitize file name before upload
+                        var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(file.FileName);
+
                         var sharePointUrl = await sharePointService
-                            .UploadUserApplicationDocumentAsync(tender.TenderNumber, companyName, stream, file.FileName); // See updated SharePointService below
+                            .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, safeFileName);
 
                         var doc = new ApplicationDocument
                         {
-                            FileName = file.FileName,
+                            FileName = file.FileName, // Store original name for user display
                             SharePointPath = sharePointUrl,
                             TenderApplicationId = application.Id
                         };
@@ -860,6 +869,51 @@ namespace SABC_Phase2.Controllers
 
             ViewBag.AwardedCompanyName = awardedCompanyName;
             return View(tender);
+        }
+
+
+        public async Task<IActionResult> OVRS_Profiles()
+        {
+            // 1. Get the current user's Phase 2 UserId from claims
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+            {
+                return Unauthorized();
+            }
+
+            // 2. Get the LegacyUserId from Phase 2 DB
+            var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (phase2User == null || phase2User.LegacyUserId == null)
+            {
+                return Unauthorized();
+            }
+            int legacyUserId = phase2User.LegacyUserId.Value;
+
+            // 3. Pull first and last name from Phase 1 (legacy) DB
+            var legacyUser = await _legacyContext.TblUsers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserId == legacyUserId);
+
+            // 4. Pull trading name from suppliers table
+            var supplier = await _legacyContext.TblSuppliers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.UserId == legacyUserId);
+
+            // 5. Prepare ViewModel
+            var model = new OVRS_UserProfileViewModel();
+            if (legacyUser != null)
+            {
+                model.FirstName = legacyUser.FirstName ?? "";
+                model.LastName = legacyUser.LastName ?? "";
+            }
+            if (supplier != null)
+            {
+                model.CompanyName = supplier.TradingName ?? supplier.LegalName ?? "";
+            }
+
+            // Optionally, populate more fields from phase2User or elsewhere
+
+            return View(model);
         }
 
     }

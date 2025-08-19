@@ -680,7 +680,9 @@ namespace SABC_Phase2.Controllers
                             var sharePointUrl = await sharePointService.UploadDocumentAsync(
                                 tender.TenderNumber,
                                 stream,
-                                file.FileName);
+                                file.FileName,
+                                isAwarded: true // <-- Add this
+                            );
 
                             var newDoc = new TenderDocument
                             {

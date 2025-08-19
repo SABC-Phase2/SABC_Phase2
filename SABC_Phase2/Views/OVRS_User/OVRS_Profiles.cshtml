@@ -1,0 +1,206 @@
+﻿@{
+    ViewData["BannerText"] = "PROFILE";
+    ViewData["Title"] = "Profile";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<div class="breadcrumb-custom">
+    Home<span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Profile</span>
+</div>
+
+<div class="tab-container">
+    <div class="profile-page container-fluid">
+        <div class="row">
+            <!-- Left section -->
+            <div class="col-md-12">
+                <form method="post" enctype="multipart/form-data">
+
+                    <!-- First & Last Name side by side -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="FirstName">First Name <span class="text-danger">*</span></label>
+                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="Enter your first name" value="@Model.FirstName" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="MiddleName">Middle Name</label>
+                                <input type="text" id="MiddleName" name="MiddleName" class="form-control" placeholder="Enter your middle name" value="@Model.MiddleName" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="LastName">Last Name <span class="text-danger">*</span></label>
+                        <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="CompanyName">Company name</label>
+                        <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" />
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="DisplayAsCompany" name="DisplayAsCompany" class="form-check-input" />
+                        <label for="DisplayAsCompany" class="form-check-label">Display as a company</label>
+                    </div>
+
+                    <!-- Phone number with editable country code -->
+                    <div class="form-group mt-3">
+                        <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 100px;">
+                                <option value="+27" selected>+27</option>
+                                <option value="+1">+1</option>
+                                <option value="+44">+44</option>
+                                <option value="+91">+91</option>
+                                <!-- add more as needed -->
+                            </select>
+                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control" placeholder="Enter your phone number" />
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Email -->
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div>
+                            <label>Email address</label>
+                            <p id="emailStatic" class="form-static">yourname@example.gov.za</p>
+                            <input type="email" id="emailInput" name="Email" class="form-control d-none" value="yourname@example.gov.za" />
+                        </div>
+                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
+                    </div>
+
+                    <hr />
+
+                    <!-- Password -->
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div>
+                            <label>Password</label>
+                            <p id="passwordStatic" class="form-static">Last updated on Mar 23, 2025</p>
+                            <input type="password" id="passwordInput" name="Password" class="form-control d-none" placeholder="Enter new password" />
+                        </div>
+                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('password')">Change</a>
+                    </div>
+
+                    <hr />
+
+                    <div class="form-group">
+                        <label>Delete account</label>
+                        <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
+                        <button type="button" class="btn btn-danger">Delete account</button>
+                    </div>
+
+                    <div class="form-group text-end mt-4">
+                        <button type="submit" class="btn btn-success">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .profile-page {
+        padding: 20px;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    .form-static {
+        padding: 5px 0;
+        color: #333;
+    }
+
+    .btn-success {
+        background-color: #1BA548;
+        border-color: #1BA548;
+        padding: 10px 25px;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+
+    .btn-danger {
+        background-color: #e63946;
+        border-color: #e63946;
+        border-radius: 8px;
+    }
+
+    hr {
+        margin: 24px 0;
+        border: 0;
+        border-top: 3px solid #1BA548;
+    }
+
+    .change-link {
+        color: #1BA548;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+        .change-link:hover {
+            text-decoration: underline;
+        }
+
+    .tab-container {
+        background: #fff;
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
+        padding: 52px 32px 24px 32px;
+        max-width: 1100px;
+        margin: 0 auto 80px auto;
+        margin-top: 0;
+        position: relative;
+    }
+
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-bottom: 18px;
+        margin-top: 32px;
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
+
+        .breadcrumb-custom .breadcrumb-arrow {
+            margin: 0 0.5em;
+            font-size: 1.25em;
+            color: #bbb;
+            font-weight: 400;
+            user-select: none;
+        }
+
+        .breadcrumb-custom .breadcrumb-active {
+            color: #1a7f37;
+            font-weight: 600;
+        }
+</style>
+
+<script>
+    function toggleEdit(field) {
+        if (field === 'email') {
+            document.getElementById("emailStatic").classList.toggle("d-none");
+            document.getElementById("emailInput").classList.toggle("d-none");
+        }
+        if (field === 'password') {
+            document.getElementById("passwordStatic").classList.toggle("d-none");
+            document.getElementById("passwordInput").classList.toggle("d-none");
+        }
+    }
+</script>

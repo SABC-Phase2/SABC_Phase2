@@ -27,23 +27,36 @@ namespace SABC_Phase2.Services
             _graphClient = new GraphServiceClient(clientSecretCredential);
         }
 
-        public async Task<string> UploadDocumentAsync(string tenderNumber, Stream fileStream, string fileName)
+
+public async Task<string> UploadDocumentAsync(string tenderNumber, Stream fileStream, string fileName, bool isAwarded = false)
+    {
+        // Sanitize all folder and file names before calling SharePoint API
+        var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tenderNumber);
+        var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(fileName);
+
+        var tenderFolder = await EnsureFolderAsync(_driveId, safeTenderNumber, null);
+        var adminDocsFolder = await EnsureFolderAsync(_driveId, "Admin docs", tenderFolder.Id);
+
+        string parentId = adminDocsFolder.Id;
+        if (isAwarded)
         {
-            var tenderFolder = await EnsureFolderAsync(_driveId, tenderNumber, null);
-            var adminDocsFolder = await EnsureFolderAsync(_driveId, "Admin docs", tenderFolder.Id);
-
-            var uploadedItem = await _graphClient.Drives[_driveId]
-                .Items[adminDocsFolder.Id]
-                .ItemWithPath(fileName)
-                .Content
-                .PutAsync(fileStream);
-
-            var fileMeta = await _graphClient.Drives[_driveId].Items[uploadedItem.Id].GetAsync();
-
-            return fileMeta?.WebUrl;
+            // Ensure "Awarded Tender Documents" subfolder exists under Admin docs
+            var awardedDocsFolder = await EnsureFolderAsync(_driveId, "Awarded Tender Documents", adminDocsFolder.Id);
+            parentId = awardedDocsFolder.Id;
         }
 
-        private async Task<DriveItem> EnsureFolderAsync(string driveId, string folderName, string parentId)
+        var uploadedItem = await _graphClient.Drives[_driveId]
+            .Items[parentId]
+            .ItemWithPath(safeFileName)
+            .Content
+            .PutAsync(fileStream);
+
+        var fileMeta = await _graphClient.Drives[_driveId].Items[uploadedItem.Id].GetAsync();
+
+        return fileMeta?.WebUrl;
+    }
+
+    private async Task<DriveItem> EnsureFolderAsync(string driveId, string folderName, string parentId)
         {
             List<DriveItem> children;
 

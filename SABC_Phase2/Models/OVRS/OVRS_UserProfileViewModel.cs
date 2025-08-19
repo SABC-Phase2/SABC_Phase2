@@ -1,0 +1,45 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SABC_Phase2.Models.OVRS
+{
+    public class OVRS_UserProfileViewModel
+    {
+        [Required(ErrorMessage = "First name is required")]
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; }
+
+        [Display(Name = "Middle Name")]
+        public string? MiddleName { get; set; }
+
+        [Required(ErrorMessage = "Last name is required")]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; }
+
+        [Display(Name = "Company Name")]
+        public string? CompanyName { get; set; }
+
+        [Display(Name = "Display as Company")]
+        public bool DisplayAsCompany { get; set; }
+
+        [Required(ErrorMessage = "Country code is required")]
+        [Display(Name = "Country Code")]
+        public string CountryCode { get; set; } = "+27";
+
+        [Required(ErrorMessage = "Phone number is required")]
+        [Phone(ErrorMessage = "Invalid phone number format")]
+        [Display(Name = "Phone Number")]
+        public string PhoneNumber { get; set; }
+
+        [Required(ErrorMessage = "Email address is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        [Display(Name = "Email")]
+        public string Email { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string? Password { get; set; }
+
+        [Display(Name = "Last Password Update")]
+        public DateTime? PasswordLastUpdated { get; set; }
+    }
+}
