@@ -57,6 +57,10 @@ builder.Services.AddScoped<EmailService>();
 //SouthAfrican TimeService Time API (NODA Time)
 builder.Services.AddSingleton<SouthAfricanTimeService>();
 
+// Add this where you register your services
+builder.Services.AddHttpClient<CountryCodeService>();
+builder.Services.AddScoped<CountryCodeService>();
+
 var app = builder.Build();
 
 // -------------------------------------

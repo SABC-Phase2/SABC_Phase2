@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SABC_Phase2.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace SABC_Phase2.Models.OVRS
 {
@@ -41,5 +42,7 @@ namespace SABC_Phase2.Models.OVRS
 
         [Display(Name = "Last Password Update")]
         public DateTime? PasswordLastUpdated { get; set; }
+
+        public List<CountryCode> CountryCodes { get; set; } = new List<CountryCode>();
     }
 }

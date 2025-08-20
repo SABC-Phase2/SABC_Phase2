@@ -1,7 +1,8 @@
-﻿@{
-    ViewData["BannerText"] = "PROFILE";
-    ViewData["Title"] = "Profile";
+﻿﻿@{
+ViewData["BannerText"] = "PROFILE";
+ViewData["Title"] = "Profile";
 }
+@using SABC_Phase2.Services
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -38,31 +39,46 @@
 
                     <div class="form-group">
                         <label for="CompanyName">Company name</label>
-                        <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" />
+                        <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" readonly />
                     </div>
 
-                    <div class="form-check">
+
+                    @* <div class="form-check">
                         <input type="checkbox" id="DisplayAsCompany" name="DisplayAsCompany" class="form-check-input" />
                         <label for="DisplayAsCompany" class="form-check-label">Display as a company</label>
-                    </div>
+                    </div> *@
 
-                    <!-- Phone number with editable country code -->
+                    <!-- Phone number with dynamic country code -->
                     <div class="form-group mt-3">
                         <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 100px;">
-                                <option value="+27" selected>+27</option>
-                                <option value="+1">+1</option>
-                                <option value="+44">+44</option>
-                                <option value="+91">+91</option>
-                                <!-- add more as needed -->
+                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 250px;">
+                                @if (ViewBag.CountryCodes != null)
+                                {
+                                    @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
+                                    {
+                                        var isSelected = countryCode.DialingCode == Model.CountryCode;
+                                                                                           <option value="@countryCode.DialingCode" selected="@isSelected">
+                                                                                               @countryCode.DialingCode (@countryCode.CountryName)
+                                                                                           </option>
+                                    }
+                                }
+                                else
+                                {
+                                    <!-- Fallback options if API fails -->
+                                    <option value="+27" selected>+27 (South Africa)</option>
+                                    <option value="+1">+1 (USA/Canada)</option>
+                                    <option value="+44">+44 (United Kingdom)</option>
+                                    <option value="+91">+91 (India)</option>
+                                }
                             </select>
-                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control" placeholder="Enter your phone number" />
+                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control" placeholder="Enter your phone number" value="@Model.PhoneNumber" />
                         </div>
                     </div>
 
                     <hr />
 
+                    <!-- Rest of your form remains the same -->
                     <!-- Email -->
                     <div class="form-group d-flex justify-content-between align-items-center">
                         <div>
@@ -101,6 +117,19 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleEdit(field) {
+        if (field === 'email') {
+            document.getElementById("emailStatic").classList.toggle("d-none");
+            document.getElementById("emailInput").classList.toggle("d-none");
+        }
+        if (field === 'password') {
+            document.getElementById("passwordStatic").classList.toggle("d-none");
+            document.getElementById("passwordInput").classList.toggle("d-none");
+        }
+    }
+</script>
 
 <style>
     .profile-page {
@@ -192,15 +221,3 @@
         }
 </style>
 
-<script>
-    function toggleEdit(field) {
-        if (field === 'email') {
-            document.getElementById("emailStatic").classList.toggle("d-none");
-            document.getElementById("emailInput").classList.toggle("d-none");
-        }
-        if (field === 'password') {
-            document.getElementById("passwordStatic").classList.toggle("d-none");
-            document.getElementById("passwordInput").classList.toggle("d-none");
-        }
-    }
-</script>

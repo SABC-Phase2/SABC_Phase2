@@ -47,7 +47,7 @@ namespace SABC_Phase2.Controllers
             // and accessing environment-specific paths or settings.
             _env = env;
 
-            
+
 
             _emailService = emailService;
             _saTimeService = saTimeService;
@@ -874,6 +874,8 @@ namespace SABC_Phase2.Controllers
 
         public async Task<IActionResult> OVRS_Profiles()
         {
+            // Your existing code...
+
             // 1. Get the current user's Phase 2 UserId from claims
             var userIdClaim = User.FindFirst("UserId")?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
@@ -899,19 +901,51 @@ namespace SABC_Phase2.Controllers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.UserId == legacyUserId);
 
-            // 5. Prepare ViewModel
+            // 5. Get country codes from API
+            var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+            var countryCodes = await countryCodeService.GetCountryCodesAsync();
+
+            // 6. Prepare ViewModel
             var model = new OVRS_UserProfileViewModel();
+
             if (legacyUser != null)
             {
                 model.FirstName = legacyUser.FirstName ?? "";
                 model.LastName = legacyUser.LastName ?? "";
+
+                // Default country code
+                string countryCode = "+27";
+                string phoneNumber = legacyUser.Phone ?? "";
+
+                // Try to extract actual country code from the phone number if present
+                if (!string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    // Remove all spaces for easier parsing
+                    var trimmed = phoneNumber.Trim();
+
+                    // Find the first space or dash, assuming format "+XXX NNNNNN" or "+XXX-NNNNNN"
+                    var match = System.Text.RegularExpressions.Regex.Match(trimmed, @"^(\+\d{1,4})[\s\-]?(.+)$");
+                    if (match.Success)
+                    {
+                        countryCode = match.Groups[1].Value;
+                        phoneNumber = match.Groups[2].Value.Trim();
+                    }
+                    else
+                    {
+                        // If no +country code, just use default and whole string as number
+                        phoneNumber = trimmed;
+                    }
+                }
+
+                model.CountryCode = countryCode;
+                model.PhoneNumber = phoneNumber;
+                model.Email = legacyUser.Email ?? "";
             }
             if (supplier != null)
             {
                 model.CompanyName = supplier.TradingName ?? supplier.LegalName ?? "";
             }
-
-            // Optionally, populate more fields from phase2User or elsewhere
+            ViewBag.CountryCodes = countryCodes;
 
             return View(model);
         }
