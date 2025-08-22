@@ -52,39 +52,41 @@ ViewData["Title"] = "Profile";
                     <div class="form-group mt-3">
                         <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 250px;">
-                                @if (ViewBag.CountryCodes != null)
+                            <!-- Country code dropdown -->
+                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 180px;" onchange="updateFlag()">
+                                @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
                                 {
-                                    @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
-                                    {
-                                        var isSelected = countryCode.DialingCode == Model.CountryCode;
-                                                                                           <option value="@countryCode.DialingCode" selected="@isSelected">
-                                                                                               @countryCode.DialingCode (@countryCode.CountryName)
-                                                                                           </option>
-                                    }
-                                }
-                                else
-                                {
-                                    <!-- Fallback options if API fails -->
-                                    <option value="+27" selected>+27 (South Africa)</option>
-                                    <option value="+1">+1 (USA/Canada)</option>
-                                    <option value="+44">+44 (United Kingdom)</option>
-                                    <option value="+91">+91 (India)</option>
+                                    var isSelected = countryCode.DialingCode == Model.CountryCode;
+                                    <option value="@countryCode.DialingCode"
+                                            data-flag="@countryCode.FlagUrl"
+                                            selected="@(isSelected ? "selected" : null)">
+                                        @countryCode.DialingCode (@countryCode.CountryName)
+                                    </option>
                                 }
                             </select>
-                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control" placeholder="Enter your phone number" value="@Model.PhoneNumber" />
+
+                            <!-- Phone number input -->
+                            <input type="text" id="PhoneNumber" name="PhoneNumber"
+                                   class="form-control" placeholder="Enter your phone number"
+                                   value="@Model.PhoneNumber" />
+
+                            <!-- Flag at the end as input-group-text -->
+                            <span class="input-group-text bg-white">
+                                <img id="CountryFlag" src="" alt="Country flag" style="width:40px; height:auto;" />
+                            </span>
                         </div>
                     </div>
+
 
                     <hr />
 
                     <!-- Rest of your form remains the same -->
                     <!-- Email -->
                     <div class="form-group d-flex justify-content-between align-items-center">
-                        <div>
-                            <label>Email address</label>
-                            <p id="emailStatic" class="form-static">yourname@example.gov.za</p>
-                            <input type="email" id="emailInput" name="Email" class="form-control d-none" value="yourname@example.gov.za" />
+                        <div class="form-group">
+                            <label for="emailInput">Email address</label>
+                            <input type="email" id="emailInput" name="Email" class="form-control"
+                                   value="@Model.Email" placeholder="Enter your email address" />
                         </div>
                         <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
                     </div>
@@ -129,6 +131,25 @@ ViewData["Title"] = "Profile";
             document.getElementById("passwordInput").classList.toggle("d-none");
         }
     }
+
+    // Function to update the flag image based on the selected country code
+    function updateFlag() {
+        var select = document.getElementById('CountryCode');
+        var selectedOption = select.options[select.selectedIndex];
+        var flagUrl = selectedOption.getAttribute('data-flag');
+        var flagImg = document.getElementById('CountryFlag');
+        if (flagUrl) {
+            flagImg.src = flagUrl;
+            flagImg.style.display = 'inline-block';
+        } else {
+            flagImg.style.display = 'none';
+        }
+    }
+
+    // On page load, set the initial flag
+    document.addEventListener('DOMContentLoaded', function() {
+        updateFlag();
+    });
 </script>
 
 <style>

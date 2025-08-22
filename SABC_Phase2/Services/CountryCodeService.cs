@@ -18,7 +18,7 @@ namespace SABC_Phase2.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync("https://restcountries.com/v3.1/all?fields=name,idd");
+                var response = await _httpClient.GetAsync("https://restcountries.com/v3.1/all?fields=name,idd,flags");
                 response.EnsureSuccessStatusCode();
 
                 // Use the Content property to read the string
@@ -40,7 +40,8 @@ namespace SABC_Phase2.Services
                             countryCodes.Add(new CountryCode
                             {
                                 CountryName = country.Name.Common,
-                                DialingCode = dialingCode
+                                DialingCode = dialingCode,
+                                FlagUrl = country.Flags?.Png // or .Svg
                             });
                         }
                     }
@@ -79,6 +80,7 @@ namespace SABC_Phase2.Services
     {
         public string CountryName { get; set; }
         public string DialingCode { get; set; }
+        public string FlagUrl { get; set; }
     }
 
     // API Response models
@@ -86,6 +88,7 @@ namespace SABC_Phase2.Services
     {
         public CountryName Name { get; set; }
         public Idd Idd { get; set; }
+        public Flags Flags { get; set; }
     }
 
     public class CountryName
@@ -98,5 +101,11 @@ namespace SABC_Phase2.Services
     {
         public string Root { get; set; }
         public string[] Suffixes { get; set; }
+    }
+
+    public class Flags // For deserializing the "flags" property
+    {
+        public string Png { get; set; }
+        public string Svg { get; set; }
     }
 }
