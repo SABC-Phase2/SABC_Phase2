@@ -25,27 +25,24 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="MiddleName">Middle Name</label>
-                                <input type="text" id="MiddleName" name="MiddleName" class="form-control" placeholder="Enter your middle name" value="@Model.MiddleName" />
+                                <label for="LastName">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="LastName">Last Name <span class="text-danger">*</span></label>
-                        <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
-                    </div>
+                    </div>      
 
                     <div class="form-group">
                         <label for="CompanyName">Company name</label>
                         <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" readonly />
                     </div>
 
-                    <!-- Phone number with dynamic country code -->
+
                     <div class="form-group mt-3">
                         <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
-                        <div class="input-group">
+                        <div class="input-group" id="phoneRow">
+                            <!-- Country code dropdown -->
                             <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 180px;"
-                                    data-original="@Model.CountryCode" onchange="updateFlag(); handlePhoneEdit();">
+                                    data-original="@Model.CountryCode" disabled>
                                 @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
                                 {
                                     var isSelected = countryCode.DialingCode == Model.CountryCode;
@@ -56,17 +53,32 @@
                                     </option>
                                 }
                             </select>
+
+                            <!-- Phone number input -->
                             <input type="text" id="PhoneNumber" name="PhoneNumber"
                                    class="form-control" placeholder="Enter your phone number"
                                    value="@Model.PhoneNumber" data-original="@Model.PhoneNumber"
-                                   oninput="handlePhoneEdit()" />
-                            <span class="input-group-text bg-white">
+                                   readonly />
+
+                            <!-- Country flag -->
+                            <span id="flagWrapper" class="input-group-text bg-white">
                                 <img id="CountryFlag" src="" alt="Country flag" style="width:40px; height:auto;" />
                             </span>
+
+
+                            <!-- Change / Cancel actions -->
+                            <!-- Change / Cancel actions -->
+                            <a href="javascript:void(0)" id="changePhoneBtn" class="change-link ms-2">
+                                Change
+                            </a>
+                            <a href="javascript:void(0)" id="cancelPhoneBtn" class="ms-2 d-none" title="Cancel">
+                                <i class="fa fa-trash text-danger"></i>
+                            </a>
+
                         </div>
                     </div>
-                    <hr />
 
+                   
                     <!-- Email -->
                     <div class="col-md-12">
                         <div class="form-group">
@@ -76,14 +88,10 @@
                                        class="form-control me-2"
                                        value="@Model.Email" placeholder="Enter your email address"
                                        data-original="@Model.Email" readonly />
-                                <a href="javascript:void(0)" id="changeEmailBtn" class="change-link">Change</a>
-                            </div>
-                            <!-- Second Email Box (hidden initially) -->
-                            <div class="d-flex align-items-center mt-2 d-none" id="secondEmailWrapper">
-                                <input type="email" id="secondEmailInput" name="NewEmail"
-                                       class="form-control me-2"
-                                       placeholder="Enter new email address" />
-                                <a href="javascript:void(0)" onclick="removeSecondEmail()" title="Remove">
+                                <a href="javascript:void(0)" id="changeEmailBtn" class="change-link ms-2">
+                                    Change
+                                </a>
+                                <a href="javascript:void(0)" id="cancelEmailBtn" class="ms-2 d-none" title="Cancel">
                                     <i class="fa fa-trash text-danger"></i>
                                 </a>
                             </div>
@@ -131,6 +139,7 @@
     </div>
 </div>
 
+<!-- ... (Your razor markup above remains unchanged up to script tag) ... -->
 <script>
     let editMode = ""; // "", "email", or "phone"
 
@@ -142,24 +151,76 @@
         return (origPhone !== currPhone) || (origCode !== currCode);
     }
 
-    function setPhoneEditable(editable) {
-        document.getElementById('PhoneNumber').readOnly = !editable;
-        document.getElementById('CountryCode').disabled = !editable;
+    function emailChanged() {
+        const emailInput = document.getElementById('emailInput');
+        return emailInput.value !== emailInput.getAttribute('data-original');
     }
-    function setEmailEditable(editable) {
-        document.getElementById('emailInput').readOnly = !editable;
-        // Also, show or hide second email box and change button as needed
-        if (editable) {
-            document.getElementById('secondEmailWrapper').classList.remove('d-none');
-            document.getElementById('changeEmailBtn').style.display = 'none';
+
+    function setPhoneEditable(editable) {
+        const phoneInput = document.getElementById('PhoneNumber');
+        const codeSelect = document.getElementById('CountryCode');
+        const flagWrapper = document.getElementById('flagWrapper');
+
+        phoneInput.readOnly = !editable;
+        codeSelect.disabled = !editable;
+        document.getElementById('changePhoneBtn').classList.toggle('d-none', editable);
+        document.getElementById('cancelPhoneBtn').classList.toggle('d-none', !editable);
+
+        // Toggle flag background like readonly inputs
+        if (!editable) {
+            flagWrapper.classList.add("disabled-bg");
+            flagWrapper.classList.remove("bg-white");
         } else {
-            document.getElementById('secondEmailWrapper').classList.add('d-none');
-            document.getElementById('changeEmailBtn').style.display = '';
+            flagWrapper.classList.remove("disabled-bg");
+            flagWrapper.classList.add("bg-white");
         }
     }
 
-    // When "Change" is clicked for email
+    function setEmailEditable(editable) {
+        const emailInput = document.getElementById('emailInput');
+        const changeBtn = document.getElementById('changeEmailBtn');
+        const cancelBtn = document.getElementById('cancelEmailBtn');
+        if (editable) {
+            emailInput.readOnly = false;
+            emailInput.value = "";
+            emailInput.placeholder = "Enter new email address";
+            changeBtn.classList.add("d-none");
+            cancelBtn.classList.remove("d-none");
+            emailInput.focus();
+        } else {
+            emailInput.readOnly = true;
+            emailInput.value = emailInput.getAttribute('data-original');
+            emailInput.placeholder = "Enter your email address";
+            changeBtn.classList.remove("d-none");
+            cancelBtn.classList.add("d-none");
+        }
+    }
+
+    function togglePhoneEdit() {
+        // If email is in edit mode and has changes, block switching
+        if (editMode === "email" && emailChanged()) {
+            alert("You have made changes to your email address. Please save or reset those changes before editing your phone number.");
+            setPhoneEditable(false);
+            return;
+        }
+        if (editMode !== "phone") {
+            editMode = "phone";
+            setPhoneEditable(true);
+            setEmailEditable(false);
+        }
+    }
+
+    function cancelPhoneEdit() {
+        editMode = "";
+        setPhoneEditable(false);
+        setEmailEditable(false);
+        // restore phone and country code values
+        document.getElementById('PhoneNumber').value = document.getElementById('PhoneNumber').getAttribute('data-original');
+        document.getElementById('CountryCode').value = document.getElementById('CountryCode').getAttribute('data-original');
+    }
+
     function toggleEmailEdit() {
+        // If phone is in edit mode and has changes, block switching
         if (editMode === "phone" && phoneChanged()) {
             alert("You have made changes to your phone number. Please save or reset those changes before editing your email address.");
             setEmailEditable(false);
@@ -169,16 +230,15 @@
             editMode = "email";
             setEmailEditable(true);
             setPhoneEditable(false);
-            document.getElementById('emailInput').focus();
         }
     }
 
-    // Remove (cancel) new email edit
-    function removeSecondEmail() {
+    function cancelEmailEdit() {
         editMode = "";
         setEmailEditable(false);
-        setPhoneEditable(true);
-        document.getElementById('secondEmailInput').value = "";
+        setPhoneEditable(false);
+        // restore email value
+        document.getElementById('emailInput').value = document.getElementById('emailInput').getAttribute('data-original');
     }
 
     function handlePhoneEdit() {
@@ -191,15 +251,13 @@
         editMode = "phone";
     }
 
-    // On Save, reset everything
     function resetEditMode() {
         editMode = "";
-        setPhoneEditable(true);
+        setPhoneEditable(false);
         setEmailEditable(false);
         document.getElementById('PhoneNumber').setAttribute('data-original', document.getElementById('PhoneNumber').value);
         document.getElementById('CountryCode').setAttribute('data-original', document.getElementById('CountryCode').value);
         document.getElementById('emailInput').setAttribute('data-original', document.getElementById('emailInput').value);
-        document.getElementById('secondEmailInput').value = "";
         hidePasswordInputs();
     }
 
@@ -221,7 +279,6 @@
         document.getElementById("passwordInputs").classList.remove("d-none");
         document.getElementById("changePasswordBtn").classList.add("d-none");
         document.getElementById("cancelPasswordBtn").classList.remove("d-none");
-        // Clear all password fields
         document.getElementById("currentPassword").value = "";
         document.getElementById("newPassword").value = "";
         document.getElementById("confirmPassword").value = "";
@@ -238,15 +295,21 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         updateFlag();
-        setPhoneEditable(true);
+        setPhoneEditable(false);
         setEmailEditable(false);
 
         document.getElementById('CountryCode').addEventListener('change', function() {
             updateFlag();
-            handlePhoneEdit();
+            if (editMode === "phone") handlePhoneEdit();
         });
-        document.getElementById('PhoneNumber').addEventListener('input', handlePhoneEdit);
+        document.getElementById('PhoneNumber').addEventListener('input', function(){
+            if (editMode === "phone") handlePhoneEdit();
+        });
+        document.getElementById('changePhoneBtn').addEventListener('click', togglePhoneEdit);
+        document.getElementById('cancelPhoneBtn').addEventListener('click', cancelPhoneEdit);
+
         document.getElementById('changeEmailBtn').addEventListener('click', toggleEmailEdit);
+        document.getElementById('cancelEmailBtn').addEventListener('click', cancelEmailEdit);
 
         // Optionally reset on form submit
         document.querySelector('form').addEventListener('submit', resetEditMode);
@@ -254,6 +317,16 @@
 </script>
 
 <style>
+    .disabled-flag {
+        filter: grayscale(100%) opacity(0.6);
+    }
+
+    .input-group-text.disabled-bg {
+        background-color: #e9ecef; /* same as readonly inputs */
+        opacity: 1; /* keep the flag visible */
+    }
+
+
     .profile-page {
         padding: 20px;
     }
