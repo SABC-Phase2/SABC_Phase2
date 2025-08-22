@@ -1,6 +1,6 @@
-﻿﻿@{
-ViewData["BannerText"] = "PROFILE";
-ViewData["Title"] = "Profile";
+﻿@{
+    ViewData["BannerText"] = "PROFILE";
+    ViewData["Title"] = "Profile";
 }
 @using SABC_Phase2.Services
 
@@ -13,10 +13,8 @@ ViewData["Title"] = "Profile";
 <div class="tab-container">
     <div class="profile-page container-fluid">
         <div class="row">
-            <!-- Left section -->
             <div class="col-md-12">
                 <form method="post" enctype="multipart/form-data">
-
                     <!-- First & Last Name side by side -->
                     <div class="row">
                         <div class="col-md-6">
@@ -42,18 +40,12 @@ ViewData["Title"] = "Profile";
                         <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" readonly />
                     </div>
 
-
-                    @* <div class="form-check">
-                        <input type="checkbox" id="DisplayAsCompany" name="DisplayAsCompany" class="form-check-input" />
-                        <label for="DisplayAsCompany" class="form-check-label">Display as a company</label>
-                    </div> *@
-
                     <!-- Phone number with dynamic country code -->
                     <div class="form-group mt-3">
                         <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <!-- Country code dropdown -->
-                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 180px;" onchange="updateFlag()">
+                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 180px;"
+                                    data-original="@Model.CountryCode" onchange="updateFlag(); handlePhoneEdit();">
                                 @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
                                 {
                                     var isSelected = countryCode.DialingCode == Model.CountryCode;
@@ -64,45 +56,64 @@ ViewData["Title"] = "Profile";
                                     </option>
                                 }
                             </select>
-
-                            <!-- Phone number input -->
                             <input type="text" id="PhoneNumber" name="PhoneNumber"
                                    class="form-control" placeholder="Enter your phone number"
-                                   value="@Model.PhoneNumber" />
-
-                            <!-- Flag at the end as input-group-text -->
+                                   value="@Model.PhoneNumber" data-original="@Model.PhoneNumber"
+                                   oninput="handlePhoneEdit()" />
                             <span class="input-group-text bg-white">
                                 <img id="CountryFlag" src="" alt="Country flag" style="width:40px; height:auto;" />
                             </span>
                         </div>
                     </div>
-
-
                     <hr />
 
-                    <!-- Rest of your form remains the same -->
                     <!-- Email -->
-                    <div class="form-group d-flex justify-content-between align-items-center">
+                    <div class="col-md-12">
                         <div class="form-group">
                             <label for="emailInput">Email address</label>
-                            <input type="email" id="emailInput" name="Email" class="form-control"
-                                   value="@Model.Email" placeholder="Enter your email address" />
+                            <div class="d-flex align-items-center" id="emailRow">
+                                <input type="email" id="emailInput" name="Email"
+                                       class="form-control me-2"
+                                       value="@Model.Email" placeholder="Enter your email address"
+                                       data-original="@Model.Email" readonly />
+                                <a href="javascript:void(0)" id="changeEmailBtn" class="change-link">Change</a>
+                            </div>
+                            <!-- Second Email Box (hidden initially) -->
+                            <div class="d-flex align-items-center mt-2 d-none" id="secondEmailWrapper">
+                                <input type="email" id="secondEmailInput" name="NewEmail"
+                                       class="form-control me-2"
+                                       placeholder="Enter new email address" />
+                                <a href="javascript:void(0)" onclick="removeSecondEmail()" title="Remove">
+                                    <i class="fa fa-trash text-danger"></i>
+                                </a>
+                            </div>
                         </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
                     </div>
-
                     <hr />
 
                     <!-- Password -->
                     <div class="form-group d-flex justify-content-between align-items-center">
-                        <div>
+                        <div style="width:100%;">
                             <label>Password</label>
                             <p id="passwordStatic" class="form-static">Last updated on Mar 23, 2025</p>
-                            <input type="password" id="passwordInput" name="Password" class="form-control d-none" placeholder="Enter new password" />
-                        </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('password')">Change</a>
-                    </div>
 
+                            <!-- Password inputs (hidden by default) -->
+                            <div id="passwordInputs" class="d-none">
+                                <input type="password" id="currentPassword" name="CurrentPassword"
+                                       class="form-control mb-2" placeholder="Enter current password" />
+                                <input type="password" id="newPassword" name="NewPassword"
+                                       class="form-control mb-2" placeholder="Enter new password" />
+                                <input type="password" id="confirmPassword" name="ConfirmPassword"
+                                       class="form-control mb-2" placeholder="Confirm new password" />
+                            </div>
+                        </div>
+
+                        <!-- Change & Cancel Links -->
+                        <div class="text-end">
+                            <a href="javascript:void(0)" id="changePasswordBtn" class="change-link" onclick="showPasswordInputs()">Change</a>
+                            <a href="javascript:void(0)" id="cancelPasswordBtn" class="change-link d-none text-danger" onclick="hidePasswordInputs()">Cancel</a>
+                        </div>
+                    </div>
                     <hr />
 
                     <div class="form-group">
@@ -121,18 +132,77 @@ ViewData["Title"] = "Profile";
 </div>
 
 <script>
-    function toggleEdit(field) {
-        if (field === 'email') {
-            document.getElementById("emailStatic").classList.toggle("d-none");
-            document.getElementById("emailInput").classList.toggle("d-none");
-        }
-        if (field === 'password') {
-            document.getElementById("passwordStatic").classList.toggle("d-none");
-            document.getElementById("passwordInput").classList.toggle("d-none");
+    let editMode = ""; // "", "email", or "phone"
+
+    function phoneChanged() {
+        const origPhone = document.getElementById('PhoneNumber').getAttribute('data-original');
+        const origCode = document.getElementById('CountryCode').getAttribute('data-original');
+        const currPhone = document.getElementById('PhoneNumber').value;
+        const currCode = document.getElementById('CountryCode').value;
+        return (origPhone !== currPhone) || (origCode !== currCode);
+    }
+
+    function setPhoneEditable(editable) {
+        document.getElementById('PhoneNumber').readOnly = !editable;
+        document.getElementById('CountryCode').disabled = !editable;
+    }
+    function setEmailEditable(editable) {
+        document.getElementById('emailInput').readOnly = !editable;
+        // Also, show or hide second email box and change button as needed
+        if (editable) {
+            document.getElementById('secondEmailWrapper').classList.remove('d-none');
+            document.getElementById('changeEmailBtn').style.display = 'none';
+        } else {
+            document.getElementById('secondEmailWrapper').classList.add('d-none');
+            document.getElementById('changeEmailBtn').style.display = '';
         }
     }
 
-    // Function to update the flag image based on the selected country code
+    // When "Change" is clicked for email
+    function toggleEmailEdit() {
+        if (editMode === "phone" && phoneChanged()) {
+            alert("You have made changes to your phone number. Please save or reset those changes before editing your email address.");
+            setEmailEditable(false);
+            return;
+        }
+        if (editMode !== "email") {
+            editMode = "email";
+            setEmailEditable(true);
+            setPhoneEditable(false);
+            document.getElementById('emailInput').focus();
+        }
+    }
+
+    // Remove (cancel) new email edit
+    function removeSecondEmail() {
+        editMode = "";
+        setEmailEditable(false);
+        setPhoneEditable(true);
+        document.getElementById('secondEmailInput').value = "";
+    }
+
+    function handlePhoneEdit() {
+        if (editMode === "email") {
+            setPhoneEditable(false);
+            return;
+        }
+        setPhoneEditable(true);
+        setEmailEditable(false);
+        editMode = "phone";
+    }
+
+    // On Save, reset everything
+    function resetEditMode() {
+        editMode = "";
+        setPhoneEditable(true);
+        setEmailEditable(false);
+        document.getElementById('PhoneNumber').setAttribute('data-original', document.getElementById('PhoneNumber').value);
+        document.getElementById('CountryCode').setAttribute('data-original', document.getElementById('CountryCode').value);
+        document.getElementById('emailInput').setAttribute('data-original', document.getElementById('emailInput').value);
+        document.getElementById('secondEmailInput').value = "";
+        hidePasswordInputs();
+    }
+
     function updateFlag() {
         var select = document.getElementById('CountryCode');
         var selectedOption = select.options[select.selectedIndex];
@@ -146,9 +216,40 @@ ViewData["Title"] = "Profile";
         }
     }
 
-    // On page load, set the initial flag
+    function showPasswordInputs() {
+        document.getElementById("passwordStatic").classList.add("d-none");
+        document.getElementById("passwordInputs").classList.remove("d-none");
+        document.getElementById("changePasswordBtn").classList.add("d-none");
+        document.getElementById("cancelPasswordBtn").classList.remove("d-none");
+        // Clear all password fields
+        document.getElementById("currentPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+    }
+    function hidePasswordInputs() {
+        document.getElementById("passwordStatic").classList.remove("d-none");
+        document.getElementById("passwordInputs").classList.add("d-none");
+        document.getElementById("changePasswordBtn").classList.remove("d-none");
+        document.getElementById("cancelPasswordBtn").classList.add("d-none");
+        document.getElementById("currentPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         updateFlag();
+        setPhoneEditable(true);
+        setEmailEditable(false);
+
+        document.getElementById('CountryCode').addEventListener('change', function() {
+            updateFlag();
+            handlePhoneEdit();
+        });
+        document.getElementById('PhoneNumber').addEventListener('input', handlePhoneEdit);
+        document.getElementById('changeEmailBtn').addEventListener('click', toggleEmailEdit);
+
+        // Optionally reset on form submit
+        document.querySelector('form').addEventListener('submit', resetEditMode);
     });
 </script>
 

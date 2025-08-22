@@ -81,6 +81,7 @@ namespace SABC_Phase2.Services
         public string CountryName { get; set; }
         public string DialingCode { get; set; }
         public string FlagUrl { get; set; }
+        public string IsoCode { get; set; } // <-- Add this
     }
 
     // API Response models
