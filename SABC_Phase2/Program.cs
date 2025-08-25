@@ -62,6 +62,8 @@ builder.Services.AddHttpClient<CountryCodeService>();
 builder.Services.AddScoped<CountryCodeService>();
 
 builder.Services.AddScoped<OtpService>();
+// Add this line with your other service registrations
+builder.Services.AddScoped<PhoneOtpEmailService>();
 
 var app = builder.Build();
 

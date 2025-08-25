@@ -28,12 +28,12 @@ namespace SABC_Phase2.Controllers
         private readonly EmailService _emailService;
         private readonly SouthAfricanTimeService _saTimeService;
         private readonly OtpService _otpService;
-
+        private readonly PhoneOtpEmailService _phoneOtpEmailService;
 
         /// <summary>
         /// Constructor: Sets up dependencies for database access, configuration, and environment.
         /// </summary>
-        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService, SouthAfricanTimeService saTimeService, OtpService otpService)
+        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService, SouthAfricanTimeService saTimeService, OtpService otpService, PhoneOtpEmailService phoneOtpEmailService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -53,6 +53,7 @@ namespace SABC_Phase2.Controllers
             _emailService = emailService;
             _saTimeService = saTimeService;
             _otpService = otpService;
+            _phoneOtpEmailService = phoneOtpEmailService;
         }
 
         /// <summary>
@@ -956,6 +957,7 @@ namespace SABC_Phase2.Controllers
 
             return View(model);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model, string action = "")
@@ -1022,16 +1024,44 @@ namespace SABC_Phase2.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // TODO: Send OTP via SMS to the new phone number
-                // await SendOtpSms(currentFullPhone, otpCode);
+                try
+                {
+                    // Send OTP via email to current email address (not the new phone number)
+                    string userName = $"{legacyUser.FirstName} {legacyUser.LastName}".Trim();
+                    if (string.IsNullOrEmpty(userName)) userName = "User";
 
-                ViewBag.ShowOtpModal = true;
-                ViewBag.OtpSentTo = currentFullPhone;
-                ViewBag.OtpType = "phone";
-                ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+                    await _phoneOtpEmailService.SendPhoneOtpAsync(
+                        legacyUser.Email, // Send to current email address
+                        userName,
+                        currentFullPhone, // New phone number for reference
+                        otpCode);
 
-                TempData["InfoMessage"] = $"An OTP has been sent to {currentFullPhone}. Please enter the code to verify your new phone number.";
-                return View(model);
+                    ViewBag.ShowOtpModal = true;
+                    ViewBag.OtpSentTo = legacyUser.Email; // Show current email address in modal
+                    ViewBag.OtpType = "phone";
+                    ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+
+                    TempData["InfoMessage"] = $"An OTP has been sent to your email address ({legacyUser.Email}) to verify your new phone number {currentFullPhone}.";
+                    return View(model);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error (you might want to use ILogger here)
+                    Console.WriteLine($"Error sending phone OTP email: {ex.Message}");
+
+                    // Clear the OTP data since email failed
+                    phase2User.OtpCode = null;
+                    phase2User.OtpExpiration = null;
+                    phase2User.PendingPhoneNumber = null;
+                    phase2User.PendingCountryCode = null;
+                    phase2User.OtpType = null;
+                    await _context.SaveChangesAsync();
+
+                    ModelState.AddModelError("", "Failed to send verification email. Please try again later.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
             }
 
             // Handle email change with OTP
@@ -1051,16 +1081,42 @@ namespace SABC_Phase2.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // TODO: Send OTP via email to the new email address
-                // await SendOtpEmail(model.Email, otpCode);
+                try
+                {
+                    // Send OTP via email to the new email address
+                    string userName = $"{legacyUser.FirstName} {legacyUser.LastName}".Trim();
+                    if (string.IsNullOrEmpty(userName)) userName = "User";
 
-                ViewBag.ShowOtpModal = true;
-                ViewBag.OtpSentTo = model.Email;
-                ViewBag.OtpType = "email";
-                ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+                    await _phoneOtpEmailService.SendEmailOtpAsync(
+                        model.Email, // Send to new email address
+                        userName,
+                        otpCode);
 
-                TempData["InfoMessage"] = $"An OTP has been sent to {model.Email}. Please enter the code to verify your new email address.";
-                return View(model);
+                    ViewBag.ShowOtpModal = true;
+                    ViewBag.OtpSentTo = model.Email; // Show new email address in modal
+                    ViewBag.OtpType = "email";
+                    ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+
+                    TempData["InfoMessage"] = $"An OTP has been sent to {model.Email}. Please enter the code to verify your new email address.";
+                    return View(model);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error
+                    Console.WriteLine($"Error sending email OTP: {ex.Message}");
+
+                    // Clear the OTP data since email failed
+                    phase2User.OtpCode = null;
+                    phase2User.OtpExpiration = null;
+                    phase2User.PendingEmail = null;
+                    phase2User.OtpType = null;
+                    await _context.SaveChangesAsync();
+
+                    ModelState.AddModelError("", "Failed to send verification email. Please try again later.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
             }
 
             // ---------- PASSWORD CHANGE LOGIC ----------
@@ -1148,6 +1204,9 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = "Invalid or expired OTP code." });
             }
 
+            // Store OTP type before clearing
+            string otpType = phase2User.OtpType;
+
             // OTP is valid, update the appropriate field based on OTP type
             var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == phase2User.LegacyUserId.Value);
             if (legacyUser != null)
@@ -1179,8 +1238,8 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Return appropriate success message
-            string successMessage = phase2User.OtpType == "phone" ?
+            // Return appropriate success message using stored otpType
+            string successMessage = otpType == "phone" ?
                 "Phone number updated successfully!" :
                 "Email address updated successfully!";
 
