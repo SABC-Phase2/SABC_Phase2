@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SABC_Phase2.Data;
 
@@ -11,9 +12,11 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    partial class Phase2ContextModelSnapshot : ModelSnapshot
+    [Migration("20250825085414_Push2")]
+    partial class Push2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -100,12 +103,6 @@ namespace SABC_Phase2.Migrations
 
                     b.Property<DateTime?>("OtpExpiration")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("PendingCountryCode")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PendingPhoneNumber")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .IsRequired()

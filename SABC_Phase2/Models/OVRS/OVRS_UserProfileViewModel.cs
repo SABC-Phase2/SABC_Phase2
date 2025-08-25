@@ -52,6 +52,9 @@ namespace SABC_Phase2.Models.OVRS
         [Display(Name = "Last Password Update")]
         public DateTime? PasswordLastUpdated { get; set; }
 
+        [Display(Name = "OTP Code")]
+        public string? OtpCode { get; set; }
+
         public List<CountryCode> CountryCodes { get; set; } = new List<CountryCode>();
     }
 }

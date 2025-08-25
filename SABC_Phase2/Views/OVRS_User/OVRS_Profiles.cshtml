@@ -9,6 +9,11 @@
     <div class="alert alert-success">@TempData["ProfileUpdateSuccess"]</div>
 }
 
+@if (TempData["InfoMessage"] != null)
+{
+    <div class="alert alert-info">@TempData["InfoMessage"]</div>
+}
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <div class="breadcrumb-custom">
@@ -34,13 +39,12 @@
                                 <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
                             </div>
                         </div>
-                    </div>      
+                    </div>
 
                     <div class="form-group">
                         <label for="CompanyName">Company name</label>
                         <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" readonly />
                     </div>
-
 
                     <div class="form-group mt-3">
                         <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
@@ -70,8 +74,6 @@
                                 <img id="CountryFlag" src="" alt="Country flag" style="width:40px; height:auto;" />
                             </span>
 
-
-                            <!-- Change / Cancel actions -->
                             <!-- Change / Cancel actions -->
                             <a href="javascript:void(0)" id="changePhoneBtn" class="change-link ms-2">
                                 Change
@@ -79,11 +81,9 @@
                             <a href="javascript:void(0)" id="cancelPhoneBtn" class="ms-2 d-none" title="Cancel">
                                 <i class="fa fa-trash text-danger"></i>
                             </a>
-
                         </div>
                     </div>
 
-                   
                     <!-- Email -->
                     <div class="col-md-12">
                         <div class="form-group">
@@ -110,7 +110,6 @@
                             <label>Password</label>
                             <p id="passwordStatic" class="form-static">Last updated on Mar 23, 2025</p>
 
-                            <!-- Password inputs (hidden by default) -->
                             <!-- Password inputs (hidden by default) -->
                             <div id="passwordInputs" class="d-none">
                                 <input type="password" id="currentPassword" name="CurrentPassword"
@@ -145,7 +144,6 @@
     </div>
 </div>
 
-
 <!-- Password Validation Modal -->
 <div class="modal fade" id="passwordValidationModal" tabindex="-1" aria-labelledby="passwordValidationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -169,27 +167,31 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="otpModalLabel">OTP Verification</h5>
+                <h5 class="modal-title" id="otpModalLabel">Verify Phone Number</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <p>Please enter the 6-digit OTP sent to your new email or phone number.</p>
-                <div class="d-flex justify-content-center mb-2" id="otpInputs">
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
-                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+            <div class="modal-body">
+                <p>We've sent a 6-digit verification code to <strong id="otpPhoneNumber"></strong></p>
+                <p class="text-muted small">The code will expire in 5 minutes.</p>
+
+                <div class="form-group">
+                    <label for="otpCodeInput">Enter verification code:</label>
+                    <input type="text" id="otpCodeInput" class="form-control text-center"
+                           placeholder="000000" maxlength="6"
+                           style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
                 </div>
-                <div id="otpError" class="text-danger mb-2" style="display:none;"></div>
-                <button type="button" id="verifyOtpBtn" class="btn btn-success mt-2">Verify OTP</button>
+
+                <div id="otpError" class="alert alert-danger mt-3 d-none"></div>
+                <div id="otpSuccess" class="alert alert-success mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="verifyOtpBtn">Verify Code</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ... (Your razor markup above remains unchanged up to script tag) ... -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // --- Password Validation Modal Logic ---
@@ -207,6 +209,67 @@
 
         // Helper to check if OTP modal is open
         let otpInProgress = false;
+
+        // Show OTP modal if needed
+        @if (ViewBag.ShowOtpModal == true)
+        {
+                <text>
+                document.getElementById('otpPhoneNumber').textContent = '@ViewBag.OtpSentTo';
+                otpModal.show();
+                </text>
+        }
+
+        // OTP Verification
+        document.getElementById('verifyOtpBtn').addEventListener('click', function() {
+            var otpCode = document.getElementById('otpCodeInput').value.trim();
+            var errorDiv = document.getElementById('otpError');
+            var successDiv = document.getElementById('otpSuccess');
+
+            // Clear previous messages
+            errorDiv.classList.add('d-none');
+            successDiv.classList.add('d-none');
+
+            if (!otpCode || otpCode.length !== 6) {
+                errorDiv.textContent = 'Please enter a valid 6-digit code.';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            // Send AJAX request to verify OTP
+            fetch('@Url.Action("VerifyOtp", "OVRS_User")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: 'otpCode=' + encodeURIComponent(otpCode)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successDiv.textContent = data.message;
+                    successDiv.classList.remove('d-none');
+
+                    setTimeout(function() {
+                        otpModal.hide();
+                        location.reload(); // Refresh the page to show updated phone number
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.message;
+                    errorDiv.classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.classList.remove('d-none');
+            });
+        });
+
+        // Allow only numbers in OTP input
+        document.getElementById('otpCodeInput').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
 
         form.addEventListener('submit', function (e) {
             // If OTP modal is being handled, skip all JS checks (so submit proceeds after OTP)
@@ -233,54 +296,6 @@
                 document.getElementById('passwordValidationModalMessage').innerHTML = message;
                 passwordModal.show();
                 return;
-            }
-
-            // ----- Email/Phone change OTP logic -----
-            var emailChanged = emailInput.value !== originalEmail;
-            var phoneChanged = phoneInput.value !== originalPhone || countryInput.value !== originalCountry;
-
-            if (emailChanged || phoneChanged) {
-                e.preventDefault();
-                otpInProgress = true;
-
-                // Optionally: call backend to send OTP here
-                // fetch('/Profile/SendOtp', { method: "POST", ... })
-
-                // Clear OTP inputs & error
-                document.querySelectorAll('.otp-input').forEach(i => { i.value = ""; });
-                document.getElementById('otpError').style.display = 'none';
-
-                otpModal.show();
-
-                // Focus first input after modal opens
-                setTimeout(() => { document.querySelector('.otp-input').focus(); }, 300);
-
-                // Handle auto-focus and backspace
-                document.querySelectorAll('.otp-input').forEach((input, idx, arr) => {
-                    input.oninput = function () {
-                        if (this.value.length === 1 && idx < arr.length - 1) arr[idx + 1].focus();
-                    };
-                    input.onkeydown = function (e) {
-                        if (e.key === "Backspace" && !this.value && idx > 0) arr[idx - 1].focus();
-                    };
-                });
-
-                // Handle OTP verify button
-                document.getElementById('verifyOtpBtn').onclick = function () {
-                    let otp = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
-                    if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
-                        document.getElementById('otpError').innerText = "Please enter a valid 6-digit OTP.";
-                        document.getElementById('otpError').style.display = 'block';
-                        return;
-                    }
-                    // TODO: AJAX to validate OTP on backend here!
-                    // fetch('/Profile/ValidateOtp', { ... }).then(...)
-
-                    // DEMO: always allow for now
-                    document.getElementById('otpError').style.display = 'none';
-                    otpModal.hide();
-                    setTimeout(() => form.submit(), 300); // let modal close first
-                };
             }
         });
 
@@ -444,9 +459,6 @@
 
         document.getElementById('changeEmailBtn').addEventListener('click', toggleEmailEdit);
         document.getElementById('cancelEmailBtn').addEventListener('click', cancelEmailEdit);
-
-        // Optionally reset on form submit
-        document.querySelector('form').addEventListener('submit', resetEditMode);
     });
 </script>
 
@@ -549,4 +561,3 @@
             font-weight: 600;
         }
 </style>
-

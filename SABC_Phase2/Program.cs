@@ -61,6 +61,8 @@ builder.Services.AddSingleton<SouthAfricanTimeService>();
 builder.Services.AddHttpClient<CountryCodeService>();
 builder.Services.AddScoped<CountryCodeService>();
 
+builder.Services.AddScoped<OtpService>();
+
 var app = builder.Build();
 
 // -------------------------------------

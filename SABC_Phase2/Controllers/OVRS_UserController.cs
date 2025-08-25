@@ -27,12 +27,13 @@ namespace SABC_Phase2.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly EmailService _emailService;
         private readonly SouthAfricanTimeService _saTimeService;
+        private readonly OtpService _otpService;
 
 
         /// <summary>
         /// Constructor: Sets up dependencies for database access, configuration, and environment.
         /// </summary>
-        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService, SouthAfricanTimeService saTimeService)
+        public OVRS_UserController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, EmailService emailService, SouthAfricanTimeService saTimeService, OtpService otpService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -51,6 +52,7 @@ namespace SABC_Phase2.Controllers
 
             _emailService = emailService;
             _saTimeService = saTimeService;
+            _otpService = otpService;
         }
 
         /// <summary>
@@ -947,14 +949,24 @@ namespace SABC_Phase2.Controllers
             }
             ViewBag.CountryCodes = countryCodes;
 
+            // Check if there's a pending OTP verification
+            ViewBag.HasPendingOtp = !string.IsNullOrEmpty(phase2User.OtpCode) &&
+                                   phase2User.OtpExpiration.HasValue &&
+                                   phase2User.OtpExpiration.Value > DateTime.UtcNow;
+
             return View(model);
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model)
+        public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model, string action = "")
         {
+            // Handle OTP verification
+            if (action == "verify-otp")
+            {
+                return await VerifyOtp(model.OtpCode);
+            }
+
             // 1. Validate Model
             if (!ModelState.IsValid)
             {
@@ -984,6 +996,34 @@ namespace SABC_Phase2.Controllers
                 ModelState.AddModelError("", "Legacy user not found.");
                 var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
                 ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                return View(model);
+            }
+
+            // 4. Check if phone number has changed
+            string currentFullPhone = $"{model.CountryCode} {model.PhoneNumber}".Trim();
+            bool phoneNumberChanged = legacyUser.Phone != currentFullPhone;
+
+            if (phoneNumberChanged)
+            {
+                // Generate OTP and store pending phone number
+                string otpCode = _otpService.GenerateOtpCode();
+                DateTime otpExpiration = _otpService.GetOtpExpiration();
+
+                phase2User.OtpCode = otpCode;
+                phase2User.OtpExpiration = otpExpiration;
+                phase2User.PendingPhoneNumber = model.PhoneNumber;
+                phase2User.PendingCountryCode = model.CountryCode;
+
+                await _context.SaveChangesAsync();
+
+                // TODO: Send OTP via SMS to the new phone number
+                // await SendOtpSms(currentFullPhone, otpCode);
+
+                ViewBag.ShowOtpModal = true;
+                ViewBag.OtpSentTo = currentFullPhone;
+                ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+
+                TempData["InfoMessage"] = $"An OTP has been sent to {currentFullPhone}. Please enter the code to verify your new phone number.";
                 return View(model);
             }
 
@@ -1027,21 +1067,68 @@ namespace SABC_Phase2.Controllers
                 // 4. Save new password
                 legacyUser.Password = model.NewPassword;
                 legacyUser.UpdatedDate = DateTime.Now;
-                // Optionally track who updated (legacyUser.UpdatedBy = ...)
             }
 
-            // 4. Update legacy user properties
+            // 5. Update other user properties (non-phone)
             legacyUser.FirstName = model.FirstName;
             legacyUser.LastName = model.LastName;
+            legacyUser.Email = model.Email;
 
-            // 5. Save changes
+            // 6. Save changes
             await _legacyContext.SaveChangesAsync();
 
-            // 6. Optionally show success message (could use TempData or ViewBag)
+            // 7. Success message
             TempData["ProfileUpdateSuccess"] = "Profile updated successfully.";
 
-            // 7. Redirect to GET (Post-Redirect-Get pattern)
+            // 8. Redirect to GET (Post-Redirect-Get pattern)
             return RedirectToAction(nameof(OVRS_Profiles));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyOtp(string otpCode)
+        {
+            // Get current user
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+            {
+                return Json(new { success = false, message = "User not found." });
+            }
+
+            var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (phase2User == null || phase2User.LegacyUserId == null)
+            {
+                return Json(new { success = false, message = "User not found." });
+            }
+
+            // Validate OTP
+            bool isValidOtp = _otpService.ValidateOtp(phase2User.OtpCode, phase2User.OtpExpiration, otpCode);
+
+            if (!isValidOtp)
+            {
+                return Json(new { success = false, message = "Invalid or expired OTP code." });
+            }
+
+            // OTP is valid, update the phone number
+            var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == phase2User.LegacyUserId.Value);
+            if (legacyUser != null)
+            {
+                string newFullPhone = $"{phase2User.PendingCountryCode} {phase2User.PendingPhoneNumber}".Trim();
+                legacyUser.Phone = newFullPhone;
+                legacyUser.UpdatedDate = DateTime.Now;
+
+                await _legacyContext.SaveChangesAsync();
+            }
+
+            // Clear OTP data
+            phase2User.OtpCode = null;
+            phase2User.OtpExpiration = null;
+            phase2User.PendingPhoneNumber = null;
+            phase2User.PendingCountryCode = null;
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Phone number updated successfully!" });
         }
     }
 }
