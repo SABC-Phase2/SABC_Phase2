@@ -1,20 +1,21 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace SABC_Phase2.Models.Phase1_LegacyDB
 {
     [Table("tbl_users")]
-    [Keyless]
     public class TblUsers
     {
+        [Key]
         [Column("user_id")]
         public int UserId { get; set; }
 
         [Column("first_name")]
-        public string? FirstName { get; set; }  // Nullable!
+        public string? FirstName { get; set; }
 
         [Column("last_name")]
-        public string? LastName { get; set; }   // Nullable!
+        public string? LastName { get; set; }
 
         [Column("email")]
         public string? Email { get; set; }

@@ -950,50 +950,55 @@ namespace SABC_Phase2.Controllers
             return View(model);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model)
         {
-            // 1. Get current user ID from claims
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
-                return Unauthorized();
-
-            // 2. Get Legacy User ID
-            var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
-            if (phase2User == null || phase2User.LegacyUserId == null)
-                return Unauthorized();
-
-            int legacyUserId = phase2User.LegacyUserId.Value;
-
-            // 3. Model validation
+            // 1. Validate Model
             if (!ModelState.IsValid)
             {
+                // Repopulate country codes for redisplay
                 var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
                 ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                 return View(model);
             }
 
-            // 4. Update legacy user - DO NOT use AsNoTracking here!
-            var legacyUser = await _legacyContext.TblUsers
-                .FirstOrDefaultAsync(u => u.UserId == legacyUserId);
-
-            if (legacyUser != null)
+            // 2. Get current user
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
             {
-                legacyUser.FirstName = model.FirstName;
-                legacyUser.LastName = model.LastName;
-                // Add any other fields you want to update here
+                return Unauthorized();
+            }
+            var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (phase2User == null || phase2User.LegacyUserId == null)
+            {
+                return Unauthorized();
+            }
+            int legacyUserId = phase2User.LegacyUserId.Value;
 
-                await _legacyContext.SaveChangesAsync(); // This triggers the UPDATE!
+            // 3. Find legacy user
+            var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == legacyUserId);
+            if (legacyUser == null)
+            {
+                ModelState.AddModelError("", "Legacy user not found.");
+                var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                return View(model);
             }
 
-            TempData["ProfileSuccess"] = "Profile updated successfully.";
+            // 4. Update legacy user properties
+            legacyUser.FirstName = model.FirstName;
+            legacyUser.LastName = model.LastName;
 
-            // Repopulate country codes for the view
-            var countryCodeService2 = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-            ViewBag.CountryCodes = await countryCodeService2.GetCountryCodesAsync();
+            // 5. Save changes
+            await _legacyContext.SaveChangesAsync();
 
-            return View(model);
+            // 6. Optionally show success message (could use TempData or ViewBag)
+            TempData["ProfileUpdateSuccess"] = "Profile updated successfully.";
+
+            // 7. Redirect to GET (Post-Redirect-Get pattern)
+            return RedirectToAction(nameof(OVRS_Profiles));
         }
     }
 }

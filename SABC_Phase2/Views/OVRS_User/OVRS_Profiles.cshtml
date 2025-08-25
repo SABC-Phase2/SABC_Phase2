@@ -4,6 +4,11 @@
 }
 @using SABC_Phase2.Services
 
+@if (TempData["ProfileUpdateSuccess"] != null)
+{
+    <div class="alert alert-success">@TempData["ProfileUpdateSuccess"]</div>
+}
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <div class="breadcrumb-custom">
