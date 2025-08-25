@@ -19,7 +19,7 @@
     <div class="profile-page container-fluid">
         <div class="row">
             <div class="col-md-12">
-                <form method="post" enctype="multipart/form-data">
+                <form id="profileForm" method="post" enctype="multipart/form-data">
                     <!-- First & Last Name side by side -->
                     <div class="row">
                         <div class="col-md-6">
@@ -111,6 +111,7 @@
                             <p id="passwordStatic" class="form-static">Last updated on Mar 23, 2025</p>
 
                             <!-- Password inputs (hidden by default) -->
+                            <!-- Password inputs (hidden by default) -->
                             <div id="passwordInputs" class="d-none">
                                 <input type="password" id="currentPassword" name="CurrentPassword"
                                        class="form-control mb-2" placeholder="Enter current password" />
@@ -144,8 +145,52 @@
     </div>
 </div>
 
+
+<!-- Password Validation Modal -->
+<div class="modal fade" id="passwordValidationModal" tabindex="-1" aria-labelledby="passwordValidationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="passwordValidationModalLabel">Password Validation Error</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="passwordValidationModalMessage">
+                <!-- JS will fill error message here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- ... (Your razor markup above remains unchanged up to script tag) ... -->
 <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('profileForm');
+        form.addEventListener('submit', function (e) {
+            var current = document.getElementById('currentPassword').value.trim();
+            var newPass = document.getElementById('newPassword').value.trim();
+            var confirm = document.getElementById('confirmPassword').value.trim();
+            if (!current && !newPass && !confirm) return;
+            var errors = [];
+            if (!current || !newPass || !confirm) {
+                errors.push("All password fields are required.");
+            } else if (newPass !== confirm) {
+                errors.push("Passwords do not match.");
+            }
+            if (errors.length > 0) {
+                e.preventDefault();
+                var message = errors.map(x => `<div>${x}</div>`).join('');
+                document.getElementById('passwordValidationModalMessage').innerHTML = message;
+                var modal = new bootstrap.Modal(document.getElementById('passwordValidationModal'));
+                modal.show();
+            }
+        });
+    });
+
     let editMode = ""; // "", "email", or "phone"
 
     function phoneChanged() {

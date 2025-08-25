@@ -22,5 +22,11 @@ namespace SABC_Phase2.Models.Phase1_LegacyDB
 
         [Column("phone")]
         public string? Phone { get; set; }
+
+        [Column("password")]
+        public string? Password { get; set; } // <-- Add this
+
+        [Column("updated_date")]
+        public DateTime? UpdatedDate { get; set; } // <-- Add this
     }
 }

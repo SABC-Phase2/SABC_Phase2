@@ -987,6 +987,49 @@ namespace SABC_Phase2.Controllers
                 return View(model);
             }
 
+            // ---------- PASSWORD CHANGE LOGIC ----------
+            // Only process if any password fields are filled
+            if (!string.IsNullOrWhiteSpace(model.CurrentPassword) ||
+                !string.IsNullOrWhiteSpace(model.NewPassword) ||
+                !string.IsNullOrWhiteSpace(model.ConfirmPassword))
+            {
+                // 1. All fields must be filled
+                if (string.IsNullOrWhiteSpace(model.CurrentPassword) ||
+                    string.IsNullOrWhiteSpace(model.NewPassword) ||
+                    string.IsNullOrWhiteSpace(model.ConfirmPassword))
+                {
+                    ModelState.AddModelError("", "All password fields are required.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
+
+                // 2. Check new/confirm match
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
+
+                // 3. Check current password matches db
+                // WARNING: This assumes you store passwords in plain text, which is not secure.
+                // If you hash passwords, use a proper hash check here.
+                if (legacyUser.Password != model.CurrentPassword)
+                {
+                    ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
+
+                // 4. Save new password
+                legacyUser.Password = model.NewPassword;
+                legacyUser.UpdatedDate = DateTime.Now;
+                // Optionally track who updated (legacyUser.UpdatedBy = ...)
+            }
+
             // 4. Update legacy user properties
             legacyUser.FirstName = model.FirstName;
             legacyUser.LastName = model.LastName;

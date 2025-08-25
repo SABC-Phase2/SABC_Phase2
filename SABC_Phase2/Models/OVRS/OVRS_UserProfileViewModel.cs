@@ -37,8 +37,17 @@ namespace SABC_Phase2.Models.OVRS
         public string Email { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Password")]
-        public string? Password { get; set; }
+        [Display(Name = "Current Password")]
+        public string? CurrentPassword { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "New Password")]
+        public string? NewPassword { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm Password")]
+        [Compare("NewPassword", ErrorMessage = "Passwords do not match.")]
+        public string? ConfirmPassword { get; set; }
 
         [Display(Name = "Last Password Update")]
         public DateTime? PasswordLastUpdated { get; set; }
