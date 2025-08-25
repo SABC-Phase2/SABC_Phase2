@@ -164,186 +164,270 @@
     </div>
 </div>
 
+<!-- OTP Verification Modal -->
+<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="otpModalLabel">OTP Verification</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>Please enter the 6-digit OTP sent to your new email or phone number.</p>
+                <div class="d-flex justify-content-center mb-2" id="otpInputs">
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                    <input type="text" maxlength="1" class="otp-input form-control mx-1 text-center" style="width:40px;display:inline-block;" />
+                </div>
+                <div id="otpError" class="text-danger mb-2" style="display:none;"></div>
+                <button type="button" id="verifyOtpBtn" class="btn btn-success mt-2">Verify OTP</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ... (Your razor markup above remains unchanged up to script tag) ... -->
 <script>
-
-        document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Password Validation Modal Logic ---
         var form = document.getElementById('profileForm');
+        var passwordModal = new bootstrap.Modal(document.getElementById('passwordValidationModal'));
+        var otpModal = new bootstrap.Modal(document.getElementById('otpModal'));
+
+        // Save original values for email and phone
+        var emailInput = document.getElementById('emailInput');
+        var phoneInput = document.getElementById('PhoneNumber');
+        var countryInput = document.getElementById('CountryCode');
+        var originalEmail = emailInput.getAttribute('data-original');
+        var originalPhone = phoneInput.getAttribute('data-original');
+        var originalCountry = countryInput.getAttribute('data-original');
+
+        // Helper to check if OTP modal is open
+        let otpInProgress = false;
+
         form.addEventListener('submit', function (e) {
+            // If OTP modal is being handled, skip all JS checks (so submit proceeds after OTP)
+            if (otpInProgress) {
+                otpInProgress = false;
+                return;
+            }
+
+            // ----- Password JS validation -----
             var current = document.getElementById('currentPassword').value.trim();
             var newPass = document.getElementById('newPassword').value.trim();
             var confirm = document.getElementById('confirmPassword').value.trim();
-            if (!current && !newPass && !confirm) return;
             var errors = [];
-            if (!current || !newPass || !confirm) {
-                errors.push("All password fields are required.");
-            } else if (newPass !== confirm) {
-                errors.push("Passwords do not match.");
+            if (current || newPass || confirm) {
+                if (!current || !newPass || !confirm) {
+                    errors.push("All password fields are required.");
+                } else if (newPass !== confirm) {
+                    errors.push("Passwords do not match.");
+                }
             }
             if (errors.length > 0) {
                 e.preventDefault();
                 var message = errors.map(x => `<div>${x}</div>`).join('');
                 document.getElementById('passwordValidationModalMessage').innerHTML = message;
-                var modal = new bootstrap.Modal(document.getElementById('passwordValidationModal'));
-                modal.show();
+                passwordModal.show();
+                return;
+            }
+
+            // ----- Email/Phone change OTP logic -----
+            var emailChanged = emailInput.value !== originalEmail;
+            var phoneChanged = phoneInput.value !== originalPhone || countryInput.value !== originalCountry;
+
+            if (emailChanged || phoneChanged) {
+                e.preventDefault();
+                otpInProgress = true;
+
+                // Optionally: call backend to send OTP here
+                // fetch('/Profile/SendOtp', { method: "POST", ... })
+
+                // Clear OTP inputs & error
+                document.querySelectorAll('.otp-input').forEach(i => { i.value = ""; });
+                document.getElementById('otpError').style.display = 'none';
+
+                otpModal.show();
+
+                // Focus first input after modal opens
+                setTimeout(() => { document.querySelector('.otp-input').focus(); }, 300);
+
+                // Handle auto-focus and backspace
+                document.querySelectorAll('.otp-input').forEach((input, idx, arr) => {
+                    input.oninput = function () {
+                        if (this.value.length === 1 && idx < arr.length - 1) arr[idx + 1].focus();
+                    };
+                    input.onkeydown = function (e) {
+                        if (e.key === "Backspace" && !this.value && idx > 0) arr[idx - 1].focus();
+                    };
+                });
+
+                // Handle OTP verify button
+                document.getElementById('verifyOtpBtn').onclick = function () {
+                    let otp = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
+                    if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+                        document.getElementById('otpError').innerText = "Please enter a valid 6-digit OTP.";
+                        document.getElementById('otpError').style.display = 'block';
+                        return;
+                    }
+                    // TODO: AJAX to validate OTP on backend here!
+                    // fetch('/Profile/ValidateOtp', { ... }).then(...)
+
+                    // DEMO: always allow for now
+                    document.getElementById('otpError').style.display = 'none';
+                    otpModal.hide();
+                    setTimeout(() => form.submit(), 300); // let modal close first
+                };
             }
         });
-    });
 
-    let editMode = ""; // "", "email", or "phone"
+        // ---- Existing phone/email edit logic ----
+        let editMode = ""; // "", "email", or "phone"
 
-    function phoneChanged() {
-        const origPhone = document.getElementById('PhoneNumber').getAttribute('data-original');
-        const origCode = document.getElementById('CountryCode').getAttribute('data-original');
-        const currPhone = document.getElementById('PhoneNumber').value;
-        const currCode = document.getElementById('CountryCode').value;
-        return (origPhone !== currPhone) || (origCode !== currCode);
-    }
+        window.phoneChanged = function() {
+            const origPhone = phoneInput.getAttribute('data-original');
+            const origCode = countryInput.getAttribute('data-original');
+            const currPhone = phoneInput.value;
+            const currCode = countryInput.value;
+            return (origPhone !== currPhone) || (origCode !== currCode);
+        };
 
-    function emailChanged() {
-        const emailInput = document.getElementById('emailInput');
-        return emailInput.value !== emailInput.getAttribute('data-original');
-    }
+        window.emailChanged = function() {
+            return emailInput.value !== emailInput.getAttribute('data-original');
+        };
 
-    function setPhoneEditable(editable) {
-        const phoneInput = document.getElementById('PhoneNumber');
-        const codeSelect = document.getElementById('CountryCode');
-        const flagWrapper = document.getElementById('flagWrapper');
+        window.setPhoneEditable = function(editable) {
+            phoneInput.readOnly = !editable;
+            countryInput.disabled = !editable;
+            document.getElementById('changePhoneBtn').classList.toggle('d-none', editable);
+            document.getElementById('cancelPhoneBtn').classList.toggle('d-none', !editable);
+            const flagWrapper = document.getElementById('flagWrapper');
+            if (!editable) {
+                flagWrapper.classList.add("disabled-bg");
+                flagWrapper.classList.remove("bg-white");
+            } else {
+                flagWrapper.classList.remove("disabled-bg");
+                flagWrapper.classList.add("bg-white");
+            }
+        };
 
-        phoneInput.readOnly = !editable;
-        codeSelect.disabled = !editable;
-        document.getElementById('changePhoneBtn').classList.toggle('d-none', editable);
-        document.getElementById('cancelPhoneBtn').classList.toggle('d-none', !editable);
+        window.setEmailEditable = function(editable) {
+            const changeBtn = document.getElementById('changeEmailBtn');
+            const cancelBtn = document.getElementById('cancelEmailBtn');
+            if (editable) {
+                emailInput.readOnly = false;
+                emailInput.value = "";
+                emailInput.placeholder = "Enter new email address";
+                changeBtn.classList.add("d-none");
+                cancelBtn.classList.remove("d-none");
+                emailInput.focus();
+            } else {
+                emailInput.readOnly = true;
+                emailInput.value = emailInput.getAttribute('data-original');
+                emailInput.placeholder = "Enter your email address";
+                changeBtn.classList.remove("d-none");
+                cancelBtn.classList.add("d-none");
+            }
+        };
 
-        // Toggle flag background like readonly inputs
-        if (!editable) {
-            flagWrapper.classList.add("disabled-bg");
-            flagWrapper.classList.remove("bg-white");
-        } else {
-            flagWrapper.classList.remove("disabled-bg");
-            flagWrapper.classList.add("bg-white");
-        }
-    }
+        window.togglePhoneEdit = function() {
+            if (editMode === "email" && emailChanged()) {
+                alert("You have made changes to your email address. Please save or reset those changes before editing your phone number.");
+                setPhoneEditable(false);
+                return;
+            }
+            if (editMode !== "phone") {
+                editMode = "phone";
+                setPhoneEditable(true);
+                setEmailEditable(false);
+            }
+        };
 
-    function setEmailEditable(editable) {
-        const emailInput = document.getElementById('emailInput');
-        const changeBtn = document.getElementById('changeEmailBtn');
-        const cancelBtn = document.getElementById('cancelEmailBtn');
-        if (editable) {
-            emailInput.readOnly = false;
-            emailInput.value = "";
-            emailInput.placeholder = "Enter new email address";
-            changeBtn.classList.add("d-none");
-            cancelBtn.classList.remove("d-none");
-            emailInput.focus();
-        } else {
-            emailInput.readOnly = true;
-            emailInput.value = emailInput.getAttribute('data-original');
-            emailInput.placeholder = "Enter your email address";
-            changeBtn.classList.remove("d-none");
-            cancelBtn.classList.add("d-none");
-        }
-    }
-
-    function togglePhoneEdit() {
-        // If email is in edit mode and has changes, block switching
-        if (editMode === "email" && emailChanged()) {
-            alert("You have made changes to your email address. Please save or reset those changes before editing your phone number.");
+        window.cancelPhoneEdit = function() {
+            editMode = "";
             setPhoneEditable(false);
-            return;
-        }
-        if (editMode !== "phone") {
-            editMode = "phone";
+            setEmailEditable(false);
+            phoneInput.value = phoneInput.getAttribute('data-original');
+            countryInput.value = countryInput.getAttribute('data-original');
+        };
+
+        window.toggleEmailEdit = function() {
+            if (editMode === "phone" && phoneChanged()) {
+                alert("You have made changes to your phone number. Please save or reset those changes before editing your email address.");
+                setEmailEditable(false);
+                return;
+            }
+            if (editMode !== "email") {
+                editMode = "email";
+                setEmailEditable(true);
+                setPhoneEditable(false);
+            }
+        };
+
+        window.cancelEmailEdit = function() {
+            editMode = "";
+            setEmailEditable(false);
+            setPhoneEditable(false);
+            emailInput.value = emailInput.getAttribute('data-original');
+        };
+
+        window.handlePhoneEdit = function() {
+            if (editMode === "email") {
+                setPhoneEditable(false);
+                return;
+            }
             setPhoneEditable(true);
             setEmailEditable(false);
-        }
-    }
+            editMode = "phone";
+        };
 
-    function cancelPhoneEdit() {
-        editMode = "";
-        setPhoneEditable(false);
-        setEmailEditable(false);
-        // restore phone and country code values
-        document.getElementById('PhoneNumber').value = document.getElementById('PhoneNumber').getAttribute('data-original');
-        document.getElementById('CountryCode').value = document.getElementById('CountryCode').getAttribute('data-original');
-    }
-
-    function toggleEmailEdit() {
-        // If phone is in edit mode and has changes, block switching
-        if (editMode === "phone" && phoneChanged()) {
-            alert("You have made changes to your phone number. Please save or reset those changes before editing your email address.");
+        window.resetEditMode = function() {
+            editMode = "";
+            setPhoneEditable(false);
             setEmailEditable(false);
-            return;
-        }
-        if (editMode !== "email") {
-            editMode = "email";
-            setEmailEditable(true);
-            setPhoneEditable(false);
-        }
-    }
+            phoneInput.setAttribute('data-original', phoneInput.value);
+            countryInput.setAttribute('data-original', countryInput.value);
+            emailInput.setAttribute('data-original', emailInput.value);
+            hidePasswordInputs();
+        };
 
-    function cancelEmailEdit() {
-        editMode = "";
-        setEmailEditable(false);
-        setPhoneEditable(false);
-        // restore email value
-        document.getElementById('emailInput').value = document.getElementById('emailInput').getAttribute('data-original');
-    }
+        window.updateFlag = function() {
+            var select = document.getElementById('CountryCode');
+            var selectedOption = select.options[select.selectedIndex];
+            var flagUrl = selectedOption.getAttribute('data-flag');
+            var flagImg = document.getElementById('CountryFlag');
+            if (flagUrl) {
+                flagImg.src = flagUrl;
+                flagImg.style.display = 'inline-block';
+            } else {
+                flagImg.style.display = 'none';
+            }
+        };
 
-    function handlePhoneEdit() {
-        if (editMode === "email") {
-            setPhoneEditable(false);
-            return;
-        }
-        setPhoneEditable(true);
-        setEmailEditable(false);
-        editMode = "phone";
-    }
+        window.showPasswordInputs = function() {
+            document.getElementById("passwordStatic").classList.add("d-none");
+            document.getElementById("passwordInputs").classList.remove("d-none");
+            document.getElementById("changePasswordBtn").classList.add("d-none");
+            document.getElementById("cancelPasswordBtn").classList.remove("d-none");
+            document.getElementById("currentPassword").value = "";
+            document.getElementById("newPassword").value = "";
+            document.getElementById("confirmPassword").value = "";
+        };
 
-    function resetEditMode() {
-        editMode = "";
-        setPhoneEditable(false);
-        setEmailEditable(false);
-        document.getElementById('PhoneNumber').setAttribute('data-original', document.getElementById('PhoneNumber').value);
-        document.getElementById('CountryCode').setAttribute('data-original', document.getElementById('CountryCode').value);
-        document.getElementById('emailInput').setAttribute('data-original', document.getElementById('emailInput').value);
-        hidePasswordInputs();
-    }
+        window.hidePasswordInputs = function() {
+            document.getElementById("passwordStatic").classList.remove("d-none");
+            document.getElementById("passwordInputs").classList.add("d-none");
+            document.getElementById("changePasswordBtn").classList.remove("d-none");
+            document.getElementById("cancelPasswordBtn").classList.add("d-none");
+            document.getElementById("currentPassword").value = "";
+            document.getElementById("newPassword").value = "";
+            document.getElementById("confirmPassword").value = "";
+        };
 
-    function updateFlag() {
-        var select = document.getElementById('CountryCode');
-        var selectedOption = select.options[select.selectedIndex];
-        var flagUrl = selectedOption.getAttribute('data-flag');
-        var flagImg = document.getElementById('CountryFlag');
-        if (flagUrl) {
-            flagImg.src = flagUrl;
-            flagImg.style.display = 'inline-block';
-        } else {
-            flagImg.style.display = 'none';
-        }
-    }
-
-    function showPasswordInputs() {
-        document.getElementById("passwordStatic").classList.add("d-none");
-        document.getElementById("passwordInputs").classList.remove("d-none");
-        document.getElementById("changePasswordBtn").classList.add("d-none");
-        document.getElementById("cancelPasswordBtn").classList.remove("d-none");
-        document.getElementById("currentPassword").value = "";
-        document.getElementById("newPassword").value = "";
-        document.getElementById("confirmPassword").value = "";
-    }
-    function hidePasswordInputs() {
-        document.getElementById("passwordStatic").classList.remove("d-none");
-        document.getElementById("passwordInputs").classList.add("d-none");
-        document.getElementById("changePasswordBtn").classList.remove("d-none");
-        document.getElementById("cancelPasswordBtn").classList.add("d-none");
-        document.getElementById("currentPassword").value = "";
-        document.getElementById("newPassword").value = "";
-        document.getElementById("confirmPassword").value = "";
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
+        // Initial setup
         updateFlag();
         setPhoneEditable(false);
         setEmailEditable(false);
