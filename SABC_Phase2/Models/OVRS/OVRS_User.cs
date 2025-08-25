@@ -13,5 +13,7 @@ namespace SABC_Phase2.Models.OVRS
         public DateTime? OtpExpiration { get; set; } // When the OTP expires
         public string? PendingPhoneNumber { get; set; } // Store the new phone number temporarily
         public string? PendingCountryCode { get; set; } // Store the new country code temporarily
+        public string? PendingEmail { get; set; } // Store the new email temporarily
+        public string? OtpType { get; set; } // "phone" or "email" to identify what the OTP is for
     }
 }

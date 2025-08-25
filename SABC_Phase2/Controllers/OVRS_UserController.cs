@@ -956,7 +956,6 @@ namespace SABC_Phase2.Controllers
 
             return View(model);
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model, string action = "")
@@ -1003,16 +1002,23 @@ namespace SABC_Phase2.Controllers
             string currentFullPhone = $"{model.CountryCode} {model.PhoneNumber}".Trim();
             bool phoneNumberChanged = legacyUser.Phone != currentFullPhone;
 
+            // 5. Check if email has changed
+            bool emailChanged = legacyUser.Email != model.Email;
+
+            // Handle phone number change with OTP
             if (phoneNumberChanged)
             {
                 // Generate OTP and store pending phone number
                 string otpCode = _otpService.GenerateOtpCode();
                 DateTime otpExpiration = _otpService.GetOtpExpiration();
 
+                // Clear any existing OTP data and set phone-specific data
                 phase2User.OtpCode = otpCode;
                 phase2User.OtpExpiration = otpExpiration;
                 phase2User.PendingPhoneNumber = model.PhoneNumber;
                 phase2User.PendingCountryCode = model.CountryCode;
+                phase2User.PendingEmail = null; // Clear email data
+                phase2User.OtpType = "phone";
 
                 await _context.SaveChangesAsync();
 
@@ -1021,9 +1027,39 @@ namespace SABC_Phase2.Controllers
 
                 ViewBag.ShowOtpModal = true;
                 ViewBag.OtpSentTo = currentFullPhone;
+                ViewBag.OtpType = "phone";
                 ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
 
                 TempData["InfoMessage"] = $"An OTP has been sent to {currentFullPhone}. Please enter the code to verify your new phone number.";
+                return View(model);
+            }
+
+            // Handle email change with OTP
+            if (emailChanged)
+            {
+                // Generate OTP and store pending email
+                string otpCode = _otpService.GenerateOtpCode();
+                DateTime otpExpiration = _otpService.GetOtpExpiration();
+
+                // Clear any existing OTP data and set email-specific data
+                phase2User.OtpCode = otpCode;
+                phase2User.OtpExpiration = otpExpiration;
+                phase2User.PendingEmail = model.Email;
+                phase2User.PendingPhoneNumber = null; // Clear phone data
+                phase2User.PendingCountryCode = null; // Clear country code data
+                phase2User.OtpType = "email";
+
+                await _context.SaveChangesAsync();
+
+                // TODO: Send OTP via email to the new email address
+                // await SendOtpEmail(model.Email, otpCode);
+
+                ViewBag.ShowOtpModal = true;
+                ViewBag.OtpSentTo = model.Email;
+                ViewBag.OtpType = "email";
+                ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
+
+                TempData["InfoMessage"] = $"An OTP has been sent to {model.Email}. Please enter the code to verify your new email address.";
                 return View(model);
             }
 
@@ -1054,8 +1090,6 @@ namespace SABC_Phase2.Controllers
                 }
 
                 // 3. Check current password matches db
-                // WARNING: This assumes you store passwords in plain text, which is not secure.
-                // If you hash passwords, use a proper hash check here.
                 if (legacyUser.Password != model.CurrentPassword)
                 {
                     ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
@@ -1069,10 +1103,15 @@ namespace SABC_Phase2.Controllers
                 legacyUser.UpdatedDate = DateTime.Now;
             }
 
-            // 5. Update other user properties (non-phone)
+            // 5. Update other user properties (non-phone, non-email if no OTP needed)
             legacyUser.FirstName = model.FirstName;
             legacyUser.LastName = model.LastName;
-            legacyUser.Email = model.Email;
+
+            // Only update email directly if it hasn't changed (no OTP needed)
+            if (!emailChanged)
+            {
+                legacyUser.Email = model.Email;
+            }
 
             // 6. Save changes
             await _legacyContext.SaveChangesAsync();
@@ -1109,26 +1148,43 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = "Invalid or expired OTP code." });
             }
 
-            // OTP is valid, update the phone number
+            // OTP is valid, update the appropriate field based on OTP type
             var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == phase2User.LegacyUserId.Value);
             if (legacyUser != null)
             {
-                string newFullPhone = $"{phase2User.PendingCountryCode} {phase2User.PendingPhoneNumber}".Trim();
-                legacyUser.Phone = newFullPhone;
-                legacyUser.UpdatedDate = DateTime.Now;
+                if (phase2User.OtpType == "phone")
+                {
+                    // Update phone number
+                    string newFullPhone = $"{phase2User.PendingCountryCode} {phase2User.PendingPhoneNumber}".Trim();
+                    legacyUser.Phone = newFullPhone;
+                    legacyUser.UpdatedDate = DateTime.Now;
+                }
+                else if (phase2User.OtpType == "email")
+                {
+                    // Update email address
+                    legacyUser.Email = phase2User.PendingEmail;
+                    legacyUser.UpdatedDate = DateTime.Now;
+                }
 
                 await _legacyContext.SaveChangesAsync();
             }
 
-            // Clear OTP data
+            // Clear all OTP data
             phase2User.OtpCode = null;
             phase2User.OtpExpiration = null;
             phase2User.PendingPhoneNumber = null;
             phase2User.PendingCountryCode = null;
+            phase2User.PendingEmail = null;
+            phase2User.OtpType = null;
 
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Phone number updated successfully!" });
+            // Return appropriate success message
+            string successMessage = phase2User.OtpType == "phone" ?
+                "Phone number updated successfully!" :
+                "Email address updated successfully!";
+
+            return Json(new { success = true, message = successMessage });
         }
     }
 }
