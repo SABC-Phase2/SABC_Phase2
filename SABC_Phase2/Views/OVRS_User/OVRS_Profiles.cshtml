@@ -211,29 +211,30 @@
         let otpInProgress = false;
 
         // Show OTP modal if needed
-        @if (ViewBag.ShowOtpModal == true)
-        {
-                <text>
-                var otpType = '@ViewBag.OtpType';
-                var otpSentTo = '@ViewBag.OtpSentTo';
+    // Show OTP modal if needed
+    @if (ViewBag.ShowOtpModal == true)
+    {
+            <text>
+            var otpType = '@ViewBag.OtpType';
+            var otpSentTo = '@ViewBag.OtpSentTo';
 
-                // Update modal content based on OTP type
-                document.getElementById('otpContactInfo').textContent = otpSentTo;
+            // Update modal content based on OTP type
+            document.getElementById('otpContactInfo').textContent = otpSentTo;
 
-                var modalTitle = document.getElementById('otpModalLabel');
-                var otpMessage = document.getElementById('otpMessage');
+            var modalTitle = document.getElementById('otpModalLabel');
+            var otpMessage = document.getElementById('otpMessage');
 
-                if (otpType === 'phone') {
-                    modalTitle.textContent = 'Verify Phone Number';
-                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to <strong>' + otpSentTo + '</strong>';
-                } else if (otpType === 'email') {
-                    modalTitle.textContent = 'Verify Email Address';
-                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to <strong>' + otpSentTo + '</strong>';
-                }
+            if (otpType === 'phone') {
+                modalTitle.textContent = 'Verify New Phone Number';
+                otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new phone number <strong>' + otpSentTo + '</strong>';
+            } else if (otpType === 'email') {
+                modalTitle.textContent = 'Verify New Email Address';
+                otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new email address <strong>' + otpSentTo + '</strong>';
+            }
 
-                otpModal.show();
-                </text>
-        }
+            otpModal.show();
+            </text>
+    }
 
         // OTP Verification
         document.getElementById('verifyOtpBtn').addEventListener('click', function() {

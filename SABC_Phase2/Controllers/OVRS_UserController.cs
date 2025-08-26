@@ -1010,6 +1010,7 @@ namespace SABC_Phase2.Controllers
             bool emailChanged = legacyUser.Email != model.Email;
 
             // Handle phone number change with OTP
+            // Handle phone number change with OTP via SMS to NEW phone number
             if (phoneNumberChanged)
             {
                 // Generate OTP and store pending phone number
@@ -1028,30 +1029,29 @@ namespace SABC_Phase2.Controllers
 
                 try
                 {
-                    // Send OTP via email to current email address (not the new phone number)
+                    // Send OTP via SMS to NEW phone number (not current phone)
                     string userName = $"{legacyUser.FirstName} {legacyUser.LastName}".Trim();
                     if (string.IsNullOrEmpty(userName)) userName = "User";
 
-                    await _phoneOtpEmailService.SendPhoneOtpAsync(
-                        legacyUser.Email, // Send to current email address
+                    await _smsOtpService.SendPhoneOtpSmsAsync(
+                        currentFullPhone, // Send to NEW phone number
                         userName,
-                        currentFullPhone, // New phone number for reference
                         otpCode);
 
                     ViewBag.ShowOtpModal = true;
-                    ViewBag.OtpSentTo = legacyUser.Email; // Show current email address in modal
+                    ViewBag.OtpSentTo = currentFullPhone; // Show NEW phone number in modal
                     ViewBag.OtpType = "phone";
                     ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
 
-                    TempData["InfoMessage"] = $"An OTP has been sent to your email address ({legacyUser.Email}) to verify your new phone number {currentFullPhone}.";
+                    TempData["InfoMessage"] = $"An OTP has been sent to your new phone number ({currentFullPhone}) to verify the change.";
                     return View(model);
                 }
                 catch (Exception ex)
                 {
-                    // Log the error (you might want to use ILogger here)
-                    Console.WriteLine($"Error sending phone OTP email: {ex.Message}");
+                    // Log the error
+                    Console.WriteLine($"Error sending phone OTP SMS: {ex.Message}");
 
-                    // Clear the OTP data since email failed
+                    // Clear the OTP data since SMS failed
                     phase2User.OtpCode = null;
                     phase2User.OtpExpiration = null;
                     phase2User.PendingPhoneNumber = null;
@@ -1059,14 +1059,14 @@ namespace SABC_Phase2.Controllers
                     phase2User.OtpType = null;
                     await _context.SaveChangesAsync();
 
-                    ModelState.AddModelError("", "Failed to send verification email. Please try again later.");
+                    ModelState.AddModelError("", "Failed to send verification SMS to your new phone number. Please try again later.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
                     ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                     return View(model);
                 }
             }
 
-            // Handle email change with OTP via SMS
+            // Handle email change with OTP via Email to NEW email address
             if (emailChanged)
             {
                 // Generate OTP and store pending email
@@ -1085,37 +1085,36 @@ namespace SABC_Phase2.Controllers
 
                 try
                 {
-                    // Send OTP via SMS to current phone number (not the new email address)
+                    // Send OTP via Email to NEW email address (not current email)
                     string userName = $"{legacyUser.FirstName} {legacyUser.LastName}".Trim();
                     if (string.IsNullOrEmpty(userName)) userName = "User";
 
-                    await _smsOtpService.SendEmailOtpSmsAsync(
-                        legacyUser.Phone, // Send to current phone number
+                    await _phoneOtpEmailService.SendEmailOtpAsync(
+                        model.Email, // Send to NEW email address
                         userName,
-                        model.Email, // New email address for reference
                         otpCode);
 
                     ViewBag.ShowOtpModal = true;
-                    ViewBag.OtpSentTo = legacyUser.Phone; // Show current phone number in modal
+                    ViewBag.OtpSentTo = model.Email; // Show NEW email address in modal
                     ViewBag.OtpType = "email";
                     ViewBag.CountryCodes = await HttpContext.RequestServices.GetRequiredService<CountryCodeService>().GetCountryCodesAsync();
 
-                    TempData["InfoMessage"] = $"An OTP has been sent to your phone number ({legacyUser.Phone}) to verify your new email address {model.Email}.";
+                    TempData["InfoMessage"] = $"An OTP has been sent to your new email address ({model.Email}) to verify the change.";
                     return View(model);
                 }
                 catch (Exception ex)
                 {
                     // Log the error
-                    Console.WriteLine($"Error sending email OTP SMS: {ex.Message}");
+                    Console.WriteLine($"Error sending email OTP: {ex.Message}");
 
-                    // Clear the OTP data since SMS failed
+                    // Clear the OTP data since email failed
                     phase2User.OtpCode = null;
                     phase2User.OtpExpiration = null;
                     phase2User.PendingEmail = null;
                     phase2User.OtpType = null;
                     await _context.SaveChangesAsync();
 
-                    ModelState.AddModelError("", "Failed to send verification SMS. Please try again later.");
+                    ModelState.AddModelError("", "Failed to send verification email to your new email address. Please try again later.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
                     ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                     return View(model);
