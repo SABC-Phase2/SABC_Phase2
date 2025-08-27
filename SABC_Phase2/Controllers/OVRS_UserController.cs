@@ -1212,8 +1212,9 @@ namespace SABC_Phase2.Controllers
                     return View(model);
                 }
 
-                // 3. Check current password matches db
-                if (legacyUser.Password != model.CurrentPassword)
+                // 3. Check current password matches db (hashed)
+                string currentPasswordHash = PasswordHelper.EncryptPassword(model.CurrentPassword);
+                if (legacyUser.Password != currentPasswordHash)
                 {
                     ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
@@ -1221,8 +1222,8 @@ namespace SABC_Phase2.Controllers
                     return View(model);
                 }
 
-                // 4. Save new password
-                legacyUser.Password = model.NewPassword;
+                // 4. Hash and save new password
+                legacyUser.Password = PasswordHelper.EncryptPassword(model.NewPassword);
                 legacyUser.UpdatedDate = DateTime.Now;
             }
 
