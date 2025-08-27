@@ -8,6 +8,11 @@ namespace SABC_Phase2.Models.OVRS
         public string Role { get; set; }
         public int? LegacyUserId { get; set; }
 
+        // Original user information
+        public string? OriginalEmail { get; set; }
+        public string? OriginalPhoneNumber { get; set; }
+        public string? OriginalCountryCode { get; set; }
+
         // New columns for OTP
         public string? OtpCode { get; set; } // 6 digit OTP, keep as string for leading zeros
         public DateTime? OtpExpiration { get; set; } // When the OTP expires

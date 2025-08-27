@@ -1,0 +1,220 @@
+﻿@{
+    ViewBag.Title = "Help";
+    ViewData["BannerText"] = "Help";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string guidePath;
+
+    if (User.IsInRole("OVRS_User")) // role name must match your setup
+    {
+        guidePath = Url.Content("~/lib/Images/SABC_OVRS_ARCHITECTURE.pdf");
+    }
+    else
+    {
+        guidePath = Url.Content("~/lib/Images/OVRS_Phase 2_FDS_v1.pdf");
+    }
+
+
+    // Determine file type icon
+    string GetFileIcon(string filePath)
+    {
+        var ext = System.IO.Path.GetExtension(filePath).ToLower();
+        return ext switch
+        {
+            ".pdf" => "fas fa-file-pdf",
+        };
+    }
+
+    var fileIconClass = GetFileIcon(guidePath);
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+
+<!-- Breadcrumb -->
+<div class="container-fluid" style="margin-top:10px;">
+    <div class="row">
+        <div class="col-12">
+            <a href="@Url.Action("Index", "Home")" class="breadcrumb-link">Home</a>
+            <span class="breadcrumb-separator"> &gt; </span>
+            <a href="#" class="breadcrumb-link active">Help</a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Card -->
+<div class="guide-card d-flex flex-column justify-content-between">
+    <div class="guide-header">
+        <h1 class="guide-title">Supplier Registration User Guide</h1>
+        <hr class="title-underline" />
+
+        @if (User.IsInRole("OVRS_User"))
+        {
+            <p class="disclaimer">
+                <strong>Disclaimer:</strong> This guide is intended to assist suppliers in completing the SABC registration process.
+            </p>
+        }
+        else
+        {
+            <p class="disclaimer">
+                <strong>Disclaimer:</strong> This guide is intended to assist Tender Administrators in managing and overseeing the tender process within the SABC system.
+            </p>
+        }
+    </div>
+
+
+    <div class="attachments-section">
+        <h3 class="attachments-heading">Attachments</h3>
+
+        <div class="attachment-box">
+            <div class="attachment-info">
+                <div class="pdf-icon-wrap">
+                    <!-- Use icon dynamically -->
+                    <i class="bi bi-file-earmark-pdf-fill" style="color:red; font-size: 2rem;"></i>
+
+
+                </div>
+                <span class="file-name">
+                    @(User.IsInRole("OVRS_User")
+                                        ? "SABC Supplier Registration User Guide"
+                                        : "SABC Tender Admin User Guide")
+                </span>
+            </div>
+            <div class="attachment-actions">
+                <a href="@guidePath" target="_blank" rel="noopener" class="btn-view">View</a>
+                <a href="@guidePath" download="SABC Supplier Registration User Guide.pdf" class="btn-download">
+                    Download <i class="fas fa-download"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* Card Layout */
+    .guide-card {
+        background: #fff;
+        padding: 44px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin: 22px auto 40px auto;
+        min-height: 360px;
+        max-width: 1280px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; /* evenly space header & attachments */
+    }
+
+    /* Header */
+    .guide-header {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .guide-title {
+        color: #008000;
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .title-underline {
+        border: 0;
+        border-top: 2px solid #008000;
+        margin: 0 0 22px 0;
+    }
+
+    .disclaimer {
+        font-size: 14px;
+    }
+
+    /* Attachments */
+    .attachments-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .attachments-heading {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 14px;
+    }
+
+    .attachment-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #dcdcdc;
+        padding: 18px 16px;
+        border-radius: 4px;
+        gap: 12px;
+    }
+
+    .attachment-info {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        min-height: 64px;
+    }
+
+    .pdf-icon-wrap {
+        width: 64px;
+        height: 64px;
+        background: #fff;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pdf-icon {
+        font-size: 32px;
+        color: #e74c3c;
+    }
+
+    .file-name {
+        font-size: 16px;
+        font-weight: 500;
+        color: #222;
+    }
+
+    .attachment-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-view, .btn-download {
+        padding: 8px 18px;
+        border: 1px solid #008000;
+        background: #fff;
+        color: #008000;
+        font-weight: 700;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-view:hover, .btn-download:hover {
+            background: #008000;
+            color: #fff;
+        }
+
+    /* Breadcrumb */
+    .breadcrumb-link {
+        color: #888;
+        text-decoration: none;
+    }
+
+        .breadcrumb-link.active {
+            color: #17994d;
+        }
+
+    .breadcrumb-separator {
+        color: #888;
+    }
+</style>

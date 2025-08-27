@@ -190,8 +190,16 @@
                         @foreach (var draft in drafts)
                         {
                             <div class="draft-carousel-item">
-                                <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" class="draft-tile-link">
-                                    <div class="draft-tile-card">
+                                <a href="#"
+                                   class="draft-tile-link"
+                                   data-tender-id="@draft.TenderId"
+                                   data-draft-id="@draft.DraftId"
+                                   data-tender-number="@draft.TenderNumber"
+                                   data-tender-title="@draft.TenderTitle"
+                                   data-closing-date="@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")"
+                                   data-closing-time="@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")"
+                                   data-status="@(draft.Status?.ToLowerInvariant() ?? "draft")">
+                                    <div class="draft-tile-card" data-draft-id="@draft.DraftId">
                                         <div class="draft-card-logo">
                                             <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
                                         </div>
@@ -221,7 +229,15 @@
                 {
                     foreach (var draft in pagedDrafts)
                     {
-                        <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = draft.TenderId, draftId = draft.DraftId })" class="draft-list-row">
+                        <a href="#"
+                           class="draft-list-row"
+                           data-tender-id="@draft.TenderId"
+                           data-draft-id="@draft.DraftId"
+                           data-tender-number="@draft.TenderNumber"
+                           data-tender-title="@draft.TenderTitle"
+                           data-closing-date="@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")"
+                           data-closing-time="@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")"
+                           data-status="@(draft.Status?.ToLowerInvariant() ?? "draft")">
                             <div class="draft-list-logo">
                                 <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
                             </div>
@@ -325,6 +341,67 @@
         }
     </div>
 </div>
+<div class="modal fade" id="deleteDraftModal" tabindex="-1" aria-labelledby="deleteDraftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteDraftModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this draft?</p>
+                <p class="text-muted" id="draftToDeleteInfo"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Draft</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="draftToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div id="draftToastMessage" class="toast-body">
+                Draft deleted successfully
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Closed Tender Modal -->
+<div class="modal fade" id="closedTenderModal" tabindex="-1" aria-labelledby="closedTenderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="closedTenderModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Tender Closed
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>This tender is now closed and you cannot continue to edit this draft.</strong></p>
+                <p class="text-muted mb-3" id="closedTenderInfo"><!-- Tender details will be populated here --></p>
+                <p class="text-secondary small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    You can either delete this draft to clean up your drafts list, or keep it for your records.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="deleteClosedDraftBtn">
+                    <i class="fas fa-trash-alt me-1"></i>Delete Draft
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @functions {
     public string GetStatusClass(string status)
@@ -349,12 +426,110 @@
     }
 }
 
+
 <script>
+    // Store the current draft to be deleted
+    let currentDraftToDelete = null;
+    let currentClosedDraft = null;
+
     // Helper to get query parameter
     function getQueryParam(name) {
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
+
+    // Function to check if tender is closed
+    function isTenderClosed(status) {
+        const closedStatuses = ['closed tender', 'closed', 'cancelled tender', 'cancelled', 'awarded tender', 'awarded'];
+        return closedStatuses.includes((status || '').toLowerCase());
+    }
+
+    // Function to handle draft link clicks
+    function handleDraftClick(e, element) {
+        e.preventDefault();
+
+        const tenderId = element.getAttribute('data-tender-id');
+        const draftId = element.getAttribute('data-draft-id');
+        const tenderNumber = element.getAttribute('data-tender-number');
+        const tenderTitle = element.getAttribute('data-tender-title');
+        const closingDate = element.getAttribute('data-closing-date');
+        const closingTime = element.getAttribute('data-closing-time');
+        const status = element.getAttribute('data-status');
+
+        console.log(`Clicking draft: ${tenderNumber}, Status: ${status}`);
+
+        if (isTenderClosed(status)) {
+            // Show closed tender modal
+            currentClosedDraft = {
+                tenderId: tenderId,
+                draftId: draftId,
+                element: element
+            };
+
+            // Update modal content
+            document.getElementById('closedTenderInfo').innerHTML =
+                `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>` +
+                `<small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>` +
+                `<small class="text-danger">Status: ${status.toUpperCase()}</small>`;
+
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('closedTenderModal'));
+            modal.show();
+        } else {
+            // Tender is open, proceed normally
+            const url = `@Url.Action("Tender_Application", "OVRS_User")?id=${tenderId}&draftId=${draftId}`;
+            console.log(`Redirecting to: ${url}`);
+            window.location.href = url;
+        }
+    }
+
+    // Initialize draft click handlers
+    function initializeDraftClickHandlers() {
+        // Handle grid view clicks
+        document.querySelectorAll('.draft-tile-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                handleDraftClick(e, this);
+            });
+        });
+
+        // Handle list view clicks
+        document.querySelectorAll('.draft-list-row').forEach(link => {
+            link.addEventListener('click', function(e) {
+                handleDraftClick(e, this);
+            });
+        });
+    }
+
+    // Handle delete from closed tender modal
+    document.getElementById('deleteClosedDraftBtn')?.addEventListener('click', function() {
+        if (currentClosedDraft) {
+            // Hide closed tender modal first
+            const closedModal = bootstrap.Modal.getInstance(document.getElementById('closedTenderModal'));
+            closedModal.hide();
+
+            // Set up for regular delete flow
+            const draftCard = currentClosedDraft.element.querySelector('.draft-tile-card') ||
+                             currentClosedDraft.element.querySelector('.draft-list-details');
+
+            const tenderNumber = currentClosedDraft.element.getAttribute('data-tender-number');
+            const tenderTitle = currentClosedDraft.element.getAttribute('data-tender-title');
+
+            currentDraftToDelete = {
+                id: currentClosedDraft.draftId,
+                element: currentClosedDraft.element.closest('.draft-carousel-item') || currentClosedDraft.element
+            };
+
+            // Update delete modal content
+            document.getElementById('draftToDeleteInfo').textContent =
+                `${tenderNumber}: ${tenderTitle} (Closed Tender)`;
+
+            // Show delete confirmation modal
+            setTimeout(() => {
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                deleteModal.show();
+            }, 300);
+        }
+    });
 
     // Section toggling logic
     function openSection(section) {
@@ -478,6 +653,8 @@
                 });
                 carousel.init();
                 updatePaginationVisibility();
+                // Re-initialize click handlers when switching views
+                initializeDraftClickHandlers();
             });
 
             listViewBtn.addEventListener('click', function() {
@@ -489,7 +666,148 @@
                     arrow.style.display = 'none';
                 });
                 updatePaginationVisibility();
+                // Re-initialize click handlers when switching views
+                initializeDraftClickHandlers();
             });
+        }
+    }
+
+    // Function to initialize delete functionality
+    function initializeDraftDelete() {
+        // Add delete button to each draft card
+        document.querySelectorAll('.draft-carousel-item').forEach(item => {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'draft-delete-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.style.display = 'none';
+
+            // Add click event to show modal
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const draftCard = this.closest('.draft-tile-card');
+                const tenderNumber = draftCard.querySelector('.draft-tender-number').textContent;
+                const tenderTitle = draftCard.querySelector('.draft-tender-title').textContent;
+
+                // Store the draft ID from data attribute
+                const draftId = draftCard.getAttribute('data-draft-id');
+                currentDraftToDelete = {
+                    id: draftId,
+                    element: item
+                };
+
+                // Update modal content
+                document.getElementById('draftToDeleteInfo').textContent =
+                    `${tenderNumber}: ${tenderTitle}`;
+
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                modal.show();
+            });
+
+            item.querySelector('.draft-tile-card').style.position = 'relative';
+            item.querySelector('.draft-tile-card').appendChild(deleteBtn);
+        });
+
+        // Add hover events to show/hide delete button
+        document.querySelectorAll('.draft-tile-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                const deleteBtn = this.querySelector('.draft-delete-btn');
+                if (deleteBtn) deleteBtn.style.display = 'block';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                const deleteBtn = this.querySelector('.draft-delete-btn');
+                if (deleteBtn) deleteBtn.style.display = 'none';
+            });
+        });
+
+        // Handle the actual deletion when confirmed
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            if (currentDraftToDelete) {
+                deleteDraft(currentDraftToDelete.id, currentDraftToDelete.element);
+            }
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        const toastEl = document.getElementById('draftToast');
+        const toastMessage = document.getElementById('draftToastMessage');
+
+        // Set message and type (Bootstrap contextual colors)
+        toastMessage.textContent = message;
+        toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    }
+
+    // Function to handle AJAX deletion
+    function deleteDraft(draftId, element) {
+        // Show loading state
+        const deleteBtn = document.getElementById('confirmDeleteBtn');
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+        deleteBtn.disabled = true;
+
+        // AJAX call to delete the draft
+        fetch('@Url.Action("DeleteDraft", "OVRS_User")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ draftId: draftId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remove the draft element from the DOM
+                element.remove();
+
+                // Update counts
+                updateDraftCounts(-1);
+
+                // Update carousel after deletion
+                carousel.totalSlides--;
+                carousel.updateControls();
+
+                // Show success message
+                showToast('Draft deleted successfully', 'success');
+            } else {
+                throw new Error(data.message || 'Failed to delete draft');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error deleting draft: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteDraftModal'));
+            modal.hide();
+
+            // Reset button state
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+            currentDraftToDelete = null;
+            currentClosedDraft = null;
+        });
+    }
+
+    // Function to update draft counts after deletion
+    function updateDraftCounts(change) {
+        // Update the main drafts count
+        const draftsTotal = document.getElementById('draftsTotal');
+        if (draftsTotal) {
+            const currentCount = parseInt(draftsTotal.textContent.match(/\d+/)[0]) || 0;
+            draftsTotal.textContent = `Total: ${currentCount + change}`;
         }
     }
 
@@ -505,6 +823,12 @@
         // Set up view toggles and carousel
         setupViewToggle();
         carousel.init();
+
+        // Initialize delete functionality
+        initializeDraftDelete();
+
+        // Initialize draft click handlers
+        initializeDraftClickHandlers();
 
         // If drafts section and view=list, force list view active
         const view = getQueryParam('view');
@@ -537,6 +861,7 @@
         carousel.move(direction);
     };
 </script>
+
 
 <style>
 
@@ -1422,6 +1747,36 @@
         background-color: #f1f1f1;
         color: #000;
         border-color: #000;
+    }
+
+    /* Delete button styles */
+    .draft-delete-btn {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        color: #d32f2f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s ease;
+    }
+
+        .draft-delete-btn:hover {
+            background-color: #d32f2f;
+            color: white;
+            transform: scale(1.1);
+        }
+
+    /* Ensure the carousel items have relative positioning for absolute positioning of delete button */
+    .draft-carousel-item {
+        position: relative;
     }
 </style>
 
