@@ -896,6 +896,43 @@ namespace SABC_Phase2.Controllers
             }
             int legacyUserId = phase2User.LegacyUserId.Value;
 
+            // ---- NEW: Check for expired OTP on page load ----
+            bool hasExpiredOtp = false;
+            if (!string.IsNullOrEmpty(phase2User.OtpCode) &&
+                phase2User.OtpExpiration.HasValue)
+            {
+                // Convert expiration time to South African time for comparison
+                var currentSaTime = _saTimeService.GetCurrentSouthAfricanTime();
+                var expirationSaTime = _saTimeService.ConvertUtcToSaLocal(phase2User.OtpExpiration.Value);
+
+                if (currentSaTime >= expirationSaTime)
+                {
+                    // OTP has expired, clean up database
+                    hasExpiredOtp = true;
+
+                    // Store original values for potential restoration (though we won't use them in this case)
+                    var originalEmail = phase2User.OriginalEmail;
+                    var originalPhone = phase2User.OriginalPhoneNumber;
+                    var otpType = phase2User.OtpType;
+
+                    // Clear all OTP-related, pending, and original data
+                    phase2User.OtpCode = null;
+                    phase2User.OtpExpiration = null;
+                    phase2User.PendingPhoneNumber = null;
+                    phase2User.PendingCountryCode = null;
+                    phase2User.PendingEmail = null;
+                    phase2User.OriginalPhoneNumber = null;
+                    phase2User.OriginalCountryCode = null;
+                    phase2User.OriginalEmail = null;
+                    phase2User.OtpType = null;
+
+                    await _context.SaveChangesAsync();
+
+                    // Set a flag to show expiration message
+                    TempData["OtpExpiredMessage"] = "Your previous verification code has expired. Please try again if you want to make changes.";
+                }
+            }
+
             // 3. Pull first and last name from Phase 1 (legacy) DB
             var legacyUser = await _legacyContext.TblUsers
                 .AsNoTracking()
@@ -952,7 +989,7 @@ namespace SABC_Phase2.Controllers
             }
             ViewBag.CountryCodes = countryCodes;
 
-            // Check if there's a pending OTP verification
+            // Check if there's a pending OTP verification (should be false after expiration cleanup)
             ViewBag.HasPendingOtp = !string.IsNullOrEmpty(phase2User.OtpCode) &&
                                    phase2User.OtpExpiration.HasValue &&
                                    phase2User.OtpExpiration.Value > DateTime.UtcNow;

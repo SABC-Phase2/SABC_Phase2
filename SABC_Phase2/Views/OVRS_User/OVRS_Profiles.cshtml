@@ -20,6 +20,15 @@
     </div>
 }
 
+@* NEW: Show OTP expiration message *@
+@if (TempData["OtpExpiredMessage"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-clock me-2"></i>@TempData["OtpExpiredMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <div class="breadcrumb-custom">
@@ -236,26 +245,26 @@
         // Show OTP modal if needed
         @if (ViewBag.ShowOtpModal == true)
         {
-                            <text>
-                            var otpType = '@ViewBag.OtpType';
-                            var otpSentTo = '@ViewBag.OtpSentTo';
+                                <text>
+                                var otpType = '@ViewBag.OtpType';
+                                var otpSentTo = '@ViewBag.OtpSentTo';
 
-                            // Update modal content based on OTP type
-                            document.getElementById('otpContactInfo').textContent = otpSentTo;
+                                // Update modal content based on OTP type
+                                document.getElementById('otpContactInfo').textContent = otpSentTo;
 
-                            var modalTitle = document.getElementById('otpModalLabel');
-                            var otpMessage = document.getElementById('otpMessage');
+                                var modalTitle = document.getElementById('otpModalLabel');
+                                var otpMessage = document.getElementById('otpMessage');
 
-                            if (otpType === 'phone') {
-                                modalTitle.textContent = 'Verify New Phone Number';
-                                otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new phone number <strong>' + otpSentTo + '</strong>';
-                            } else if (otpType === 'email') {
-                                modalTitle.textContent = 'Verify New Email Address';
-                                otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new email address <strong>' + otpSentTo + '</strong>';
-                            }
+                                if (otpType === 'phone') {
+                                    modalTitle.textContent = 'Verify New Phone Number';
+                                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new phone number <strong>' + otpSentTo + '</strong>';
+                                } else if (otpType === 'email') {
+                                    modalTitle.textContent = 'Verify New Email Address';
+                                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new email address <strong>' + otpSentTo + '</strong>';
+                                }
 
-                            otpModal.show();
-                            </text>
+                                otpModal.show();
+                                </text>
         }
 
         // ---- OTP Input Box Handling ----
@@ -658,7 +667,6 @@
     });
 </script>
 
-
 <style>
     .disabled-flag {
         filter: grayscale(100%) opacity(0.6);
@@ -668,7 +676,6 @@
         background-color: #e9ecef; /* same as readonly inputs */
         opacity: 1; /* keep the flag visible */
     }
-
 
     .profile-page {
         padding: 20px;
@@ -712,6 +719,7 @@
         border: 0;
         border-top: 3px solid #1BA548;
     }
+
     /* Force consistent height across phone input row */
     #phoneRow .form-select,
     #phoneRow .form-control,
@@ -765,7 +773,6 @@
             color: #b71c1c;
             text-decoration: none;
         }
-
 
     .tab-container {
         background: #fff;
@@ -855,5 +862,23 @@
         .otp-input:focus {
             border-color: #1BA548;
             box-shadow: 0 0 4px rgba(27, 165, 72, 0.4);
+        }
+
+    /* NEW: Warning alert styling */
+    .alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffecb5;
+        color: #664d03;
+        border-radius: 8px;
+    }
+
+        .alert-warning .btn-close {
+            filter: none !important; /* Remove any filter */
+            color: #000 !important; /* Make X black */
+            opacity: 1; /* Ensure full opacity */
+        }
+
+        .alert-warning i.fas.fa-clock {
+            color: #f0ad4e;
         }
 </style>
