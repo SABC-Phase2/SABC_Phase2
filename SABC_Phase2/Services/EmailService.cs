@@ -54,5 +54,50 @@ SABC SCM";
 
             await smtpClient.SendMailAsync(mailMessage);
         }
+
+
+        public async Task SendTenderClosedNotificationAsync(
+    IEnumerable<string> adminEmails, string tenderNumber, string tenderTitle, DateTime closingDateTime)
+        {
+            var emailSettings = _configuration.GetSection("EmailSettings");
+            using var smtpClient = new SmtpClient(emailSettings["SmtpServer"])
+            {
+                Port = int.Parse(emailSettings["SmtpPort"]),
+                Credentials = new NetworkCredential(
+                    emailSettings["ServiceAccountEmail"],
+                    emailSettings["ServiceAccountPassword"]),
+                EnableSsl = bool.Parse(emailSettings["EnableSsl"] ?? "true"),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 10000
+            };
+
+            var fromEmail = new MailAddress(
+                emailSettings["ServiceAccountEmail"],
+                $"{emailSettings["FromName"]}");
+
+            var body = $@"Dear Administrator,
+
+The following tender has been automatically closed by the system:
+
+Tender Number: {tenderNumber}
+Tender Title: {tenderTitle}
+Closed At: {closingDateTime:yyyy-MM-dd HH:mm:ss}
+
+If this was unexpected, please review the tender's configuration.
+
+Yours Sincerely,
+SABC SCM System";
+
+            foreach (var adminEmail in adminEmails.Distinct())
+            {
+                using var mailMessage = new MailMessage(fromEmail, new MailAddress(adminEmail))
+                {
+                    Subject = $"SABC Tender Closed Notification: {tenderNumber}",
+                    Body = body,
+                    IsBodyHtml = false
+                };
+                await smtpClient.SendMailAsync(mailMessage);
+            }
+        }
     }
 }

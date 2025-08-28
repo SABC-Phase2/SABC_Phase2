@@ -15,14 +15,16 @@ namespace SABC_Phase2.Services
     public class TenderClosingService : ITenderClosingService
     {
         private readonly Phase2Context _context;
+        private readonly EmailService _emailService;
 
         /// <summary>
         /// Constructor that receives the database context via dependency injection.
         /// </summary>
         /// <param name="context">Entity Framework Core database context</param>
-        public TenderClosingService(Phase2Context context)
+        public TenderClosingService(Phase2Context context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         /// <summary>
@@ -35,38 +37,36 @@ namespace SABC_Phase2.Services
         /// </summary>
         public async Task CloseExpiredTendersAsync()
         {
-            // Get the current UTC time for accurate comparison
             var utcNow = DateTime.UtcNow;
-
-            // Query all tenders currently marked as "Open Tender"
-            // This includes tenders that may or may not have a ClosingTime specified
             var openTenders = await _context.Tenders
                 .Where(t => t.Status == "Open Tender")
                 .ToListAsync();
 
-            // Process each open tender to determine if it should be closed
+            // Query admin emails once
+            var adminEmails = await _context.Administrators
+                .Select(a => a.Email)
+                .ToListAsync();
+
             foreach (var tender in openTenders)
             {
-                // If ClosingTime is not specified, default to midnight (00:00)
                 var closeTime = tender.ClosingTime ?? TimeSpan.Zero;
-
-                // Combine ClosingDate and ClosingTime as a local DateTime
                 DateTime localCloseDateTime = tender.ClosingDate.Date + closeTime;
-
-                // Specify the local time zone (update this string if your region is different!)
                 var localTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
-
-                // Convert the local closing datetime to UTC for comparison
                 DateTime closeDateTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localCloseDateTime, localTimeZone);
 
-                // If the closing datetime (in UTC) is in the past or now, close the tender
                 if (closeDateTimeUtc <= utcNow)
                 {
                     tender.Status = "Closed Tender";
+                    // Notify admins for this tender
+                    await _emailService.SendTenderClosedNotificationAsync(
+                        adminEmails,
+                        tender.TenderNumber,
+                        tender.Title,
+                        localCloseDateTime
+                    );
                 }
             }
 
-            // Save all status changes to the database in a single transaction
             await _context.SaveChangesAsync();
         }
     }

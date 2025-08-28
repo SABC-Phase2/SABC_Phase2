@@ -355,40 +355,41 @@
                 return val;
             }
 
-            function validateHourInput() {
-                hoursInput.addEventListener('input', function(e) {
-                    let val = this.value.replace(/\D/g, '');
-                    if (val.length > 2) val = val.slice(0, 2);
-                    if (val.length === 1 && val === '0') val = '';
-                    if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
-                    if (val === '00') val = '';
+        function validateHourInput() {
+            hoursInput.addEventListener('input', function(e) {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 1 && val === '0') val = '';
+                if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
+                if (val === '00') val = '';
+                // No leading zero for display
+                this.value = val ? String(parseInt(val, 10)) : '';
+                updateHiddenTimeValue();
+            });
 
-                    this.value = displayHourValue(val);
+            hoursInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '1', 10) || 1;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 12 ? 1 : val + 1;
+                    this.value = String(val); // No leading zero for display
                     updateHiddenTimeValue();
-                });
-
-                hoursInput.addEventListener('keydown', function(e) {
-                    let val = parseInt(this.value || '1', 10) || 1;
-                    if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        val = val >= 12 ? 1 : val + 1;
-                        this.value = displayHourValue(val);
-                        updateHiddenTimeValue();
-                    } else if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        val = val <= 1 ? 12 : val - 1;
-                        this.value = displayHourValue(val);
-                        updateHiddenTimeValue();
-                    }
-                });
-
-                hoursInput.addEventListener('blur', function() {
-                    if (this.value && this.value.length === 1) {
-                        this.value = this.value.padStart(2, '0');
-                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 1 ? 12 : val - 1;
+                    this.value = String(val); // No leading zero for display
                     updateHiddenTimeValue();
-                });
-            }
+                }
+            });
+
+            hoursInput.addEventListener('blur', function() {
+                // Remove leading zero if present and value is 1-9
+                if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
+                    this.value = this.value.substring(1);
+                }
+                updateHiddenTimeValue();
+            });
+        }
 
             function validateMinuteInput() {
                 minutesInput.addEventListener('input', function(e) {
