@@ -176,36 +176,43 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
-            TenderApplicationDraft draft = null;
-            if (draftId.HasValue)
-            {
-                draft = _context.TenderApplicationDrafts
-                    .Include(d => d.Documents)
-                    .FirstOrDefault(d => d.DraftId == draftId.Value);
-            }
-
             // Get current user Id from claims
             var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
             int? currentUserId = null;
             if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var uid))
                 currentUserId = uid;
 
-            int? legacyUserId = null;
-            if (currentUserId != null)
+            if (!currentUserId.HasValue)
+                return Unauthorized();
+
+            // Try to fetch legacy user id
+            int? legacyUserId = _context.Users.Where(u => u.Id == currentUserId).Select(u => u.LegacyUserId).FirstOrDefault();
+
+            // 1️⃣ Determine the draft to load
+            TenderApplicationDraft draft = null;
+
+            if (draftId.HasValue)
             {
-                legacyUserId = _context.Users
-                    .Where(u => u.Id == currentUserId)
-                    .Select(u => u.LegacyUserId)
-                    .FirstOrDefault();
+                // Open specific draft
+                draft = _context.TenderApplicationDrafts
+                    .Include(d => d.Documents)
+                    .FirstOrDefault(d => d.DraftId == draftId.Value && d.OVRS_UserId == currentUserId);
             }
 
-            // Fetch company email and name from legacy DB
+            if (draft == null)
+            {
+                // Check if a draft already exists for this user + tender
+                draft = _context.TenderApplicationDrafts
+                    .Include(d => d.Documents)
+                    .FirstOrDefault(d => d.TenderId == id && d.OVRS_UserId == currentUserId);
+            }
+
+            // 2️⃣ Fetch company info from legacy DB
             string companyEmail = "";
             string companyName = "";
             if (legacyUserId != null)
             {
-                var supplier = _legacyContext.TblSuppliers
-                    .FirstOrDefault(s => s.UserId == legacyUserId.Value); // <-- use C# property name!
+                var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == legacyUserId.Value);
                 if (supplier != null)
                 {
                     companyEmail = supplier.Email;
@@ -213,17 +220,19 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
+            // 3️⃣ Prepare view model
             var vm = new TenderApplicationViewModel
             {
                 Tender = tender,
-                Draft = draft,
+                Draft = draft, // This is either the existing draft or null
                 LegacyUserId = legacyUserId,
                 CompanyEmail = companyEmail,
                 CompanyName = companyName
             };
 
-            return View(vm); // Pass ViewModel, not tender!
+            return View(vm);
         }
+
 
 
 
@@ -493,19 +502,12 @@ namespace SABC_Phase2.Controllers
             return View(model);
         }
 
-
         /// <summary>
         /// Persists or updates a draft tender application, including draft document uploads.
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft(
-     Guid? DraftId,
-     int? LegacyUserId,
-     int? TenderId,
-     List<IFormFile> UploadedFiles,
-     [FromForm] List<int> DocumentsToDelete // <-- Accept this from the form!
- )
+        public async Task<IActionResult> SaveTenderApplicationDraft( Guid? DraftId, int? LegacyUserId, int? TenderId, List<IFormFile> UploadedFiles, [FromForm] List<int> DocumentsToDelete) // <-- Accept this from the form!
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -513,7 +515,7 @@ namespace SABC_Phase2.Controllers
             {
                 var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId.Value);
                 if (user != null)
-                    ovrsUserId = user.Id;
+                ovrsUserId = user.Id;
             }
 
             // Defensive: Ensure we have an OVRS_UserId
@@ -585,20 +587,25 @@ namespace SABC_Phase2.Controllers
                 {
                     if (file != null && file.Length > 0)
                     {
+                        // ✅ Skip if file with same name already exists in draft
+                        if (draft.Documents.Any(d => d.FileName == file.FileName))
+                            continue;
+
                         using var stream = file.OpenReadStream();
-                        // Save under /TenderNumber/Tender Applications/CompanyName/
                         var sharePointUrl = await sharePointService
                             .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, file.FileName);
 
                         var doc = new TenderApplicationDraftDocument
                         {
                             FileName = file.FileName,
-                            SharePointPath = sharePointUrl
+                            SharePointPath = sharePointUrl,
+                            TempGuid = Guid.NewGuid()
                         };
                         draft.Documents.Add(doc);
                     }
                 }
             }
+
 
             // Commit all changes to the database; handle exceptions for enterprise robustness.
             try
@@ -620,7 +627,6 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("OVRS_Documents")
             });
         }
-
         // GET: /OVRS_User/ViewDocument/{id}
         // Redirects the user to the SharePoint document URL for viewing the PDF in SharePoint
         public async Task<IActionResult> ViewDocument(int id)
