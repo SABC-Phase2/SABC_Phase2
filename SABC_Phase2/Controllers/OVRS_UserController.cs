@@ -61,7 +61,7 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Main OVRS tender listing with optional status filtering and pagination.
         /// </summary>
-        // Your Index action, updated for partial view & AJAX
+        
         public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
         {
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();

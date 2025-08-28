@@ -173,7 +173,6 @@
             <div class="modal-body">
                 <p style="font-size:1.25rem; font-weight:600;">Draft saved</p>
                 <div style="font-size:0.95rem; color: #222; margin-top:10px;">
-
                     Your draft has been saved to
                     <a href="#" id="ovrsDraftResponsesLink" style="color:#222; text-decoration:underline; font-weight:500;">draft responses</a>
                 </div>
@@ -296,7 +295,7 @@
             });
         }
 
-             submitBtn.addEventListener("click", function (e) {
+        submitBtn.addEventListener("click", function (e) {
             // Disable the button immediately
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
@@ -347,7 +346,6 @@
             });
         });
 
-
         function showApplicationSuccessModal() {
             const modal = document.getElementById('applicationSuccessModal');
             modal.classList.add('show');
@@ -358,7 +356,7 @@
                 window.location.href = '/OVRS_User/Index'; // Or another relevant page
             };
         }
-                function showSubmissionErrorModal() {
+        function showSubmissionErrorModal() {
             const modal = document.getElementById('submissionErrorModal');
             modal.classList.add('show');
             modal.style.display = 'flex';
@@ -368,10 +366,12 @@
             };
         }
 
-             function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
+        // Updated: Always link the modal hyperlink to drafts section (and list view)
+        function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
             document.getElementById('ovrsDraftModalTenderNumber').innerText = tenderNumber || '';
             const draftsLink = document.getElementById('ovrsDraftResponsesLink');
-            draftsLink.href = draftResponsesUrl || '/OVRS_User/OVRS_Submissions_Drafts';
+            // Always open the drafts section and list view
+            draftsLink.href = draftResponsesUrl || '/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list';
 
             const modal = document.getElementById('ovrsDraftSavedModal');
             modal.classList.add('show');
@@ -385,8 +385,7 @@
             };
         }
 
-
-                function showTenderClosedModal(closingDateTime) {
+        function showTenderClosedModal(closingDateTime) {
             document.getElementById('tenderClosedDateTime').innerText = closingDateTime
                 ? `Closed on: ${closingDateTime}`
                 : '';
@@ -398,7 +397,8 @@
                 modal.style.display = 'none';
             };
         }
-             // Update the saveAsDraft function
+
+        // Update the saveAsDraft function
         function saveAsDraft(isAuto = false) {
             const draftBtn = document.getElementById("draftBtn");
             if (!isAuto) {
@@ -449,7 +449,7 @@
                     if (data.success) {
                         if (!isAuto) {
                             const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
-                            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts");
+                            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
                         }
                         if (data.draftId) {
                             if (!draftIdField) {
@@ -518,9 +518,45 @@
                 saveAsDraft(false);
             });
         }
+
+        // --- DRAFTS SECTION AUTO-TOGGLE ON PAGE LOAD ---
+        document.addEventListener("DOMContentLoaded", function() {
+            function getQueryString(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+            // If section=drafts, open drafts section and hide submissions
+            if (getQueryString('section') === 'drafts') {
+                // Hide submissions card if present
+                document.getElementById('submissionCard')?.style.setProperty('display', 'none');
+                // Show drafts card and scroll into view
+                const draftsCard = document.getElementById('draftsCard');
+                draftsCard?.style.setProperty('display', 'block');
+                // Optionally scroll to drafts section
+                draftsCard?.scrollIntoView({ behavior: "smooth" });
+
+                // Optionally set the arrow
+                document.getElementById('toggleArrow')?.classList.remove('open');
+                document.getElementById('draftsArrow')?.classList.add('open');
+            }
+            // If view=list or view=grid, set view mode
+            const view = getQueryString('view');
+            if (view === 'list') {
+                document.getElementById('draftListView')?.style.setProperty('display', 'block');
+                document.getElementById('draftGridView')?.style.setProperty('display', 'none');
+                document.getElementById('gridViewBtn')?.classList.remove('active');
+                document.getElementById('listViewBtn')?.classList.add('active');
+            }
+            if (view === 'grid') {
+                document.getElementById('draftListView')?.style.setProperty('display', 'none');
+                document.getElementById('draftGridView')?.style.setProperty('display', 'block');
+                document.getElementById('listViewBtn')?.classList.remove('active');
+                document.getElementById('gridViewBtn')?.classList.add('active');
+            }
+        });
+
     </script>
 }
-
 
 <style>
 
