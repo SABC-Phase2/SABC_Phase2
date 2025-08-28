@@ -6,7 +6,7 @@ using SABC_Phase2.Data;
 using SABC_Phase2.Models;
 using SABC_Phase2.Models.Tender;
 using SABC_Phase2.Services;
-
+using System.Security.Claims;
 
 
 namespace SABC_Phase2.Controllers
@@ -926,6 +926,69 @@ namespace SABC_Phase2.Controllers
             return RedirectToAction("ScheduledIndex");
         }
 
+        [HttpPost]
+
+        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
+        {
+            try
+            {
+                if (request == null || request.Id <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Invalid draft ID" });
+                }
+
+                // Get the current user ID (optional, if you want to ensure users can only delete their own drafts)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Find the draft with its documents
+                var draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.Id == request.Id);
+
+                if (draft == null)
+                {
+                    return NotFound(new { success = false, message = "Draft not found" });
+                }
+
+                // Optional: Add user ownership check if needed
+                // if (draft.CreatedBy != userId) {
+                //     return Forbid();
+                // }
+
+                // Delete associated documents from SharePoint first
+                var sharePointService = new SharePointService(_configuration);
+                if (draft.Documents != null && draft.Documents.Any())
+                {
+                    foreach (var document in draft.Documents)
+                    {
+                        try
+                        {
+                            await sharePointService.DeleteDocumentAsync(document.SharePointPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error but continue with deletion
+                            Console.WriteLine($"Error deleting document from SharePoint: {ex.Message}");
+                        }
+                    }
+
+                    // Remove documents from database
+                    _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
+                }
+
+                // Remove the draft itself
+                _context.TenderAdminsDraft.Remove(draft);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Draft deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error deleting draft: {ex}");
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the draft" });
+            }
+        }
 
 
         //---------------------------------------------------------------------------------------------------
@@ -1166,5 +1229,9 @@ namespace SABC_Phase2.Controllers
         }
     }
 
+    public class DeleteDraftReq
+    {
+        public int Id { get; set; }
+    }
 }
 

@@ -882,6 +882,57 @@ namespace SABC_Phase2.Controllers
             return View(tender);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftRequest request)
+        {
+            if (request == null || request.DraftId == Guid.Empty)
+            {
+                return Json(new { success = false, message = "Invalid draft ID." });
+            }
+
+            try
+            {
+                // Fetch the draft + docs
+                var draft = await _context.TenderApplicationDrafts
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.DraftId == request.DraftId);
+
+                if (draft == null)
+                {
+                    return Json(new { success = false, message = "Draft not found." });
+                }
+
+                // Delete files from SharePoint if needed
+                if (draft.Documents != null && draft.Documents.Any())
+                {
+                    var sharePointService = new SharePointService(_configuration);
+                    foreach (var doc in draft.Documents)
+                    {
+                        try
+                        {
+                            await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Optionally log error, but continue removing DB record
+                        }
+                    }
+
+                    _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
+                }
+
+                _context.TenderApplicationDrafts.Remove(draft);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error deleting draft: " + ex.Message });
+            }
+        }
+
 
         public async Task<IActionResult> OVRS_Profiles()
         {
@@ -1369,5 +1420,9 @@ namespace SABC_Phase2.Controllers
                 originalData = originalData
             });
         }
+    }
+    public class DeleteDraftRequest
+    {
+        public Guid DraftId { get; set; }
     }
 }
