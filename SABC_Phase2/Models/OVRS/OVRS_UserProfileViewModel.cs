@@ -1,6 +1,7 @@
 ﻿using SABC_Phase2.Services;
 using System.ComponentModel.DataAnnotations;
 
+// Profile view model
 namespace SABC_Phase2.Models.OVRS
 {
     public class OVRS_UserProfileViewModel
