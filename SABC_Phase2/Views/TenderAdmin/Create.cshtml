@@ -305,6 +305,39 @@
 @section Scripts {
     <script>
                document.addEventListener('DOMContentLoaded', function () {
+
+
+                            document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var container = btn.closest('[data-doc-id]');
+                    var docId = container.getAttribute('data-doc-id');
+                    if (!docId) return;
+                    if (!confirm('Are you sure you want to delete this document?')) return;
+
+                    fetch('/TenderAdmin/DeleteDraftDocument', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ documentId: docId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            container.remove(); // Instantly remove from UI
+                        } else {
+                            alert('Failed to delete document: ' + data.message);
+                        }
+                    })
+                    .catch(err => alert('Error deleting document.'));
+                });
+            });
+      
+
+
+
+
             // Tab logic...
             const tabs = ['details', 'documents', 'submit'];
             let currentTab = 'details';

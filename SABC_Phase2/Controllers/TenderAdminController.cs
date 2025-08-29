@@ -1374,6 +1374,46 @@ namespace SABC_Phase2.Controllers
             // Return the PDF file as a download, naming it with the date range
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDraftDocument([FromBody] DeleteDraftDocumentRequest req)
+        {
+            if (req == null || req.DocumentId <= 0)
+                return Json(new { success = false, message = "Invalid request." });
+
+            var doc = await _context.TenderAdminsDraftDocuments
+                .FirstOrDefaultAsync(d => d.Id == req.DocumentId);
+
+            if (doc == null)
+                return Json(new { success = false, message = "Document not found." });
+
+            var sharePointService = new SharePointService(_configuration);
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(doc.SharePointPath))
+                    await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+            }
+            catch (Exception ex)
+            {
+                // You might want to log this
+                return Json(new { success = false, message = "Error deleting from SharePoint: " + ex.Message });
+            }
+
+            _context.TenderAdminsDraftDocuments.Remove(doc);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+      
+    }
+
+    public class DeleteDraftDocumentRequest
+    {
+        public int DocumentId { get; set; }
     }
 
     public class DeleteDraftReq
