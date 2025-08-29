@@ -27,36 +27,35 @@ namespace SABC_Phase2.Services
             _graphClient = new GraphServiceClient(clientSecretCredential);
         }
 
-
-public async Task<string> UploadDocumentAsync(string tenderNumber, Stream fileStream, string fileName, bool isAwarded = false)
-    {
-        // Sanitize all folder and file names before calling SharePoint API
-        var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tenderNumber);
-        var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(fileName);
-
-        var tenderFolder = await EnsureFolderAsync(_driveId, safeTenderNumber, null);
-        var adminDocsFolder = await EnsureFolderAsync(_driveId, "Admin docs", tenderFolder.Id);
-
-        string parentId = adminDocsFolder.Id;
-        if (isAwarded)
+        public async Task<string> UploadDocumentAsync(string tenderNumber, Stream fileStream, string fileName, bool isAwarded = false)
         {
-            // Ensure "Awarded Tender Documents" subfolder exists under Admin docs
-            var awardedDocsFolder = await EnsureFolderAsync(_driveId, "Awarded Tender Documents", adminDocsFolder.Id);
-            parentId = awardedDocsFolder.Id;
+            // Sanitize all folder and file names before calling SharePoint API
+            var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tenderNumber);
+            var safeFileName = SanitizeHelper.ToSharePointSafeFileName(fileName); // <-- THIS IS ALL YOU NEED
+
+            var tenderFolder = await EnsureFolderAsync(_driveId, safeTenderNumber, null);
+            var adminDocsFolder = await EnsureFolderAsync(_driveId, "Admin docs", tenderFolder.Id);
+
+            string parentId = adminDocsFolder.Id;
+            if (isAwarded)
+            {
+                // Ensure "Awarded Tender Documents" subfolder exists under Admin docs
+                var awardedDocsFolder = await EnsureFolderAsync(_driveId, "Awarded Tender Documents", adminDocsFolder.Id);
+                parentId = awardedDocsFolder.Id;
+            }
+
+            var uploadedItem = await _graphClient.Drives[_driveId]
+                .Items[parentId]
+                .ItemWithPath(safeFileName)
+                .Content
+                .PutAsync(fileStream);
+
+            var fileMeta = await _graphClient.Drives[_driveId].Items[uploadedItem.Id].GetAsync();
+
+            return fileMeta?.WebUrl;
         }
 
-        var uploadedItem = await _graphClient.Drives[_driveId]
-            .Items[parentId]
-            .ItemWithPath(safeFileName)
-            .Content
-            .PutAsync(fileStream);
-
-        var fileMeta = await _graphClient.Drives[_driveId].Items[uploadedItem.Id].GetAsync();
-
-        return fileMeta?.WebUrl;
-    }
-
-    private async Task<DriveItem> EnsureFolderAsync(string driveId, string folderName, string parentId)
+        private async Task<DriveItem> EnsureFolderAsync(string driveId, string folderName, string parentId)
         {
             List<DriveItem> children;
 
@@ -191,6 +190,30 @@ public async Task<string> UploadDocumentAsync(string tenderNumber, Stream fileSt
                 .Root
                 .ItemWithPath(relativePath)
                 .DeleteAsync();
+        }
+
+        public async Task RenameTenderFolderAsync(string oldTenderNumber, string newTenderNumber)
+        {
+            var oldSafe = SanitizeHelper.ToSharePointSafeFolderName(oldTenderNumber);
+            var newSafe = SanitizeHelper.ToSharePointSafeFolderName(newTenderNumber);
+
+            // Correct way to get root children in Graph SDK v5+
+            var rootChildren = await _graphClient.Drives[_driveId]
+                .Items["root"]
+                .Children
+                .GetAsync();
+
+            var folder = rootChildren.Value.FirstOrDefault(x => x.Name == oldSafe && x.Folder != null);
+
+            if (folder == null)
+                throw new Exception($"Tender folder '{oldTenderNumber}' not found in SharePoint.");
+
+            // Patch (rename) the folder
+            var update = new DriveItem
+            {
+                Name = newSafe
+            };
+            await _graphClient.Drives[_driveId].Items[folder.Id].PatchAsync(update);
         }
     }
 }

@@ -161,33 +161,45 @@
             </div>
 
             <div id="awardedDocumentsContainer" class="mt-3" style="display: none;">
-                <label class="supporting-label mb-2"><i class="fas fa-trophy text-warning me-1"></i> Awarded Tender Document</label>
-                <div class="uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light">
-                    <div>
-                        <strong>Awarded Document</strong>
-                        <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                            @if (Model.AwardedDocuments != null && Model.AwardedDocuments.Any())
-                            {
-                                foreach (var doc in Model.AwardedDocuments)
-                                {
-                                    <div class="uploaded-file-entry p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light">
-                                        <div>
-                                            <strong>@doc.FileName</strong>
-                                            <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                                <a href="@doc.SharePointPath" target="_blank">View</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            <!-- Always include this span, will toggle visibility in JS -->
-                            <span id="noAwardedDocMsg" @( (Model.AwardedDocuments != null && Model.AwardedDocuments.Any()) ? "style='display:none;'" : "" )>
-                                No awarded document uploaded
-                            </span>
-                        </div>
-                    </div>
+                <label class="supporting-label mb-2">
+                    <i class="fas fa-trophy text-warning me-1"></i> Awarded Tender Document
+                </label>
+                <div>
+
+                    @if (Model.AwardedDocuments != null && Model.AwardedDocuments.Any())
+
+                    {
+
+                        foreach (var doc in Model.AwardedDocuments)
+
+                        {
+                            <div class="uploaded-file-entry existing-doc" data-doc-id="@doc.Id">
+                                <div class="uploaded-file-entry-content">
+                                    <div class="uploaded-file-name">@doc.FileName</div>
+                                </div>
+                                <div class="uploaded-file-actions">
+                                    <button type="button" class="icon-btn view-upload-btn" onclick="window.open('@doc.SharePointPath', '_blank')" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="icon-btn text-danger remove-upload-btn" onclick="document.getElementById('delete_awarded_doc_@doc.Id').checked = true;" title="Delete">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                                <div style="display:none;">
+                                    <input type="checkbox" name="AwardedDocumentsToDelete" value="@doc.Id" id="delete_awarded_doc_@doc.Id" />
+                                </div>
+                            </div>
+
+                        }
+
+                    }
+                    <span id="noAwardedDocMsg" @( (Model.AwardedDocuments != null && Model.AwardedDocuments.Any()) ? "style='display:none;'" : "" )>
+
+                        No awarded document uploaded
+                    </span>
                 </div>
             </div>
+
 
             <!-- File upload input for new supporting documents -->
             <div id="uploadInputGroup" class="d-flex align-items-center gap-2 mt-3">
@@ -571,15 +583,26 @@
                     errorFields.push('AwardedTenderNote'); errorTabs.push('details');
                 }
                 // Count only awarded docs not marked for deletion + new uploads
-                const awardedDocCount =
-                    Array.from(awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
-                        .filter(div => {
-                            const docId = div.getAttribute('data-doc-id');
-                            const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
-                            return !(delCheckbox && delCheckbox.checked);
-                        }).length
-                    +
-                    awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+                  const awardedDocCount =
+
+        Array.from(awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+
+            .filter(div => {
+
+                const docId = div.getAttribute('data-doc-id');
+
+                // FIX: Use AwardedDocumentsToDelete for awarded docs
+
+                const delCheckbox = document.querySelector(`input[name="AwardedDocumentsToDelete"][value="${docId}"]`);
+
+                return !(delCheckbox && delCheckbox.checked);
+
+            }).length
+
+        +
+
+        awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+
                 if (awardedDocCount === 0) {
                     errors.push({field: 'AwardedDocuments', message: 'You must upload at least one awarded document.', tab: 'documents'});
                     errorFields.push('AwardedDocuments'); errorTabs.push('documents');

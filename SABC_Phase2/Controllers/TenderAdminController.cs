@@ -347,6 +347,9 @@ namespace SABC_Phase2.Controllers
                     .FirstOrDefaultAsync(d => d.DraftId == draftGuid);
             }
 
+            // --- Detect old tender number for possible rename ---
+            var oldTenderNumber = draft?.TenderNumber;
+
             if (draft == null)
             {
                 draft = new TenderDraft
@@ -372,6 +375,33 @@ namespace SABC_Phase2.Controllers
                 draft.ClosingDate = closingDate;
             if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
                 draft.ClosingTime = closingTime;
+
+            // --- RENAME SharePoint folder if tender number changed and there are docs ---
+            var newTenderNumber = draft.TenderNumber;
+            bool tenderNumberChanged = !string.IsNullOrWhiteSpace(oldTenderNumber)
+                                       && !string.Equals(oldTenderNumber, newTenderNumber, StringComparison.OrdinalIgnoreCase)
+                                       && draft.Documents != null && draft.Documents.Count > 0;
+            if (tenderNumberChanged)
+            {
+                var sharePointService = new SharePointService(_configuration);
+                try
+                {
+                    await sharePointService.RenameTenderFolderAsync(oldTenderNumber, newTenderNumber);
+
+                    // Update SharePointPath for all draft docs if folder in URL
+                    foreach (var doc in draft.Documents)
+                    {
+                        if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
+                        {
+                            doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Optionally log or show error
+                }
+            }
 
             // --- Handle Deletion of Draft Documents ---
             var docsToDelete = form["DocumentsToDelete"];
@@ -613,18 +643,109 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
+
+            // --- AWARDED DOCUMENT VALIDATION ---
+            if (dto.Status == "Awarded Tender")
+            {
+                // Get IDs of awarded docs marked for deletion
+                var awardedDocsToDelete = dto.DocumentsToDelete ?? new List<int>();
+                // Count awarded docs not marked for deletion
+                int remainingAwardedDocs = tender.AwardedTender?.Documents
+                    .Where(d => !awardedDocsToDelete.Contains(d.Id))
+                    .Count() ?? 0;
+                // Count new uploads
+                int newAwardedUploads = dto.UploadedFiles?.Count ?? 0;
+
+                if ((remainingAwardedDocs + newAwardedUploads) == 0)
+                {
+                    ModelState.AddModelError("", "You must upload at least one awarded tender document.");
+                    // Re-populate AwardedDocuments for the view
+                    dto.AwardedDocuments = tender.AwardedTender?.Documents
+                        .Where(d => !awardedDocsToDelete.Contains(d.Id))
+                        .Select(d => new TenderDocumentViewModel
+                        {
+                            Id = d.Id,
+                            FileName = d.FileName,
+                            SharePointPath = d.SharePointPath
+                        }).ToList() ?? new List<TenderDocumentViewModel>();
+                    return View("Edit", dto);
+                }
+            }
+
+            var sharePointService = new SharePointService(_configuration);
+
+            // Handle awarded document deletions
+            if (dto.AwardedDocumentsToDelete != null && dto.AwardedDocumentsToDelete.Any() && tender.AwardedTender != null)
+            {
+                var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.AwardedDocumentsToDelete.Contains(d.Id)).ToList();
+                foreach (var doc in docsToRemove)
+                {
+                    await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    _context.TenderDocuments.Remove(doc);
+                }
+            }
+
+            // Handle supporting document deletions
+            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
+            {
+                var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
+                foreach (var doc in docsToRemove)
+                {
+                    await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    _context.TenderDocuments.Remove(doc);
+                }
+            }
+
+            // --- Detect tender number change ---
+            var oldTenderNumber = tender.TenderNumber;
+            var newTenderNumber = dto.TenderNumber;
+            bool tenderNumberChanged = !string.Equals(oldTenderNumber, newTenderNumber, StringComparison.OrdinalIgnoreCase);
+
             tender.TenderType = dto.TenderType;
-            tender.TenderNumber = dto.TenderNumber;
+            tender.TenderNumber = newTenderNumber;
             tender.ClosingDate = dto.ClosingDate.Value;
             tender.ClosingTime = dto.ClosingTime;
             tender.Status = dto.Status;
             tender.Title = dto.Title;
             tender.Description = dto.Description;
 
-            var sharePointService = new SharePointService(_configuration);
+           
 
-            // Handle document deletions
-            // Handle document deletions
+            // --- RENAME SHAREPOINT FOLDER IF TENDER NUMBER CHANGED ---
+            if (tenderNumberChanged)
+            {
+                try
+                {
+                    await sharePointService.RenameTenderFolderAsync(oldTenderNumber, newTenderNumber);
+
+                    // Optional: update SharePointPath for all docs if folder in URL
+                    foreach (var doc in tender.Documents)
+                    {
+                        if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
+                        {
+                            doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
+                        }
+                    }
+                    if (tender.AwardedTender?.Documents != null)
+                    {
+                        foreach (var doc in tender.AwardedTender.Documents)
+                        {
+                            if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
+                            {
+                                doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log or show error as needed
+                    ModelState.AddModelError("", $"Failed to rename SharePoint folder: {ex.Message}");
+                    return View("Edit", dto);
+                }
+            }
+
+            // --- Document deletions as before ---
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
             {
                 if (dto.Status == "Awarded Tender" && tender.AwardedTender != null)
@@ -632,7 +753,6 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        // Delete from SharePoint
                         await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
                         _context.TenderDocuments.Remove(doc);
                     }
@@ -642,14 +762,13 @@ namespace SABC_Phase2.Controllers
                     var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
                     foreach (var doc in docsToRemove)
                     {
-                        // Delete from SharePoint
                         await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
                         _context.TenderDocuments.Remove(doc);
                     }
                 }
             }
 
-            // Handle new PDF uploads
+            // --- Document uploads as before ---
             if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
             {
                 if (dto.Status == "Awarded Tender")
@@ -681,7 +800,7 @@ namespace SABC_Phase2.Controllers
                                 tender.TenderNumber,
                                 stream,
                                 file.FileName,
-                                isAwarded: true // <-- Add this
+                                isAwarded: true
                             );
 
                             var newDoc = new TenderDocument
@@ -720,7 +839,7 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // AwardedTender update logic
+            // --- AwardedTender logic as before ---
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
                 if (tender.AwardedTender == null)
@@ -855,8 +974,13 @@ namespace SABC_Phase2.Controllers
             if (scheduledTender == null)
                 return NotFound();
 
+            // --- Detect tender number change ---
+            var oldTenderNumber = scheduledTender.TenderNumber;
+            var newTenderNumber = dto.TenderNumber;
+            bool tenderNumberChanged = !string.Equals(oldTenderNumber, newTenderNumber, StringComparison.OrdinalIgnoreCase);
+
             scheduledTender.TenderType = dto.TenderType;
-            scheduledTender.TenderNumber = dto.TenderNumber;
+            scheduledTender.TenderNumber = newTenderNumber;
             scheduledTender.ClosingDate = dto.ClosingDate.Value;
             scheduledTender.ClosingTime = dto.ClosingTime;
             scheduledTender.Status = dto.Status;
@@ -877,8 +1001,31 @@ namespace SABC_Phase2.Controllers
                 scheduledTender.ScheduledPublishDateTime = scheduledUtcInstant.ToDateTimeUtc();
             }
 
-            // Use your SharePointService for document management
             var sharePointService = new SharePointService(_configuration);
+
+            // --- RENAME SharePoint folder if TenderNumber changed ---
+            if (tenderNumberChanged)
+            {
+                try
+                {
+                    await sharePointService.RenameTenderFolderAsync(oldTenderNumber, newTenderNumber);
+
+                    // Also update document SharePointPath for all docs if folder in URL
+                    foreach (var doc in scheduledTender.Documents)
+                    {
+                        if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
+                        {
+                            doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Optionally: log or display error
+                    ModelState.AddModelError("", $"Failed to rename SharePoint folder: {ex.Message}");
+                    return View("EditScheduled", dto);
+                }
+            }
 
             // Handle deletion of documents:
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
