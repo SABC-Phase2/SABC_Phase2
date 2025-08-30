@@ -18,7 +18,7 @@
             <thead>
                 <tr>
                     <th>THUMBNAIL</th>
-                    <th>TITLE</th>
+                    <th>Tender Number</th>
                     <th>TENDER TYPE</th>
                     <th>DRAFT DATE <i class="fas fa-sort"></i></th>
                     <th>ACTION</th>
@@ -33,7 +33,26 @@
                             <td>
                                 <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                             </td>
-                            <td class="tender-title">@(!string.IsNullOrWhiteSpace(draft.Title) ? draft.Title : "(No Title)")</td>
+                            <td class="tender-title">
+                                @if (!string.IsNullOrWhiteSpace(draft.TenderNumber))
+                                {
+                                    <strong>@draft.TenderNumber</strong>
+                                    @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                    {
+                                        @(": " + draft.Title)
+                                    }
+                                }
+                                else
+                                {
+                                    <strong>(No Tender Number)</strong>
+                                    @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                    {
+                                        @(": " + draft.Title)
+                                    }
+                                }
+                            </td>
+
+
                             <td class="tender-type">@draft.TenderType</td>
                             <td class="tender-date">@draft.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>

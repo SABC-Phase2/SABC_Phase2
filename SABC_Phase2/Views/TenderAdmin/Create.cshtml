@@ -737,22 +737,20 @@
 
         // ---- Form AJAX submit logic ----
         doneBtn.addEventListener('click', function() {
-            // Prevent multiple submissions
-            if (doneBtn.classList.contains('loading')) {
-                return;
-            }
+                if (doneBtn.classList.contains('loading')) {
+            return;
+        }
 
-            // Add loading state
-            doneBtn.classList.add('loading');
-            doneBtn.innerHTML = 'Submitting<span class="loading-dots"></span>';
-            doneBtn.disabled = true;
+        doneBtn.classList.add('loading');
+        doneBtn.innerHTML = 'Submitting<span class="loading-dots"></span>';
+        doneBtn.disabled = true;
 
-            clearAllCustomErrors();
+        clearAllCustomErrors();
 
-            // VALIDATION SECTION
-            let errors = [];
-            let errorFields = [];
-            let errorTabs = [];
+        // VALIDATION SECTION (unchanged)
+        let errors = [];
+        let errorFields = [];
+        let errorTabs = [];
 
             // Only validate for publish and schedule, skip validation for draft
             if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
@@ -857,12 +855,11 @@
                 }
             }
 
-            // No errors (or draft): submit form
+                    // No errors (or draft): submit form
             var form = document.querySelector('form[asp-action="Create"]');
             if (!form) form = document.querySelector('form[action*="Create"]');
             if (!form) {
                 alert("Form not found!");
-                // Remove loading state if form not found
                 doneBtn.classList.remove('loading');
                 doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
                 doneBtn.disabled = false;
@@ -872,13 +869,38 @@
 
             // Remove any existing files from input (so we don't send duplicates)
             formData.delete('UploadedFiles');
-
-            // Append all files from selectedFiles
             selectedFiles.forEach(function(file) {
                 formData.append('UploadedFiles', file, file.name);
             });
 
-            // SCHEDULE LOGIC
+            // --- Inline Validation Re-render Helper ---
+            function handleHtmlValidationResponse(html) {
+                // Replace the entire form in .tab-container with the new form
+                // This ensures all validation spans (incl. server-side) are visible
+                let tempDiv = document.createElement("div");
+                tempDiv.innerHTML = html;
+                let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                if (!newForm) newForm = tempDiv.querySelector("form");
+                if (newForm) {
+                    document.querySelector('.tab-container').innerHTML = "";
+                    document.querySelector('.tab-container').appendChild(newForm);
+
+                    // Always switch back to details tab, since validation errors are most likely there
+                    if (typeof showTab === "function") showTab('details');
+                    // Optionally, autofocus the first field with error
+                    setTimeout(function() {
+                        let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
+                        if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 10);
+                } else {
+                    alert("Validation error: Could not update form.");
+                }
+                doneBtn.classList.remove('loading');
+                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                doneBtn.disabled = false;
+            }
+
+            // --- SCHEDULE LOGIC ---
             if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
                 let scheduledDate = document.getElementById('ScheduledDate').value;
                 let scheduledTime = document.getElementById('ScheduledTime').value;
@@ -890,32 +912,36 @@
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                    doneBtn.disabled = false;
+                .then(async response => {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        doneBtn.classList.remove('loading');
+                        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                        doneBtn.disabled = false;
 
-                    if (data.success) {
-                        document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
-                        var scheduledLink = document.getElementById('scheduledTendersLink');
-                        if (scheduledLink && data.scheduledTendersUrl) {
-                            scheduledLink.href = data.scheduledTendersUrl;
-                        } else if (scheduledLink) {
-                            scheduledLink.href = "/TenderAdmin/ScheduledIndex";
-                        }
-                        var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
-                        modal.show();
-                        document.getElementById('scheduledModalCloseBtn').onclick = function() {
-                            window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
+                        if (data.success) {
+                            document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
+                            var scheduledLink = document.getElementById('scheduledTendersLink');
+                            if (scheduledLink && data.scheduledTendersUrl) {
+                                scheduledLink.href = data.scheduledTendersUrl;
+                            } else if (scheduledLink) {
+                                scheduledLink.href = "/TenderAdmin/ScheduledIndex";
+                            }
+                            var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
+                            modal.show();
+                            document.getElementById('scheduledModalCloseBtn').onclick = function() {
+                                window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
+                            }
+                        } else {
+                            alert(data.error || "Failed to schedule tender.");
                         }
                     } else {
-                        alert("Failed to schedule tender.");
+                        const html = await response.text();
+                        handleHtmlValidationResponse(html);
                     }
                 })
                 .catch(error => {
-                    // Remove loading state on error
                     doneBtn.classList.remove('loading');
                     doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
                     doneBtn.disabled = false;
@@ -924,32 +950,36 @@
                 return;
             }
 
-            // PUBLISH LOGIC
+            // --- PUBLISH LOGIC ---
             if (currentTab === 'submit' && currentSubmitSubTab === 'publish') {
                 fetch(form.action, {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                    doneBtn.disabled = false;
+                .then(async response => {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        doneBtn.classList.remove('loading');
+                        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                        doneBtn.disabled = false;
 
-                    if (data.success) {
-                        document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
-                        var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
-                        modal.show();
-                        document.getElementById('modalCloseBtn').onclick = function() {
-                            window.location.href = "/TenderAdmin/Index";
+                        if (data.success) {
+                            document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
+                            var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
+                            modal.show();
+                            document.getElementById('modalCloseBtn').onclick = function() {
+                                window.location.href = "/TenderAdmin/Index";
+                            }
+                        } else {
+                            alert(data.error || "Failed to publish tender.");
                         }
                     } else {
-                        alert("Failed to publish tender.");
+                        const html = await response.text();
+                        handleHtmlValidationResponse(html);
                     }
                 })
                 .catch(error => {
-                    // Remove loading state on error
                     doneBtn.classList.remove('loading');
                     doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
                     doneBtn.disabled = false;
@@ -958,16 +988,17 @@
                 return;
             }
 
-            // DRAFT LOGIC
-            if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-                var draftUrl = '/TenderAdmin/SaveDraft';
-                fetch(draftUrl, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Remove loading state after response
+                   // --- DRAFT LOGIC ---
+        if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+            var draftUrl = '/TenderAdmin/SaveDraft';
+            fetch(draftUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
                     doneBtn.classList.remove('loading');
                     doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
                     doneBtn.disabled = false;
@@ -986,18 +1017,47 @@
                             window.location.href = data.draftIndexUrl || "/TenderAdmin/DraftIndex";
                         }
                     } else {
-                        alert("Failed to save draft.");
+                        alert(data.message || "Failed to save draft.");
                     }
-                })
-                .catch(error => {
-                    // Remove loading state on error
-                    doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                    doneBtn.disabled = false;
-                    alert("An error occurred while saving draft.");
-                });
-                return;
-            }
+                        } else {
+                   const html = await response.text();
+        let tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+
+        // Find the form in the returned HTML robustly
+        let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+        if (!newForm) newForm = tempDiv.querySelector("form");
+
+        // Replace the .tab-container contents with the new form or fallback to all HTML
+        if (newForm) {
+            document.querySelector('.tab-container').innerHTML = "";
+            document.querySelector('.tab-container').appendChild(newForm);
+        } else {
+            document.querySelector('.tab-container').innerHTML = html; // fallback
+        }
+
+        // Always switch to details tab since errors are likely there
+        if (typeof showTab === "function") showTab('details');
+
+        // Focus first error field
+        setTimeout(function() {
+            let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
+            if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 10);
+
+        doneBtn.classList.remove('loading');
+        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+        doneBtn.disabled = false;
+        }
+            })
+            .catch(error => {
+                doneBtn.classList.remove('loading');
+                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                doneBtn.disabled = false;
+                alert("An error occurred while saving draft.");
+            });
+            return;
+        }
         });
         });
     </script>

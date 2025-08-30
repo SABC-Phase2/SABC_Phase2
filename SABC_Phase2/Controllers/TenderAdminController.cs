@@ -71,6 +71,25 @@ namespace SABC_Phase2.Controllers
             if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
                 return Forbid();
 
+            // --- TENDER NUMBER UNIQUENESS VALIDATION ---
+            if (!string.IsNullOrWhiteSpace(model.TenderNumber))
+            {
+                var tenderNumber = model.TenderNumber.Trim();
+
+                bool existsInRegular = await _context.Tenders.AnyAsync(t => t.TenderNumber == tenderNumber);
+                bool existsInDraft = await _context.TenderAdminsDraft.AnyAsync(d => d.TenderNumber == tenderNumber);
+                bool existsInScheduled = await _context.ScheduledTenders.AnyAsync(s => s.TenderNumber == tenderNumber);
+
+                if (existsInRegular)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
+                else if (existsInScheduled)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
+            }
+
+            // If ModelState is invalid, return the View so inline errors display
+            if (!ModelState.IsValid)
+                return View(model);
+
             var sharePointService = new SharePointService(_configuration);
 
             // --- Scheduled Tender Logic ---
@@ -78,13 +97,11 @@ namespace SABC_Phase2.Controllers
             {
                 try
                 {
-                    // Combine date and time as South African local time
                     var scheduledLocal = model.ScheduledDate.Value.Date + model.ScheduledTime.Value;
                     var scheduledSaLocal = new NodaTime.LocalDateTime(
                         scheduledLocal.Year, scheduledLocal.Month, scheduledLocal.Day,
                         scheduledLocal.Hour, scheduledLocal.Minute, scheduledLocal.Second
                     );
-                    // Convert South African local time to UTC
                     var scheduledUtcInstant = _saTimeService.ConvertSaLocalToUtc(scheduledSaLocal);
                     var scheduledUtc = scheduledUtcInstant.ToDateTimeUtc();
 
@@ -102,7 +119,6 @@ namespace SABC_Phase2.Controllers
                         Documents = new List<ScheduledTenderDocument>()
                     };
 
-                    // SANITIZE tender number for SharePoint folder
                     var safeTenderFolder = SanitizeHelper.ToSharePointSafeFolderName(scheduledTender.TenderNumber);
 
                     if (model.UploadedFiles != null && model.UploadedFiles.Any())
@@ -113,7 +129,7 @@ namespace SABC_Phase2.Controllers
                             {
                                 using var stream = file.OpenReadStream();
                                 var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                                    safeTenderFolder, // Use sanitized
+                                    safeTenderFolder,
                                     stream,
                                     file.FileName);
 
@@ -121,7 +137,6 @@ namespace SABC_Phase2.Controllers
                                 {
                                     FileName = file.FileName,
                                     SharePointPath = sharePointUrl
-                                    // ScheduledTenderId will be filled after SaveChanges
                                 });
                             }
                         }
@@ -148,7 +163,6 @@ namespace SABC_Phase2.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // You can also use a logger here
                     Console.WriteLine($"Error scheduling tender: {ex}");
                     return Json(new
                     {
@@ -177,10 +191,8 @@ namespace SABC_Phase2.Controllers
                 AwardedTender = null
             };
 
-            // SANITIZE tender number for SharePoint folder
             var safeTenderFolder2 = SanitizeHelper.ToSharePointSafeFolderName(tender.TenderNumber);
 
-            // Handle new uploads first
             if (model.UploadedFiles != null && model.UploadedFiles.Any())
             {
                 foreach (var file in model.UploadedFiles)
@@ -189,21 +201,20 @@ namespace SABC_Phase2.Controllers
                     {
                         using var stream = file.OpenReadStream();
                         var sharePointUrl = await sharePointService.UploadDocumentAsync(
-                            safeTenderFolder2, // Use sanitized
+                            safeTenderFolder2,
                             stream,
                             file.FileName);
 
                         tender.Documents.Add(new TenderDocument
                         {
                             FileName = file.FileName,
-                            SharePointPath = sharePointUrl, // Save SharePoint URL
+                            SharePointPath = sharePointUrl,
                             TenderId = tender.Id
                         });
                     }
                 }
             }
 
-            // --- Copy PDFs from Draft if present and not already uploaded ---
             if (model.DraftId.HasValue)
             {
                 var draft = await _context.TenderAdminsDraft
@@ -214,14 +225,13 @@ namespace SABC_Phase2.Controllers
                 {
                     foreach (var draftDoc in draft.Documents)
                     {
-                        // Avoid duplicates if user re-uploaded the same file
                         if (!tender.Documents.Any(d => d.FileName == draftDoc.FileName))
                         {
                             tender.Documents.Add(new TenderDocument
                             {
                                 FileName = draftDoc.FileName,
                                 SharePointPath = draftDoc.SharePointPath,
-                                TenderId = tender.Id // will be set after SaveChanges
+                                TenderId = tender.Id
                             });
                         }
                     }
@@ -231,7 +241,6 @@ namespace SABC_Phase2.Controllers
             _context.Tenders.Add(tender);
             await _context.SaveChangesAsync();
 
-            // --- Draft Cleanup Logic ---
             if (model.DraftId.HasValue)
             {
                 var draft = await _context.TenderAdminsDraft
@@ -333,14 +342,46 @@ namespace SABC_Phase2.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveDraft()
+        public async Task<IActionResult> SaveDraft(TenderViewModel model)
         {
-            var form = Request.Form;
-            var files = Request.Form.Files;
+            Guid draftGuid = model.DraftId ?? Guid.Empty;
+            bool isNewDraft = draftGuid == Guid.Empty;
 
-            Guid draftGuid;
+            // Uniqueness check: If another draft (not this one) uses this number
+            if (!string.IsNullOrWhiteSpace(model.TenderNumber))
+            {
+                var tenderNumber = model.TenderNumber.Trim();
+
+                var existsInDraft = await _context.TenderAdminsDraft
+                    .AnyAsync(d => d.TenderNumber == tenderNumber && (isNewDraft || d.DraftId != draftGuid));
+                var existsInPublished = await _context.Tenders.AnyAsync(t => t.TenderNumber == tenderNumber);
+                var existsInScheduled = await _context.ScheduledTenders.AnyAsync(s => s.TenderNumber == tenderNumber);
+
+                if (existsInPublished)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
+                if (existsInDraft)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Draft Tender\".");
+                if (existsInScheduled)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
+            }
+
+            // *** Remove all required field errors except TenderNumber when saving as draft ***
+            // This block must run before the ModelState.IsValid check!
+            foreach (var key in ModelState.Keys.ToList())
+            {
+                if (key != nameof(model.TenderNumber) && ModelState[key].Errors.Count > 0)
+                {
+                    ModelState[key].Errors.Clear();
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View("Create", model); // Only the TenderNumber error will show
+            }
+
             TenderDraft draft = null;
-            if (Guid.TryParse(form["DraftId"], out draftGuid))
+            if (!isNewDraft)
             {
                 draft = await _context.TenderAdminsDraft
                     .Include(d => d.Documents)
@@ -365,16 +406,13 @@ namespace SABC_Phase2.Controllers
                 draft.LastModifiedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
             }
 
-            draft.TenderType = form["TenderType"];
-            draft.TenderNumber = form["TenderNumber"];
-            draft.Status = form["Status"];
-            draft.Title = form["Title"];
-            draft.Description = form["Description"];
-
-            if (DateTime.TryParse(form["ClosingDate"], out var closingDate))
-                draft.ClosingDate = closingDate;
-            if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
-                draft.ClosingTime = closingTime;
+            draft.TenderType = model.TenderType;
+            draft.TenderNumber = model.TenderNumber;
+            draft.Status = model.Status;
+            draft.Title = model.Title;
+            draft.Description = model.Description;
+            draft.ClosingDate = model.ClosingDate;
+            draft.ClosingTime = model.ClosingTime;
 
             // --- RENAME SharePoint folder if tender number changed and there are docs ---
             var newTenderNumber = draft.TenderNumber;
@@ -404,7 +442,7 @@ namespace SABC_Phase2.Controllers
             }
 
             // --- Handle Deletion of Draft Documents ---
-            var docsToDelete = form["DocumentsToDelete"];
+            var docsToDelete = Request.Form["DocumentsToDelete"];
             if (draft.Documents != null && docsToDelete.Count > 0)
             {
                 var idsToDelete = new HashSet<int>();
@@ -438,6 +476,7 @@ namespace SABC_Phase2.Controllers
             }
 
             // --- Handle Uploads ---
+            var files = Request.Form.Files;
             if (files != null && files.Count > 0)
             {
                 var sharePointService = new SharePointService(_configuration);
