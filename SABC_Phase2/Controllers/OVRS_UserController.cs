@@ -507,7 +507,12 @@ namespace SABC_Phase2.Controllers
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft( Guid? DraftId, int? LegacyUserId, int? TenderId, List<IFormFile> UploadedFiles, [FromForm] List<int> DocumentsToDelete) // <-- Accept this from the form!
+        public async Task<IActionResult> SaveTenderApplicationDraft(
+     Guid? DraftId,
+     int? LegacyUserId,
+     int? TenderId,
+     List<IFormFile> UploadedFiles,
+     [FromForm] List<int> DocumentsToDelete)
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -515,12 +520,28 @@ namespace SABC_Phase2.Controllers
             {
                 var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId.Value);
                 if (user != null)
-                ovrsUserId = user.Id;
+                    ovrsUserId = user.Id;
             }
 
             // Defensive: Ensure we have an OVRS_UserId
             if (!ovrsUserId.HasValue)
                 return Json(new { success = false, message = "Could not resolve user from LegacyUserId." });
+
+            // 2. Check if a submission already exists for this user and tender
+            if (TenderId.HasValue)
+            {
+                var alreadySubmitted = _context.Applied_For_Tenders
+                    .Any(a => a.OVRS_UserId == ovrsUserId && a.TenderId == TenderId.Value);
+                if (alreadySubmitted)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        alreadySubmitted = true,
+                        message = "You cannot create a draft for this tender because you have already created a submission for it."
+                    });
+                }
+            }
 
             // Draft object to persist.
             TenderApplicationDraft draft;
@@ -605,7 +626,6 @@ namespace SABC_Phase2.Controllers
                     }
                 }
             }
-
 
             // Commit all changes to the database; handle exceptions for enterprise robustness.
             try

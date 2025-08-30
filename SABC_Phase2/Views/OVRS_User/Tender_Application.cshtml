@@ -198,6 +198,28 @@
     </div>
 </div>
 
+<!-- Draft Blocked Modal -->
+<div id="draftBlockedModal" class="modal fade" tabindex="-1" aria-labelledby="draftBlockedModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="draftBlockedModalLabel" style="width:100%;text-align:center; color:#e11d48;">
+                    Draft Not Allowed
+                </h5>
+            </div>
+            <div class="modal-body">
+                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
+                <p style="font-size:1.15rem; font-weight:500; color:#e11d48; margin-top:12px;">
+                    You cannot create a draft for this tender because you have already created a submission for it.
+                </p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="draftBlockedModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="tenderClosedModal" class="modal fade" tabindex="-1" aria-labelledby="tenderClosedModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
@@ -412,7 +434,7 @@
         }
 
         // ------------------- Save Draft -------------------
-        function saveAsDraft(isAuto = false) {
+                function saveAsDraft(isAuto = false) {
             const draftBtn = document.getElementById("draftBtn");
             if (!isAuto) {
                 draftBtn.disabled = true;
@@ -422,61 +444,56 @@
 
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => formData.append("UploadedFiles", fileInfo.file));
-
             const draftIdField = form.querySelector("input[name='DraftId']");
             if (draftIdField && draftIdField.value) formData.append("DraftId", draftIdField.value);
 
-            let completed = false;
-            if (isAuto && window.event && window.event.type === "beforeunload") {
-                try {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open("POST", '/OVRS_User/SaveTenderApplicationDraft', false);
-                    xhr.send(formData);
-                    completed = true;
-                } catch (err) {
-                    console.error("Autosave failed:", err);
+            fetch('/OVRS_User/SaveTenderApplicationDraft', {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!isAuto) {
+                    draftBtn.disabled = false;
+                    draftBtn.querySelector('.btn-text').classList.remove('d-none');
+                    draftBtn.querySelector('.spinner-border').classList.add('d-none');
                 }
-            }
-
-            if (!completed) {
-                fetch('/OVRS_User/SaveTenderApplicationDraft', {
-                    method: "POST",
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
+                if (data.success) {
                     if (!isAuto) {
-                        draftBtn.disabled = false;
-                        draftBtn.querySelector('.btn-text').classList.remove('d-none');
-                        draftBtn.querySelector('.spinner-border').classList.add('d-none');
+                        const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
+                        showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
                     }
-                    if (data.success) {
-                        if (!isAuto) {
-                            const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
-                            // FIX: Always pass the drafts URL with the section and view
-                            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
-                        }
-                        if (data.draftId) {
-                            if (!draftIdField) {
-                                const input = document.createElement("input");
-                                input.type = "hidden";
-                                input.name = "DraftId";
-                                input.value = data.draftId;
-                                form.appendChild(input);
-                            } else draftIdField.value = data.draftId;
-                        }
-                    } else if (!isAuto) alert(data.message || "Failed to save draft.");
-                })
-                .catch(error => {
-                    if (!isAuto) {
-                        draftBtn.disabled = false;
-                        draftBtn.querySelector('.btn-text').classList.remove('d-none');
-                        draftBtn.querySelector('.spinner-border').classList.add('d-none');
-                        alert("Error saving draft.");
+                    if (data.draftId) {
+                        if (!draftIdField) {
+                            const input = document.createElement("input");
+                            input.type = "hidden";
+                            input.name = "DraftId";
+                            input.value = data.draftId;
+                            form.appendChild(input);
+                        } else draftIdField.value = data.draftId;
                     }
-                    console.error(error);
-                });
-            }
+                } else if (data.alreadySubmitted) {
+                    // Show the draft blocked modal
+                    const modal = document.getElementById('draftBlockedModal');
+                    modal.classList.add('show');
+                    modal.style.display = 'flex';
+                    document.getElementById('draftBlockedModalCloseBtn').onclick = function() {
+                        modal.classList.remove('show');
+                        modal.style.display = 'none';
+                    };
+                } else if (!isAuto) {
+                    alert(data.message || "Failed to save draft.");
+                }
+            })
+            .catch(error => {
+                if (!isAuto) {
+                    draftBtn.disabled = false;
+                    draftBtn.querySelector('.btn-text').classList.remove('d-none');
+                    draftBtn.querySelector('.spinner-border').classList.add('d-none');
+                    alert("Error saving draft.");
+                }
+                console.error(error);
+            });
         }
 
         // ------------------- Autosave on BeforeUnload -------------------

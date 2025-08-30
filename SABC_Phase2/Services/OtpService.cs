@@ -28,7 +28,11 @@ namespace SABC_Phase2.Services
         /// <returns>DateTime representing expiration time</returns>
         public DateTime GetOtpExpiration()
         {
-            return DateTime.UtcNow.AddMinutes(5);
+            var saTimeService = new SouthAfricanTimeService();
+            var saNow = saTimeService.GetCurrentSouthAfricanTime();
+            var saExpiry = saNow.PlusMinutes(5);
+            var utcExpiryInstant = saTimeService.ConvertSaLocalToUtc(saExpiry);
+            return utcExpiryInstant.ToDateTimeUtc();
         }
 
         /// <summary>
