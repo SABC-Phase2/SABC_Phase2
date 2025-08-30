@@ -402,6 +402,66 @@
     </div>
 </div>
 
+<!-- Cancelled Tender Modal -->
+<div class="modal fade" id="cancelledTenderModal" tabindex="-1" aria-labelledby="cancelledTenderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="cancelledTenderModalLabel">
+                    <!-- icon and title set in JS -->
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="cancelledTenderModalMessage" class="fw-bold"></p>
+                <p class="text-muted mb-3" id="cancelledTenderModalInfo"></p>
+                <p class="text-secondary small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    You can either delete this draft to clean up your drafts list, or keep it for your records.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="deleteCancelledDraftBtn">
+                    <i class="fas fa-trash-alt me-1"></i>Delete Draft
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Awarded Tender Modal -->
+<div class="modal fade" id="awardedTenderModal" tabindex="-1" aria-labelledby="awardedTenderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="awardedTenderModalLabel">
+                    <!-- icon and title set in JS -->
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="awardedTenderModalMessage" class="fw-bold"></p>
+                <p class="text-muted mb-3" id="awardedTenderModalInfo"></p>
+                <p class="text-secondary small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    You can either delete this draft to clean up your drafts list, or keep it for your records.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="deleteAwardedDraftBtn">
+                    <i class="fas fa-trash-alt me-1"></i>Delete Draft
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @functions {
     public string GetStatusClass(string status)
@@ -439,9 +499,14 @@
     }
 
     // Function to check if tender is closed
-    function isTenderClosed(status) {
-        const closedStatuses = ['closed tender', 'closed', 'cancelled tender', 'cancelled', 'awarded tender', 'awarded'];
-        return closedStatuses.includes((status || '').toLowerCase());
+     function isTenderClosed(status) {
+        return ['closed tender', 'closed'].includes((status || '').toLowerCase());
+    }
+    function isTenderCancelled(status) {
+        return ['cancelled tender', 'cancelled'].includes((status || '').toLowerCase());
+    }
+    function isTenderAwarded(status) {
+        return ['awarded tender', 'awarded'].includes((status || '').toLowerCase());
     }
 
     // Function to handle draft link clicks
@@ -456,29 +521,45 @@
         const closingTime = element.getAttribute('data-closing-time');
         const status = element.getAttribute('data-status');
 
-        console.log(`Clicking draft: ${tenderNumber}, Status: ${status}`);
+        if (isTenderClosed(status) || isTenderCancelled(status) || isTenderAwarded(status)) {
+            // Decide which modal to show and what info
+            let modalId, title, icon, message, statusText;
+            if (isTenderClosed(status)) {
+                modalId = 'closedTenderModal';
+                title = 'Tender Closed';
+                icon = 'fa-exclamation-triangle';
+                message = 'This tender is now closed and you cannot continue to edit this draft.';
+                statusText = 'Closed Tender';
+            } else if (isTenderCancelled(status)) {
+                modalId = 'cancelledTenderModal';
+                title = 'Tender Cancelled';
+                icon = 'fa-ban';
+                message = 'This tender has been cancelled and you cannot continue to edit this draft.';
+                statusText = 'Cancelled Tender';
+            } else if (isTenderAwarded(status)) {
+                modalId = 'awardedTenderModal';
+                title = 'Tender Awarded';
+                icon = 'fa-trophy';
+                message = 'This tender has been awarded and you cannot continue to edit this draft.';
+                statusText = 'Awarded Tender';
+            }
 
-        if (isTenderClosed(status)) {
-            // Show closed tender modal
-            currentClosedDraft = {
-                tenderId: tenderId,
-                draftId: draftId,
-                element: element
-            };
+            currentClosedDraft = { tenderId, draftId, element };
 
-            // Update modal content
-            document.getElementById('closedTenderInfo').innerHTML =
-                `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>` +
-                `<small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>` +
-                `<small class="text-danger">Status: ${status.toUpperCase()}</small>`;
+            // Populate modal content dynamically
+            document.getElementById(`${modalId}Label`).innerHTML =
+                `<i class="fas ${icon} me-2"></i>${title}`;
+            document.getElementById(`${modalId}Info`).innerHTML =
+                `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>
+                 <small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>
+                 <small class="text-danger">Status: ${statusText.toUpperCase()}</small>`;
+            document.getElementById(`${modalId}Message`).innerHTML = message;
 
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('closedTenderModal'));
+            const modal = new bootstrap.Modal(document.getElementById(modalId));
             modal.show();
         } else {
             // Tender is open, proceed normally
             const url = `@Url.Action("Tender_Application", "OVRS_User")?id=${tenderId}&draftId=${draftId}`;
-            console.log(`Redirecting to: ${url}`);
             window.location.href = url;
         }
     }
@@ -524,6 +605,47 @@
                 `${tenderNumber}: ${tenderTitle} (Closed Tender)`;
 
             // Show delete confirmation modal
+            setTimeout(() => {
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                deleteModal.show();
+            }, 300);
+        }
+    });
+
+     document.getElementById('deleteCancelledDraftBtn')?.addEventListener('click', function() {
+        if (currentClosedDraft) {
+            const closedModal = bootstrap.Modal.getInstance(document.getElementById('cancelledTenderModal'));
+            closedModal.hide();
+
+            currentDraftToDelete = {
+                id: currentClosedDraft.draftId,
+                element: currentClosedDraft.element.closest('.draft-carousel-item') || currentClosedDraft.element
+            };
+
+            document.getElementById('draftToDeleteInfo').textContent =
+                currentClosedDraft.element.getAttribute('data-tender-number') + ': ' +
+                currentClosedDraft.element.getAttribute('data-tender-title') + ' (Cancelled Tender)';
+            setTimeout(() => {
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                deleteModal.show();
+            }, 300);
+        }
+    });
+
+
+    document.getElementById('deleteAwardedDraftBtn')?.addEventListener('click', function() {
+        if (currentClosedDraft) {
+            const closedModal = bootstrap.Modal.getInstance(document.getElementById('awardedTenderModal'));
+            closedModal.hide();
+
+            currentDraftToDelete = {
+                id: currentClosedDraft.draftId,
+                element: currentClosedDraft.element.closest('.draft-carousel-item') || currentClosedDraft.element
+            };
+
+            document.getElementById('draftToDeleteInfo').textContent =
+                currentClosedDraft.element.getAttribute('data-tender-number') + ': ' +
+                currentClosedDraft.element.getAttribute('data-tender-title') + ' (Awarded Tender)';
             setTimeout(() => {
                 const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
                 deleteModal.show();

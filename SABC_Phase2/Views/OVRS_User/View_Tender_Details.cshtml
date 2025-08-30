@@ -9,6 +9,7 @@
     bool isAwarded = tenderStatus == "awarded tender";
     bool isCancelled = tenderStatus == "cancelled tender";
     bool showGreyButton = isClosed || isAwarded || isCancelled;
+    bool alreadyApplied = ViewBag.AlreadyApplied ?? false;
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -99,9 +100,18 @@
 <div class="tender-respond-row">
     @if (isOpen)
     {
-        @if (isAuthenticated)
+        if (isAuthenticated)
         {
-            <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+            if (alreadyApplied)
+            {
+                // Show a button that triggers the modal
+                <button type="button" class="respond-btn" onclick="showAlreadyAppliedModal()">Respond</button>
+            }
+            else
+            {
+                // Normal respond link
+                <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+            }
         }
         else
         {
@@ -133,6 +143,25 @@
     </div>
 </div>
 
+<!-- Already Applied Modal -->
+<div id="alreadyAppliedModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeAlreadyAppliedModal()">&times;</span>
+        <div class="modal-icon-container">
+            <div class="error-icon-circle">
+                <i class="fas fa-info-circle"></i>
+            </div>
+        </div>
+        <h2 class="modal-error-title">Already Applied</h2>
+        <p class="modal-message">You have already applied for this tender. Only one submission is allowed per tender.</p>
+        <div class="modal-btn-container">
+            <button class="modal-login-btn" onclick="closeAlreadyAppliedModal()">
+                <i class="fas fa-check"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     // Script to handle modal popup
     function showLoginModal() {
@@ -146,6 +175,19 @@
         var modal = document.getElementById("loginModal");
         if (event.target == modal) modal.style.display = "none";
     }
+
+        // Already Applied Modal logic
+    function showAlreadyAppliedModal() {
+        document.getElementById("alreadyAppliedModal").style.display = "block";
+    }
+    function closeAlreadyAppliedModal() {
+        document.getElementById("alreadyAppliedModal").style.display = "none";
+    }
+      // Optional: close on outside click
+    window.addEventListener('click', function(event) {
+        var modal = document.getElementById("alreadyAppliedModal");
+        if (event.target == modal) modal.style.display = "none";
+    });
 </script>
 
 <style>
