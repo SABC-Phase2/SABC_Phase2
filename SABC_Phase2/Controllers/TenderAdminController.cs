@@ -1028,6 +1028,33 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditScheduled(int id, TenderEditDto dto)
         {
+
+            // --- TENDER NUMBER UNIQUENESS VALIDATION ON EDIT SCHEDULED ---
+            if (!string.IsNullOrWhiteSpace(dto.TenderNumber))
+            {
+                var tenderNumber = dto.TenderNumber.Trim();
+
+                // Check other scheduled tenders except this one
+                bool existsInOtherScheduled = await _context.ScheduledTenders
+                    .AnyAsync(s => s.TenderNumber == tenderNumber && s.Id != id);
+
+                // Check drafts
+                bool existsInDraft = await _context.TenderAdminsDraft
+                    .AnyAsync(d => d.TenderNumber == tenderNumber);
+
+                // Check published
+                bool existsInPublished = await _context.Tenders
+                    .AnyAsync(t => t.TenderNumber == tenderNumber);
+
+                if (existsInOtherScheduled)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
+                if (existsInDraft)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Draft Tender\".");
+                if (existsInPublished)
+                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
+            }
+
+
             if (!ModelState.IsValid)
             {
                 return View("EditScheduled", dto);
