@@ -1499,22 +1499,25 @@ namespace SABC_Phase2.Controllers
                     return NotFound(new { success = false, message = "Scheduled tender not found" });
 
                 var sharePointService = new SharePointService(_configuration);
+
+                try
+                {
+                    // Delete the entire SharePoint folder for this scheduled tender
+                    await sharePointService.DeleteTenderFolderAsync(scheduledTender.TenderNumber);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue with DB cleanup
+                    Console.WriteLine($"Error deleting scheduled tender folder from SharePoint: {ex.Message}");
+                }
+
+                // Remove documents from database if any
                 if (scheduledTender.Documents != null && scheduledTender.Documents.Any())
                 {
-                    foreach (var document in scheduledTender.Documents)
-                    {
-                        try
-                        {
-                            await sharePointService.DeleteDocumentAsync(document.SharePointPath);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log error but continue
-                        }
-                    }
                     _context.ScheduledTendersDocuments.RemoveRange(scheduledTender.Documents);
                 }
 
+                // Remove the scheduled tender itself
                 _context.ScheduledTenders.Remove(scheduledTender);
                 await _context.SaveChangesAsync();
 
@@ -1522,6 +1525,7 @@ namespace SABC_Phase2.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error deleting scheduled tender: {ex}");
                 return StatusCode(500, new { success = false, message = "An error occurred while deleting the scheduled tender" });
             }
         }
