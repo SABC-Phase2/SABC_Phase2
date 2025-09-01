@@ -66,9 +66,10 @@
 
                 <div class="form-group">
                     <label asp-for="ClosingDate">Closing Date <span class="text-danger">*</span></label>
-                    <input asp-for="ClosingDate" type="date" class="form-control" />
+                    <input asp-for="ClosingDate" type="date" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     <span asp-validation-for="ClosingDate" class="text-danger"></span>
                 </div>
+
 
                 <div class="form-group">
                     <label asp-for="ClosingTime">Closing Time <span class="text-danger">*</span></label>
@@ -202,7 +203,11 @@
 
 <div class="action-buttons">
     <button type="button" id="cancelBtn" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "Tender")'">Cancel</button>
-    <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">Done <span class="arrow-icon"></span></button>
+    <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">
+        <span class="btn-text">Done</span>
+        <span class="arrow-icon"></span>
+        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+    </button>
     @* <button type="button" id="continueBtn" class="action-btn preview-btn" onclick="goToSubmitTab()">Continue</button> *@
     <button type="button" id="continueBtn" class="action-btn preview-btn">Continue</button>
 </div>
@@ -306,6 +311,26 @@
     <script>
                document.addEventListener('DOMContentLoaded', function () {
 
+
+        const closingDateInput = document.querySelector('input[name="ClosingDate"]');
+        if (closingDateInput) {
+            // Set min attribute on load
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const minDate = `${yyyy}-${mm}-${dd}`;
+            closingDateInput.setAttribute('min', minDate);
+
+            // Validate on change
+            closingDateInput.addEventListener('change', function () {
+                if (this.value < minDate) {
+                    this.value = minDate;
+                    // Optionally show a validation error
+                    alert('Closing date cannot be before today.');
+                }
+            });
+        }
 
                             document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
                 btn.addEventListener('click', function() {
@@ -741,8 +766,11 @@
             return;
         }
 
+        // In your submitForm() or doneBtn click handler:
         doneBtn.classList.add('loading');
-        doneBtn.innerHTML = 'Submitting<span class="loading-dots"></span>';
+        doneBtn.querySelector('.btn-text').textContent = 'Submitting';
+        doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.remove('d-none');
         doneBtn.disabled = true;
 
         clearAllCustomErrors();
@@ -809,12 +837,19 @@
 
                 // Show all errors next to their fields
                 if (errors.length > 0) {
+                   
                     // Remove loading state if validation fails
-                    doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                   doneBtn.classList.remove('loading');
+
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
                     doneBtn.disabled = false;
 
-                    errors.forEach(function(err) {
+                            errors.forEach(function(err) {
                         showFieldError(err.field, err.message, err.tab);
                     });
                     // Switch to first errored tab and focus field
@@ -841,12 +876,20 @@
                 ].some(value => value);
 
                 if (!hasContent) {
-                    // Remove loading state if validation fails
-                    doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                    doneBtn.disabled = false;
+           // When loading is done (after response/error):
 
-                    var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
+        doneBtn.classList.remove('loading');
+
+        doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+        doneBtn.querySelector('.arrow-icon').style.display = '';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+        doneBtn.disabled = false;
+
+
+                            var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
                     modal.show();
                     document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
                         modal.hide();
@@ -860,10 +903,19 @@
             if (!form) form = document.querySelector('form[action*="Create"]');
             if (!form) {
                 alert("Form not found!");
+                                // Remove loading state if form not found
+
                 doneBtn.classList.remove('loading');
-                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+
+                doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                        doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
                 doneBtn.disabled = false;
-                return;
+
+                        return;
             }
             var formData = new FormData(form);
 
@@ -916,11 +968,20 @@
                     const contentType = response.headers.get("content-type");
                     if (contentType && contentType.includes("application/json")) {
                         const data = await response.json();
-                        doneBtn.classList.remove('loading');
-                        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                        doneBtn.disabled = false;
+                    // Remove loading state after response
 
-                        if (data.success) {
+                    doneBtn.classList.remove('loading');
+
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    doneBtn.disabled = false;
+
+
+                                if (data.success) {
                             document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
                             var scheduledLink = document.getElementById('scheduledTendersLink');
                             if (scheduledLink && data.scheduledTendersUrl) {
@@ -942,8 +1003,11 @@
                     }
                 })
                 .catch(error => {
+                                  // Remove loading state after response
                     doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
                     doneBtn.disabled = false;
                     alert("An error occurred while scheduling.");
                 });
@@ -960,9 +1024,12 @@
                     const contentType = response.headers.get("content-type");
                     if (contentType && contentType.includes("application/json")) {
                         const data = await response.json();
-                        doneBtn.classList.remove('loading');
-                        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                        doneBtn.disabled = false;
+                                      // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
 
                         if (data.success) {
                             document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
@@ -980,15 +1047,18 @@
                     }
                 })
                 .catch(error => {
+                                 // Remove loading state after response
                     doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
                     doneBtn.disabled = false;
                     alert("An error occurred while publishing.");
                 });
                 return;
             }
 
-                   // --- DRAFT LOGIC ---
+        // --- DRAFT LOGIC ---
         if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
             var draftUrl = '/TenderAdmin/SaveDraft';
             fetch(draftUrl, {
@@ -999,8 +1069,11 @@
                 const contentType = response.headers.get("content-type");
                 if (contentType && contentType.includes("application/json")) {
                     const data = await response.json();
+                                  // Remove loading state after response
                     doneBtn.classList.remove('loading');
-                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
                     doneBtn.disabled = false;
 
                     if (data.success) {
@@ -1019,43 +1092,58 @@
                     } else {
                         alert(data.message || "Failed to save draft.");
                     }
-                        } else {
-                   const html = await response.text();
-        let tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
+                } else {
+                    // Handle HTML validation response (tender number uniqueness errors)
+                    const html = await response.text();
+                    let tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = html;
 
-        // Find the form in the returned HTML robustly
-        let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
-        if (!newForm) newForm = tempDiv.querySelector("form");
+                    // Find the form in the returned HTML
+                    let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                    if (!newForm) newForm = tempDiv.querySelector("form");
 
-        // Replace the .tab-container contents with the new form or fallback to all HTML
-        if (newForm) {
-            document.querySelector('.tab-container').innerHTML = "";
-            document.querySelector('.tab-container').appendChild(newForm);
-        } else {
-            document.querySelector('.tab-container').innerHTML = html; // fallback
-        }
+                    // Replace the .tab-container contents with the new form
+                    if (newForm) {
+                        document.querySelector('.tab-container').innerHTML = "";
+                        document.querySelector('.tab-container').appendChild(newForm);
 
-        // Always switch to details tab since errors are likely there
-        if (typeof showTab === "function") showTab('details');
+                        // Reinitialize any event handlers that were lost
+                        initializeFormHandlers();
+                    } else {
+                        document.querySelector('.tab-container').innerHTML = html;
+                    }
 
-        // Focus first error field
-        setTimeout(function() {
-            let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
-            if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 10);
+                    // Always switch to details tab since tender number error is there
+                    if (typeof showTab === "function") showTab('details');
 
-        doneBtn.classList.remove('loading');
-        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-        doneBtn.disabled = false;
-        }
+                    // Focus the tender number field with error
+                    setTimeout(function() {
+                        let tenderNumberField = document.querySelector('input[name="TenderNumber"]');
+                        if (tenderNumberField) {
+                            tenderNumberField.scrollIntoView({ behavior: "smooth", block: "center" });
+                            tenderNumberField.focus();
+                        }
+                    }, 10);
+
+                                 // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+                }
             })
-            .catch(error => {
-                doneBtn.classList.remove('loading');
-                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                doneBtn.disabled = false;
-                alert("An error occurred while saving draft.");
-            });
+        .catch(error => {
+                          // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+            console.error('Draft save error:', error);
+            // Optionally: show a non-intrusive toast instead of alert
+        });
+
             return;
         }
         });
@@ -1434,12 +1522,38 @@
         color: white;
         border: 1.5px solid #1a7f37;
         box-shadow: 0 10px 28px -6px rgba(34,197,94,0.28), 0 4px 12px rgba(0,0,0,0.12);
+        min-width: 180px; /* Ensures width stays fixed during loading */
+        height: 52px;
+        line-height: 24px;
     }
 
         .continue-btn:hover {
             background-color: #166534;
             box-shadow: 0 16px 40px -8px rgba(34,197,94,0.32), 0 6px 16px rgba(0,0,0,0.16);
         }
+
+        .continue-btn .spinner-border {
+            margin-left: 8px;
+            color: #fff;
+            width: 1.2rem;
+            height: 1.2rem;
+            vertical-align: middle;
+            display: inline-block;
+        }
+
+        .continue-btn.loading {
+            background-color: #9ca3af !important;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+            .continue-btn.loading .arrow-icon {
+                display: none;
+            }
+
+            .continue-btn.loading .spinner-border {
+                display: inline-block;
+            }
 
     .arrow-icon {
         display: inline-block;

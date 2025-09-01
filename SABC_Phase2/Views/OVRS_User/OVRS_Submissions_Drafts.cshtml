@@ -224,20 +224,20 @@
             </div>
 
             <!-- List View (hidden by default) -->
+            @* Add delete button to each draft row in the list view *@
             <div class="draft-list-view" id="draftListView" style="display: none;">
                 @if (pagedDrafts != null && pagedDrafts.Any())
                 {
                     foreach (var draft in pagedDrafts)
                     {
-                        <a href="#"
-                           class="draft-list-row"
-                           data-tender-id="@draft.TenderId"
-                           data-draft-id="@draft.DraftId"
-                           data-tender-number="@draft.TenderNumber"
-                           data-tender-title="@draft.TenderTitle"
-                           data-closing-date="@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")"
-                           data-closing-time="@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")"
-                           data-status="@(draft.Status?.ToLowerInvariant() ?? "draft")">
+                        <div class="draft-list-row"
+                             data-tender-id="@draft.TenderId"
+                             data-draft-id="@draft.DraftId"
+                             data-tender-number="@draft.TenderNumber"
+                             data-tender-title="@draft.TenderTitle"
+                             data-closing-date="@(draft.ClosingDate?.ToString("dd MMM yyyy") ?? "-")"
+                             data-closing-time="@(draft.ClosingTime.HasValue? draft.ClosingTime.Value.ToString(@"hh\:mm") : "-")"
+                             data-status="@(draft.Status?.ToLowerInvariant() ?? "draft")">
                             <div class="draft-list-logo">
                                 <img src="~/lib/Images/cropped_logoblack.png" alt="SABC Logo">
                             </div>
@@ -263,7 +263,10 @@
                                     </span>
                                 </div>
                             </div>
-                        </a>
+                            <button class="draft-delete-btn-list" title="Delete Draft" style="margin-left:auto;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     }
                 }
                 else
@@ -273,6 +276,8 @@
                     </div>
                 }
             </div>
+
+
             @* Move pagination bar OUTSIDE of .draft-list-view, but still inside .drafts-card *@
             @if (draftTotalPages > 1)
             {
@@ -402,13 +407,14 @@
     </div>
 </div>
 
+
 <!-- Cancelled Tender Modal -->
 <div class="modal fade" id="cancelledTenderModal" tabindex="-1" aria-labelledby="cancelledTenderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="cancelledTenderModalLabel">
-                    <!-- icon and title set in JS -->
+                    <i class="fas fa-exclamation-triangle me-2"></i>Tender Cancelled
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -438,7 +444,7 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="awardedTenderModalLabel">
-                    <!-- icon and title set in JS -->
+                    <i class="fas fa-exclamation-triangle me-2"></i>Tender Awarder
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -461,6 +467,7 @@
         </div>
     </div>
 </div>
+
 
 
 @functions {
@@ -488,18 +495,17 @@
 
 
 <script>
-    // Store the current draft to be deleted
-    let currentDraftToDelete = null;
-    let currentClosedDraft = null;
+        // Store the current draft to be deleted
+        let currentDraftToDelete = null;
+        let currentClosedDraft = null;
 
-    // Helper to get query parameter
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
-    }
+        // Helper to get query parameter
+        function getQueryParam(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
 
-    // Function to check if tender is closed
-     function isTenderClosed(status) {
+    function isTenderClosed(status) {
         return ['closed tender', 'closed'].includes((status || '').toLowerCase());
     }
     function isTenderCancelled(status) {
@@ -509,110 +515,101 @@
         return ['awarded tender', 'awarded'].includes((status || '').toLowerCase());
     }
 
-    // Function to handle draft link clicks
-    function handleDraftClick(e, element) {
-        e.preventDefault();
+        // Function to handle draft link clicks
+        function handleDraftClick(e, element) {
+            e.preventDefault();
 
-        const tenderId = element.getAttribute('data-tender-id');
-        const draftId = element.getAttribute('data-draft-id');
-        const tenderNumber = element.getAttribute('data-tender-number');
-        const tenderTitle = element.getAttribute('data-tender-title');
-        const closingDate = element.getAttribute('data-closing-date');
-        const closingTime = element.getAttribute('data-closing-time');
-        const status = element.getAttribute('data-status');
+            const tenderId = element.getAttribute('data-tender-id');
+            const draftId = element.getAttribute('data-draft-id');
+            const tenderNumber = element.getAttribute('data-tender-number');
+            const tenderTitle = element.getAttribute('data-tender-title');
+            const closingDate = element.getAttribute('data-closing-date');
+            const closingTime = element.getAttribute('data-closing-time');
+            const status = element.getAttribute('data-status');
 
-        if (isTenderClosed(status) || isTenderCancelled(status) || isTenderAwarded(status)) {
-            // Decide which modal to show and what info
-            let modalId, title, icon, message, statusText;
-            if (isTenderClosed(status)) {
-                modalId = 'closedTenderModal';
-                title = 'Tender Closed';
-                icon = 'fa-exclamation-triangle';
-                message = 'This tender is now closed and you cannot continue to edit this draft.';
-                statusText = 'Closed Tender';
-            } else if (isTenderCancelled(status)) {
-                modalId = 'cancelledTenderModal';
-                title = 'Tender Cancelled';
-                icon = 'fa-ban';
-                message = 'This tender has been cancelled and you cannot continue to edit this draft.';
-                statusText = 'Cancelled Tender';
-            } else if (isTenderAwarded(status)) {
-                modalId = 'awardedTenderModal';
-                title = 'Tender Awarded';
-                icon = 'fa-trophy';
-                message = 'This tender has been awarded and you cannot continue to edit this draft.';
-                statusText = 'Awarded Tender';
+            console.log(`Clicking draft: ${tenderNumber}, Status: ${status}`);
+
+      if (isTenderClosed(status)) {
+        // Show closed tender modal
+        currentClosedDraft = { tenderId, draftId, element };
+        document.getElementById('closedTenderInfo').innerHTML =
+            `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>` +
+            `<small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>` +
+            `<small class="text-danger">Status: ${status.toUpperCase()}</small>`;
+        const modal = new bootstrap.Modal(document.getElementById('closedTenderModal'));
+        modal.show();
+    } else if (isTenderCancelled(status)) {
+        currentClosedDraft = { tenderId, draftId, element };
+        document.getElementById('cancelledTenderModalInfo').innerHTML =
+            `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>` +
+            `<small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>` +
+            `<small class="text-danger">Status: ${status.toUpperCase()}</small>`;
+        const modal = new bootstrap.Modal(document.getElementById('cancelledTenderModal'));
+        modal.show();
+    } else if (isTenderAwarded(status)) {
+        currentClosedDraft = { tenderId, draftId, element };
+        document.getElementById('awardedTenderModalInfo').innerHTML =
+            `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>` +
+            `<small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>` +
+            `<small class="text-danger">Status: ${status.toUpperCase()}</small>`;
+        const modal = new bootstrap.Modal(document.getElementById('awardedTenderModal'));
+        modal.show();
+    } else {
+        // Tender is open, proceed normally
+        const url = `@Url.Action("Tender_Application", "OVRS_User")?id=${tenderId}&draftId=${draftId}`;
+        window.location.href = url;
+    }
+        }
+
+        // Initialize draft click handlers
+        function initializeDraftClickHandlers() {
+            // Handle grid view clicks
+            document.querySelectorAll('.draft-tile-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    handleDraftClick(e, this);
+                });
+            });
+
+            // Handle list view clicks
+            document.querySelectorAll('.draft-list-row').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    handleDraftClick(e, this);
+                });
+            });
+        }
+
+        // Handle delete from closed tender modal
+        document.getElementById('deleteClosedDraftBtn')?.addEventListener('click', function() {
+            if (currentClosedDraft) {
+                // Hide closed tender modal first
+                const closedModal = bootstrap.Modal.getInstance(document.getElementById('closedTenderModal'));
+                closedModal.hide();
+
+                // Set up for regular delete flow
+                const draftCard = currentClosedDraft.element.querySelector('.draft-tile-card') ||
+                                 currentClosedDraft.element.querySelector('.draft-list-details');
+
+                const tenderNumber = currentClosedDraft.element.getAttribute('data-tender-number');
+                const tenderTitle = currentClosedDraft.element.getAttribute('data-tender-title');
+
+                currentDraftToDelete = {
+                    id: currentClosedDraft.draftId,
+                    element: currentClosedDraft.element.closest('.draft-carousel-item') || currentClosedDraft.element
+                };
+
+                // Update delete modal content
+                document.getElementById('draftToDeleteInfo').textContent =
+                    `${tenderNumber}: ${tenderTitle} (Closed Tender)`;
+
+                // Show delete confirmation modal
+                setTimeout(() => {
+                    const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                    deleteModal.show();
+                }, 300);
             }
-
-            currentClosedDraft = { tenderId, draftId, element };
-
-            // Populate modal content dynamically
-            document.getElementById(`${modalId}Label`).innerHTML =
-                `<i class="fas ${icon} me-2"></i>${title}`;
-            document.getElementById(`${modalId}Info`).innerHTML =
-                `<strong>${tenderNumber}</strong>: ${tenderTitle}<br/>
-                 <small class="text-muted">Closing Date: ${closingDate} at ${closingTime}</small><br/>
-                 <small class="text-danger">Status: ${statusText.toUpperCase()}</small>`;
-            document.getElementById(`${modalId}Message`).innerHTML = message;
-
-            const modal = new bootstrap.Modal(document.getElementById(modalId));
-            modal.show();
-        } else {
-            // Tender is open, proceed normally
-            const url = `@Url.Action("Tender_Application", "OVRS_User")?id=${tenderId}&draftId=${draftId}`;
-            window.location.href = url;
-        }
-    }
-
-    // Initialize draft click handlers
-    function initializeDraftClickHandlers() {
-        // Handle grid view clicks
-        document.querySelectorAll('.draft-tile-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                handleDraftClick(e, this);
-            });
         });
 
-        // Handle list view clicks
-        document.querySelectorAll('.draft-list-row').forEach(link => {
-            link.addEventListener('click', function(e) {
-                handleDraftClick(e, this);
-            });
-        });
-    }
-
-    // Handle delete from closed tender modal
-    document.getElementById('deleteClosedDraftBtn')?.addEventListener('click', function() {
-        if (currentClosedDraft) {
-            // Hide closed tender modal first
-            const closedModal = bootstrap.Modal.getInstance(document.getElementById('closedTenderModal'));
-            closedModal.hide();
-
-            // Set up for regular delete flow
-            const draftCard = currentClosedDraft.element.querySelector('.draft-tile-card') ||
-                             currentClosedDraft.element.querySelector('.draft-list-details');
-
-            const tenderNumber = currentClosedDraft.element.getAttribute('data-tender-number');
-            const tenderTitle = currentClosedDraft.element.getAttribute('data-tender-title');
-
-            currentDraftToDelete = {
-                id: currentClosedDraft.draftId,
-                element: currentClosedDraft.element.closest('.draft-carousel-item') || currentClosedDraft.element
-            };
-
-            // Update delete modal content
-            document.getElementById('draftToDeleteInfo').textContent =
-                `${tenderNumber}: ${tenderTitle} (Closed Tender)`;
-
-            // Show delete confirmation modal
-            setTimeout(() => {
-                const deleteModal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
-                deleteModal.show();
-            }, 300);
-        }
-    });
-
-     document.getElementById('deleteCancelledDraftBtn')?.addEventListener('click', function() {
+    document.getElementById('deleteCancelledDraftBtn')?.addEventListener('click', function() {
         if (currentClosedDraft) {
             const closedModal = bootstrap.Modal.getInstance(document.getElementById('cancelledTenderModal'));
             closedModal.hide();
@@ -632,8 +629,7 @@
         }
     });
 
-
-    document.getElementById('deleteAwardedDraftBtn')?.addEventListener('click', function() {
+        document.getElementById('deleteAwardedDraftBtn')?.addEventListener('click', function() {
         if (currentClosedDraft) {
             const closedModal = bootstrap.Modal.getInstance(document.getElementById('awardedTenderModal'));
             closedModal.hide();
@@ -653,339 +649,424 @@
         }
     });
 
-    // Section toggling logic
-    function openSection(section) {
-        const draftsCard = document.getElementById('draftsCard');
-        const draftsArrow = document.getElementById('draftsArrow');
-        const submissionsCard = document.getElementById('submissionCard');
-        const submissionsArrow = document.getElementById('toggleArrow');
+        // Section toggling logic
+        function openSection(section) {
+            const draftsCard = document.getElementById('draftsCard');
+            const draftsArrow = document.getElementById('draftsArrow');
+            const submissionsCard = document.getElementById('submissionCard');
+            const submissionsArrow = document.getElementById('toggleArrow');
 
-        if (section === 'drafts') {
-            draftsCard.style.display = 'block';
-            draftsArrow.style.transform = 'rotate(180deg)';
-            submissionsCard.style.display = 'none';
-            submissionsArrow.style.transform = 'rotate(0deg)';
-        } else {
-            submissionsCard.style.display = 'block';
-            submissionsArrow.style.transform = 'rotate(180deg)';
-            draftsCard.style.display = 'none';
-            draftsArrow.style.transform = 'rotate(0deg)';
-        }
-    }
-
-    // Initialize toggle functionality
-    function setupToggle(toggleId, cardId, arrowId) {
-        const toggle = document.getElementById(toggleId);
-        const card = document.getElementById(cardId);
-        const arrow = document.getElementById(arrowId);
-
-        if (toggle && card && arrow) {
-            toggle.addEventListener('click', function() {
-                const isOpen = card.style.display === 'block';
-                card.style.display = isOpen ? 'none' : 'block';
-                arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-            });
-        }
-    }
-
-    // Carousel functionality
-    const carousel = {
-        currentSlide: 0,
-        itemsPerPage: 4,
-        totalSlides: 0,
-
-        init: function() {
-            const carouselElement = document.getElementById('draftGridView');
-            if (!carouselElement) return;
-
-            this.totalSlides = carouselElement.querySelectorAll('.draft-carousel-item').length;
-            this.updateControls();
-        },
-
-        move: function(direction) {
-            this.currentSlide += direction;
-
-            // Boundary checks with no wrap-around
-            if (this.currentSlide < 0) {
-                this.currentSlide = 0;
-            } else if (this.currentSlide * this.itemsPerPage >= this.totalSlides - this.itemsPerPage) {
-                this.currentSlide = Math.floor((this.totalSlides - 1) / this.itemsPerPage);
-            }
-
-            this.updatePosition();
-            this.updateControls();
-        },
-
-        updatePosition: function() {
-            const carouselElement = document.getElementById('draftGridView');
-            if (!carouselElement) return;
-
-            const itemWidth = 100 / this.itemsPerPage;
-            const transformValue = -this.currentSlide * itemWidth;
-            carouselElement.style.transform = `translateX(${transformValue}%)`;
-        },
-
-        updateControls: function() {
-            const prevBtn = document.querySelector('.carousel-arrow.prev');
-            const nextBtn = document.querySelector('.carousel-arrow.next');
-
-            if (prevBtn) {
-                prevBtn.style.visibility = this.currentSlide === 0 ? 'hidden' : 'visible';
-            }
-            if (nextBtn) {
-                nextBtn.style.visibility = this.currentSlide >= Math.floor((this.totalSlides - 1) / this.itemsPerPage) ? 'hidden' : 'visible';
-            }
-        }
-    };
-
-    // View toggle functionality
-    function setupViewToggle() {
-        const gridViewBtn = document.getElementById('gridViewBtn');
-        const listViewBtn = document.getElementById('listViewBtn');
-        const draftGridView = document.getElementById('draftGridView');
-        const draftListView = document.getElementById('draftListView');
-        const carouselArrows = document.querySelectorAll('.carousel-arrow');
-
-        function updatePaginationVisibility() {
-            const pagination = document.querySelector('.draft-list-pagination');
-            if (pagination) {
-                pagination.style.display = (draftListView.style.display !== 'none') ? 'flex' : 'none';
-            }
-        }
-
-        if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
-            // Show grid view by default
-            gridViewBtn.classList.add('active');
-            listViewBtn.classList.remove('active');
-            draftGridView.style.display = 'flex';
-            draftListView.style.display = 'none';
-
-            carouselArrows.forEach(arrow => {
-                arrow.style.display = 'flex';
-            });
-            updatePaginationVisibility();
-
-            gridViewBtn.addEventListener('click', function() {
-                gridViewBtn.classList.add('active');
-                listViewBtn.classList.remove('active');
-                draftGridView.style.display = 'flex';
-                draftListView.style.display = 'none';
-                carouselArrows.forEach(arrow => {
-                    arrow.style.display = 'flex';
-                });
-                carousel.init();
-                updatePaginationVisibility();
-                // Re-initialize click handlers when switching views
-                initializeDraftClickHandlers();
-            });
-
-            listViewBtn.addEventListener('click', function() {
-                listViewBtn.classList.add('active');
-                gridViewBtn.classList.remove('active');
-                draftGridView.style.display = 'none';
-                draftListView.style.display = 'block';
-                carouselArrows.forEach(arrow => {
-                    arrow.style.display = 'none';
-                });
-                updatePaginationVisibility();
-                // Re-initialize click handlers when switching views
-                initializeDraftClickHandlers();
-            });
-        }
-    }
-
-    // Function to initialize delete functionality
-    function initializeDraftDelete() {
-        // Add delete button to each draft card
-        document.querySelectorAll('.draft-carousel-item').forEach(item => {
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'draft-delete-btn';
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-            deleteBtn.style.display = 'none';
-
-            // Add click event to show modal
-            deleteBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const draftCard = this.closest('.draft-tile-card');
-                const tenderNumber = draftCard.querySelector('.draft-tender-number').textContent;
-                const tenderTitle = draftCard.querySelector('.draft-tender-title').textContent;
-
-                // Store the draft ID from data attribute
-                const draftId = draftCard.getAttribute('data-draft-id');
-                currentDraftToDelete = {
-                    id: draftId,
-                    element: item
-                };
-
-                // Update modal content
-                document.getElementById('draftToDeleteInfo').textContent =
-                    `${tenderNumber}: ${tenderTitle}`;
-
-                // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
-                modal.show();
-            });
-
-            item.querySelector('.draft-tile-card').style.position = 'relative';
-            item.querySelector('.draft-tile-card').appendChild(deleteBtn);
-        });
-
-        // Add hover events to show/hide delete button
-        document.querySelectorAll('.draft-tile-card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                const deleteBtn = this.querySelector('.draft-delete-btn');
-                if (deleteBtn) deleteBtn.style.display = 'block';
-            });
-
-            card.addEventListener('mouseleave', function() {
-                const deleteBtn = this.querySelector('.draft-delete-btn');
-                if (deleteBtn) deleteBtn.style.display = 'none';
-            });
-        });
-
-        // Handle the actual deletion when confirmed
-        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-            if (currentDraftToDelete) {
-                deleteDraft(currentDraftToDelete.id, currentDraftToDelete.element);
-            }
-        });
-    }
-
-    function showToast(message, type = 'info') {
-        const toastEl = document.getElementById('draftToast');
-        const toastMessage = document.getElementById('draftToastMessage');
-
-        // Set message and type (Bootstrap contextual colors)
-        toastMessage.textContent = message;
-        toastEl.className = `toast align-items-center text-bg-${type} border-0`;
-
-        const toast = new bootstrap.Toast(toastEl);
-        toast.show();
-    }
-
-    // Function to handle AJAX deletion
-    function deleteDraft(draftId, element) {
-        // Show loading state
-        const deleteBtn = document.getElementById('confirmDeleteBtn');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
-        deleteBtn.disabled = true;
-
-        // AJAX call to delete the draft
-        fetch('@Url.Action("DeleteDraft", "OVRS_User")', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({ draftId: draftId })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Remove the draft element from the DOM
-                element.remove();
-
-                // Update counts
-                updateDraftCounts(-1);
-
-                // Update carousel after deletion
-                carousel.totalSlides--;
-                carousel.updateControls();
-
-                // Show success message
-                showToast('Draft deleted successfully', 'success');
+            if (section === 'drafts') {
+                draftsCard.style.display = 'block';
+                draftsArrow.style.transform = 'rotate(180deg)';
+                submissionsCard.style.display = 'none';
+                submissionsArrow.style.transform = 'rotate(0deg)';
             } else {
-                throw new Error(data.message || 'Failed to delete draft');
+                submissionsCard.style.display = 'block';
+                submissionsArrow.style.transform = 'rotate(180deg)';
+                draftsCard.style.display = 'none';
+                draftsArrow.style.transform = 'rotate(0deg)';
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error deleting draft: ' + error.message, 'error');
-        })
-        .finally(() => {
-            // Hide modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteDraftModal'));
-            modal.hide();
-
-            // Reset button state
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-            currentDraftToDelete = null;
-            currentClosedDraft = null;
-        });
-    }
-
-    // Function to update draft counts after deletion
-    function updateDraftCounts(change) {
-        // Update the main drafts count
-        const draftsTotal = document.getElementById('draftsTotal');
-        if (draftsTotal) {
-            const currentCount = parseInt(draftsTotal.textContent.match(/\d+/)[0]) || 0;
-            draftsTotal.textContent = `Total: ${currentCount + change}`;
         }
-    }
 
-    // Initialize everything when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        setupToggle('submissionToggle', 'submissionCard', 'toggleArrow');
-        setupToggle('draftsToggle', 'draftsCard', 'draftsArrow');
+        // Initialize toggle functionality
+        function setupToggle(toggleId, cardId, arrowId) {
+            const toggle = document.getElementById(toggleId);
+            const card = document.getElementById(cardId);
+            const arrow = document.getElementById(arrowId);
 
-        // Open correct section based on URL parameter
-        const section = getQueryParam('section');
-        openSection(section);
+            if (toggle && card && arrow) {
+                toggle.addEventListener('click', function() {
+                    const isOpen = card.style.display === 'block';
+                    card.style.display = isOpen ? 'none' : 'block';
+                    arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            }
+        }
 
-        // Set up view toggles and carousel
-        setupViewToggle();
-        carousel.init();
+        // Carousel functionality
+        const carousel = {
+            currentSlide: 0,
+            itemsPerPage: 4,
+            totalSlides: 0,
 
-        // Initialize delete functionality
-        initializeDraftDelete();
+            init: function() {
+                const carouselElement = document.getElementById('draftGridView');
+                if (!carouselElement) return;
 
-        // Initialize draft click handlers
-        initializeDraftClickHandlers();
+                this.totalSlides = carouselElement.querySelectorAll('.draft-carousel-item').length;
+                this.updateControls();
+            },
 
-        // If drafts section and view=list, force list view active
-        const view = getQueryParam('view');
-        if (section === 'drafts' && view === 'list') {
+            move: function(direction) {
+                this.currentSlide += direction;
+
+                // Boundary checks with no wrap-around
+                if (this.currentSlide < 0) {
+                    this.currentSlide = 0;
+                } else if (this.currentSlide * this.itemsPerPage >= this.totalSlides - this.itemsPerPage) {
+                    this.currentSlide = Math.floor((this.totalSlides - 1) / this.itemsPerPage);
+                }
+
+                this.updatePosition();
+                this.updateControls();
+            },
+
+            updatePosition: function() {
+                const carouselElement = document.getElementById('draftGridView');
+                if (!carouselElement) return;
+
+                const itemWidth = 100 / this.itemsPerPage;
+                const transformValue = -this.currentSlide * itemWidth;
+                carouselElement.style.transform = `translateX(${transformValue}%)`;
+            },
+
+            updateControls: function() {
+                const prevBtn = document.querySelector('.carousel-arrow.prev');
+                const nextBtn = document.querySelector('.carousel-arrow.next');
+
+                if (prevBtn) {
+                    prevBtn.style.visibility = this.currentSlide === 0 ? 'hidden' : 'visible';
+                }
+                if (nextBtn) {
+                    nextBtn.style.visibility = this.currentSlide >= Math.floor((this.totalSlides - 1) / this.itemsPerPage) ? 'hidden' : 'visible';
+                }
+            }
+        };
+
+        // View toggle functionality
+        function setupViewToggle() {
             const gridViewBtn = document.getElementById('gridViewBtn');
             const listViewBtn = document.getElementById('listViewBtn');
             const draftGridView = document.getElementById('draftGridView');
             const draftListView = document.getElementById('draftListView');
             const carouselArrows = document.querySelectorAll('.carousel-arrow');
 
-            if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
-                listViewBtn.classList.add('active');
-                gridViewBtn.classList.remove('active');
-                draftGridView.style.display = 'none';
-                draftListView.style.display = 'block';
-                carouselArrows.forEach(arrow => {
-                    arrow.style.display = 'none';
-                });
-                // Show pagination
+            function updatePaginationVisibility() {
                 const pagination = document.querySelector('.draft-list-pagination');
                 if (pagination) {
-                    pagination.style.display = 'flex';
+                    pagination.style.display = (draftListView.style.display !== 'none') ? 'flex' : 'none';
                 }
             }
+
+            if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
+                // Show grid view by default
+                gridViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+                draftGridView.style.display = 'flex';
+                draftListView.style.display = 'none';
+
+                carouselArrows.forEach(arrow => {
+                    arrow.style.display = 'flex';
+                });
+                updatePaginationVisibility();
+
+                gridViewBtn.addEventListener('click', function() {
+                    gridViewBtn.classList.add('active');
+                    listViewBtn.classList.remove('active');
+                    draftGridView.style.display = 'flex';
+                    draftListView.style.display = 'none';
+                    carouselArrows.forEach(arrow => {
+                        arrow.style.display = 'flex';
+                    });
+                    carousel.init();
+                    updatePaginationVisibility();
+                    // Re-initialize click handlers when switching views
+                    initializeDraftClickHandlers();
+                });
+
+                listViewBtn.addEventListener('click', function() {
+                    listViewBtn.classList.add('active');
+                    gridViewBtn.classList.remove('active');
+                    draftGridView.style.display = 'none';
+                    draftListView.style.display = 'block';
+                    carouselArrows.forEach(arrow => {
+                        arrow.style.display = 'none';
+                    });
+                    updatePaginationVisibility();
+                    // Re-initialize click handlers when switching views
+                    initializeDraftClickHandlers();
+                });
+            }
         }
+
+        // Function to initialize delete functionality
+        function initializeDraftDelete() {
+            // Add delete button to each draft card
+            document.querySelectorAll('.draft-carousel-item').forEach(item => {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'draft-delete-btn';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.style.display = 'none';
+
+                // Add click event to show modal
+                deleteBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const draftCard = this.closest('.draft-tile-card');
+                    const tenderNumber = draftCard.querySelector('.draft-tender-number').textContent;
+                    const tenderTitle = draftCard.querySelector('.draft-tender-title').textContent;
+
+                    // Store the draft ID from data attribute
+                    const draftId = draftCard.getAttribute('data-draft-id');
+                    currentDraftToDelete = {
+                        id: draftId,
+                        element: item
+                    };
+
+                    // Update modal content
+                    document.getElementById('draftToDeleteInfo').textContent =
+                        `${tenderNumber}: ${tenderTitle}`;
+
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+                    modal.show();
+                });
+
+                item.querySelector('.draft-tile-card').style.position = 'relative';
+                item.querySelector('.draft-tile-card').appendChild(deleteBtn);
+            });
+
+            // Add hover events to show/hide delete button
+            document.querySelectorAll('.draft-tile-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    const deleteBtn = this.querySelector('.draft-delete-btn');
+                    if (deleteBtn) deleteBtn.style.display = 'block';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    const deleteBtn = this.querySelector('.draft-delete-btn');
+                    if (deleteBtn) deleteBtn.style.display = 'none';
+                });
+            });
+
+            // Handle the actual deletion when confirmed
+            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+                if (currentDraftToDelete) {
+                    deleteDraft(currentDraftToDelete.id, currentDraftToDelete.element);
+                }
+            });
+        }
+
+        // Add after initializeDraftDelete()
+    document.querySelectorAll('.draft-delete-btn-list').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const row = this.closest('.draft-list-row');
+            const tenderNumber = row.getAttribute('data-tender-number');
+            const tenderTitle = row.getAttribute('data-tender-title');
+            const draftId = row.getAttribute('data-draft-id');
+            currentDraftToDelete = {
+                id: draftId,
+                element: row
+            };
+            document.getElementById('draftToDeleteInfo').textContent =
+                `${tenderNumber}: ${tenderTitle}`;
+            const modal = new bootstrap.Modal(document.getElementById('deleteDraftModal'));
+            modal.show();
+        });
     });
 
-    // Expose carousel move function to global scope for HTML onclick
-    window.moveCarousel = function(direction) {
-        carousel.move(direction);
-    };
+
+        function showToast(message, type = 'info') {
+            const toastEl = document.getElementById('draftToast');
+            const toastMessage = document.getElementById('draftToastMessage');
+
+            // Set message and type (Bootstrap contextual colors)
+            toastMessage.textContent = message;
+            toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+            function removeDraftFromListView(draftId) {
+            document.querySelectorAll('.draft-list-row').forEach(row => {
+                if (row.getAttribute('data-draft-id') === draftId) {
+                    row.remove();
+                }
+            });
+        }
+
+            function removeDraftFromGridView(draftId) {
+
+        document.querySelectorAll('.draft-carousel-item').forEach(item => {
+
+            const card = item.querySelector('.draft-tile-card');
+
+            if (card && card.getAttribute('data-draft-id') === draftId) {
+
+                item.remove();
+
+            }
+
+        });
+
+    }
+
+
+               // Update the deleteDraft function to call removeDraftFromListView
+        function deleteDraft(draftId, element) {
+            // ...existing code...
+            fetch('@Url.Action("DeleteDraft", "OVRS_User")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ draftId: draftId })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+               .then(data => {
+
+        if (data.success) {
+
+            // Remove from the view where the delete was triggered
+
+            element.remove();
+
+            // Remove from the other view as well
+
+            removeDraftFromListView(draftId);
+
+            removeDraftFromGridView(draftId);
+
+            // Update counts
+
+            updateDraftCounts(-1);
+
+            // Update carousel after deletion
+
+            carousel.totalSlides--;
+
+            carousel.updateControls();
+
+            // Show success message
+
+            showToast('Draft deleted successfully', 'success');
+
+        } else {
+
+            throw new Error(data.message || 'Failed to delete draft');
+
+        }
+
+    })
+
+                .catch(error => {
+                console.error('Error:', error);
+                showToast('Error deleting draft: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Hide modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteDraftModal'));
+                modal.hide();
+
+                // Reset button state
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+                currentDraftToDelete = null;
+                currentClosedDraft = null;
+            });
+        }
+
+        // Function to update draft counts after deletion
+        function updateDraftCounts(change) {
+            // Update the main drafts count
+            const draftsTotal = document.getElementById('draftsTotal');
+            if (draftsTotal) {
+                const currentCount = parseInt(draftsTotal.textContent.match(/\d+/)[0]) || 0;
+                draftsTotal.textContent = `Total: ${currentCount + change}`;
+            }
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setupToggle('submissionToggle', 'submissionCard', 'toggleArrow');
+            setupToggle('draftsToggle', 'draftsCard', 'draftsArrow');
+
+            // Open correct section based on URL parameter
+            const section = getQueryParam('section');
+            openSection(section);
+
+            // Set up view toggles and carousel
+            setupViewToggle();
+            carousel.init();
+
+            // Initialize delete functionality
+            initializeDraftDelete();
+
+            // Initialize draft click handlers
+            initializeDraftClickHandlers();
+
+            // If drafts section and view=list, force list view active
+            const view = getQueryParam('view');
+            if (section === 'drafts' && view === 'list') {
+                const gridViewBtn = document.getElementById('gridViewBtn');
+                const listViewBtn = document.getElementById('listViewBtn');
+                const draftGridView = document.getElementById('draftGridView');
+                const draftListView = document.getElementById('draftListView');
+                const carouselArrows = document.querySelectorAll('.carousel-arrow');
+
+                if (gridViewBtn && listViewBtn && draftGridView && draftListView) {
+                    listViewBtn.classList.add('active');
+                    gridViewBtn.classList.remove('active');
+                    draftGridView.style.display = 'none';
+                    draftListView.style.display = 'block';
+                    carouselArrows.forEach(arrow => {
+                        arrow.style.display = 'none';
+                    });
+                    // Show pagination
+                    const pagination = document.querySelector('.draft-list-pagination');
+                    if (pagination) {
+                        pagination.style.display = 'flex';
+                    }
+                }
+            }
+        });
+
+        // Expose carousel move function to global scope for HTML onclick
+        window.moveCarousel = function(direction) {
+            carousel.move(direction);
+        };
 </script>
 
 
 <style>
+
+
+    .draft-delete-btn-list {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        color: #d32f2f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+        margin-right: 8px;
+    }
+
+        .draft-delete-btn-list:hover {
+            background-color: #d32f2f;
+            color: white;
+            transform: scale(1.1);
+        }
+
+    .draft-list-row {
+        position: relative;
+    }
 
     /* Submissions header styles */
     .submissions-header-row {

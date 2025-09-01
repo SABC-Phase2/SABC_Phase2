@@ -23,33 +23,47 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var tender in Model)
+                @if (Model != null && Model.Any())
                 {
-                    var localTime = TimeZoneInfo.ConvertTimeFromUtc(tender.ScheduledPublishDateTime, saTimeZone);
-                    <tr>
-                        <td>
-                            <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
-                        </td>
-                        <td>
-                            <div class="tender-title-block">
-                                <strong>@tender.TenderNumber</strong> : @tender.Title
-                            </div>
-                        </td>
-                        <td>
-                            <span class="tender-status tender-status-scheduled">
-                                @tender.Status
-                            </span>
-                        </td>
-                        <td>@localTime.ToString("yyyy-MM-dd HH:mm")</td>
-                        <td>
-                            <a asp-controller="TenderAdmin" asp-action="EditScheduled" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
-                        </td>
-                    </tr>
+                    foreach (var tender in Model)
+                    {
+                        var localTime = TimeZoneInfo.ConvertTimeFromUtc(tender.ScheduledPublishDateTime, saTimeZone);
+                        <tr>
+                            <td>
+                                <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
+                            </td>
+                            <td>
+                                <div class="tender-title-block">
+                                    <strong>@tender.TenderNumber</strong> : @tender.Title
+                                </div>
+                            </td>
+                            <td>
+                                <span class="tender-status tender-status-scheduled">
+                                    @tender.Status
+                                </span>
+                            </td>
+                            <td>@localTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <a asp-controller="TenderAdmin" asp-action="EditScheduled" asp-route-id="@tender.Id" class="edit-btn">Edit <i class="fas fa-edit"></i></a>
+                                <button class="delete-scheduled-btn" data-scheduled-id="@tender.Id" title="Delete Scheduled Tender">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                    for (int i = 0; i < emptyRows; i++)
+                    {
+                        <tr>
+                            <td colspan="5" style="background:transparent; border:none;"></td>
+                        </tr>
+                    }
                 }
-                @for (int i = 0; i < emptyRows; i++)
+                else
                 {
-                    <tr>
-                        <td colspan="5" style="background:transparent; border:none;"></td>
+                    <tr class="no-tenders-row">
+                        <td colspan="5" style="text-align:center; color:#888; font-style:italic;">
+                            No scheduled tenders found.
+                        </td>
                     </tr>
                 }
             </tbody>

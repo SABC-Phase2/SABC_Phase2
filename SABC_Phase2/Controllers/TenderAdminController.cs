@@ -342,44 +342,81 @@ namespace SABC_Phase2.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveDraft(TenderViewModel model)
+        public async Task<IActionResult> SaveDraft()
         {
-            Guid draftGuid = model.DraftId ?? Guid.Empty;
+            var form = Request.Form;
+            var files = Request.Form.Files;
+
+            // Get draft ID if exists
+            Guid draftGuid = Guid.Empty;
+            if (Guid.TryParse(form["DraftId"], out var parsedDraftId))
+            {
+                draftGuid = parsedDraftId;
+            }
             bool isNewDraft = draftGuid == Guid.Empty;
 
             // Uniqueness check: If another draft (not this one) uses this number
-            if (!string.IsNullOrWhiteSpace(model.TenderNumber))
+            var tenderNumber = form["TenderNumber"].ToString()?.Trim();
+            if (!string.IsNullOrWhiteSpace(tenderNumber))
             {
-                var tenderNumber = model.TenderNumber.Trim();
-
                 var existsInDraft = await _context.TenderAdminsDraft
                     .AnyAsync(d => d.TenderNumber == tenderNumber && (isNewDraft || d.DraftId != draftGuid));
                 var existsInPublished = await _context.Tenders.AnyAsync(t => t.TenderNumber == tenderNumber);
                 var existsInScheduled = await _context.ScheduledTenders.AnyAsync(s => s.TenderNumber == tenderNumber);
 
-                if (existsInPublished)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
-                if (existsInDraft)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Draft Tender\".");
-                if (existsInScheduled)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
-            }
-
-            // *** Remove all required field errors except TenderNumber when saving as draft ***
-            // This block must run before the ModelState.IsValid check!
-            foreach (var key in ModelState.Keys.ToList())
-            {
-                if (key != nameof(model.TenderNumber) && ModelState[key].Errors.Count > 0)
+                if (existsInPublished || existsInDraft || existsInScheduled)
                 {
-                    ModelState[key].Errors.Clear();
+                    // Create a model for validation display
+                    var model = new TenderViewModel
+                    {
+                        DraftId = isNewDraft ? null : draftGuid,
+                        TenderType = form["TenderType"],
+                        TenderNumber = tenderNumber,
+                        Title = form["Title"],
+                        Description = form["Description"],
+                        Status = form["Status"]
+                    };
+
+                    // Parse dates if they exist
+                    if (DateTime.TryParse(form["ClosingDate"], out var parsedClosingDate))
+                        model.ClosingDate = parsedClosingDate;
+
+                    if (TimeSpan.TryParse(form["ClosingTime"], out var parsedClosingTime))
+                        model.ClosingTime = parsedClosingTime;
+
+
+                    // Load existing documents if editing
+                    if (!isNewDraft)
+                    {
+                        var existingDraft = await _context.TenderAdminsDraft
+                            .Include(d => d.Documents)
+                            .FirstOrDefaultAsync(d => d.DraftId == draftGuid);
+
+                        if (existingDraft?.Documents != null)
+                        {
+                            model.ExistingDocuments = existingDraft.Documents.Select(d => new TenderDocumentViewModel
+                            {
+                                Id = d.Id,
+                                FileName = d.FileName,
+                                SharePointPath = d.SharePointPath
+                            }).ToList();
+                        }
+                    }
+
+                    // Add specific error messages
+                    if (existsInPublished)
+                        ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
+                    if (existsInDraft)
+                        ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Draft Tender\".");
+                    if (existsInScheduled)
+                        ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
+
+                    // Return the view with validation errors
+                    return View("Create", model);
                 }
             }
 
-            if (!ModelState.IsValid)
-            {
-                return View("Create", model); // Only the TenderNumber error will show
-            }
-
+            // Find or create draft
             TenderDraft draft = null;
             if (!isNewDraft)
             {
@@ -388,7 +425,7 @@ namespace SABC_Phase2.Controllers
                     .FirstOrDefaultAsync(d => d.DraftId == draftGuid);
             }
 
-            // --- Detect old tender number for possible rename ---
+            // Detect old tender number for possible rename
             var oldTenderNumber = draft?.TenderNumber;
 
             if (draft == null)
@@ -406,15 +443,19 @@ namespace SABC_Phase2.Controllers
                 draft.LastModifiedDate = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
             }
 
-            draft.TenderType = model.TenderType;
-            draft.TenderNumber = model.TenderNumber;
-            draft.Status = model.Status;
-            draft.Title = model.Title;
-            draft.Description = model.Description;
-            draft.ClosingDate = model.ClosingDate;
-            draft.ClosingTime = model.ClosingTime;
+            // Update draft fields
+            draft.TenderType = form["TenderType"];
+            draft.TenderNumber = tenderNumber;
+            draft.Status = form["Status"];
+            draft.Title = form["Title"];
+            draft.Description = form["Description"];
 
-            // --- RENAME SharePoint folder if tender number changed and there are docs ---
+            if (DateTime.TryParse(form["ClosingDate"], out var closingDate))
+                draft.ClosingDate = closingDate;
+            if (TimeSpan.TryParse(form["ClosingTime"], out var closingTime))
+                draft.ClosingTime = closingTime;
+
+            // Handle SharePoint folder rename if tender number changed
             var newTenderNumber = draft.TenderNumber;
             bool tenderNumberChanged = !string.IsNullOrWhiteSpace(oldTenderNumber)
                                        && !string.Equals(oldTenderNumber, newTenderNumber, StringComparison.OrdinalIgnoreCase)
@@ -437,12 +478,12 @@ namespace SABC_Phase2.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Optionally log or show error
+                    // Optionally log error
                 }
             }
 
-            // --- Handle Deletion of Draft Documents ---
-            var docsToDelete = Request.Form["DocumentsToDelete"];
+            // Handle Deletion of Draft Documents
+            var docsToDelete = form["DocumentsToDelete"];
             if (draft.Documents != null && docsToDelete.Count > 0)
             {
                 var idsToDelete = new HashSet<int>();
@@ -475,8 +516,7 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- Handle Uploads ---
-            var files = Request.Form.Files;
+            // Handle Uploads
             if (files != null && files.Count > 0)
             {
                 var sharePointService = new SharePointService(_configuration);
@@ -1028,33 +1068,6 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditScheduled(int id, TenderEditDto dto)
         {
-
-            // --- TENDER NUMBER UNIQUENESS VALIDATION ON EDIT SCHEDULED ---
-            if (!string.IsNullOrWhiteSpace(dto.TenderNumber))
-            {
-                var tenderNumber = dto.TenderNumber.Trim();
-
-                // Check other scheduled tenders except this one
-                bool existsInOtherScheduled = await _context.ScheduledTenders
-                    .AnyAsync(s => s.TenderNumber == tenderNumber && s.Id != id);
-
-                // Check drafts
-                bool existsInDraft = await _context.TenderAdminsDraft
-                    .AnyAsync(d => d.TenderNumber == tenderNumber);
-
-                // Check published
-                bool existsInPublished = await _context.Tenders
-                    .AnyAsync(t => t.TenderNumber == tenderNumber);
-
-                if (existsInOtherScheduled)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
-                if (existsInDraft)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Draft Tender\".");
-                if (existsInPublished)
-                    ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Published Tender\".");
-            }
-
-
             if (!ModelState.IsValid)
             {
                 return View("EditScheduled", dto);
@@ -1067,13 +1080,8 @@ namespace SABC_Phase2.Controllers
             if (scheduledTender == null)
                 return NotFound();
 
-            // --- Detect tender number change ---
-            var oldTenderNumber = scheduledTender.TenderNumber;
-            var newTenderNumber = dto.TenderNumber;
-            bool tenderNumberChanged = !string.Equals(oldTenderNumber, newTenderNumber, StringComparison.OrdinalIgnoreCase);
-
             scheduledTender.TenderType = dto.TenderType;
-            scheduledTender.TenderNumber = newTenderNumber;
+            scheduledTender.TenderNumber = dto.TenderNumber;
             scheduledTender.ClosingDate = dto.ClosingDate.Value;
             scheduledTender.ClosingTime = dto.ClosingTime;
             scheduledTender.Status = dto.Status;
@@ -1094,31 +1102,8 @@ namespace SABC_Phase2.Controllers
                 scheduledTender.ScheduledPublishDateTime = scheduledUtcInstant.ToDateTimeUtc();
             }
 
+            // Use your SharePointService for document management
             var sharePointService = new SharePointService(_configuration);
-
-            // --- RENAME SharePoint folder if TenderNumber changed ---
-            if (tenderNumberChanged)
-            {
-                try
-                {
-                    await sharePointService.RenameTenderFolderAsync(oldTenderNumber, newTenderNumber);
-
-                    // Also update document SharePointPath for all docs if folder in URL
-                    foreach (var doc in scheduledTender.Documents)
-                    {
-                        if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
-                        {
-                            doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Optionally: log or display error
-                    ModelState.AddModelError("", $"Failed to rename SharePoint folder: {ex.Message}");
-                    return View("EditScheduled", dto);
-                }
-            }
 
             // Handle deletion of documents:
             if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
@@ -1166,69 +1151,7 @@ namespace SABC_Phase2.Controllers
             return RedirectToAction("ScheduledIndex");
         }
 
-        [HttpPost]
 
-        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
-        {
-            try
-            {
-                if (request == null || request.Id <= 0)
-                {
-                    return BadRequest(new { success = false, message = "Invalid draft ID" });
-                }
-
-                // Get the current user ID (optional, if you want to ensure users can only delete their own drafts)
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                // Find the draft with its documents
-                var draft = await _context.TenderAdminsDraft
-                    .Include(d => d.Documents)
-                    .FirstOrDefaultAsync(d => d.Id == request.Id);
-
-                if (draft == null)
-                {
-                    return NotFound(new { success = false, message = "Draft not found" });
-                }
-
-                // Optional: Add user ownership check if needed
-                // if (draft.CreatedBy != userId) {
-                //     return Forbid();
-                // }
-
-                // Delete associated documents from SharePoint first
-                var sharePointService = new SharePointService(_configuration);
-                if (draft.Documents != null && draft.Documents.Any())
-                {
-                    foreach (var document in draft.Documents)
-                    {
-                        try
-                        {
-                            await sharePointService.DeleteDocumentAsync(document.SharePointPath);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log error but continue with deletion
-                            Console.WriteLine($"Error deleting document from SharePoint: {ex.Message}");
-                        }
-                    }
-
-                    // Remove documents from database
-                    _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
-                }
-
-                // Remove the draft itself
-                _context.TenderAdminsDraft.Remove(draft);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Draft deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                // Log the error
-                Console.WriteLine($"Error deleting draft: {ex}");
-                return StatusCode(500, new { success = false, message = "An error occurred while deleting the draft" });
-            }
-        }
 
 
         //---------------------------------------------------------------------------------------------------
@@ -1468,7 +1391,65 @@ namespace SABC_Phase2.Controllers
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
 
+        // This deals with deleting entire draft
+        [HttpPost]
+        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
+        {
+            try
+            {
+                if (request == null || request.Id <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Invalid draft ID" });
+                }
 
+                // Get the current user ID (optional, if you want to ensure users can only delete their own drafts)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Find the draft with its documents
+                var draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.Id == request.Id);
+
+                if (draft == null)
+                {
+                    return NotFound(new { success = false, message = "Draft not found" });
+                }
+
+                var sharePointService = new SharePointService(_configuration);
+
+                // Delete the entire tender folder (including Admin docs and any other subfolders)
+                if (draft.Documents != null && draft.Documents.Any())
+                {
+                    try
+                    {
+                        string tenderNumber = draft.TenderNumber;
+
+                        // Use DeleteTenderFolderAsync instead of DeleteAdminDocsFolder
+                        await sharePointService.DeleteTenderFolderAsync(tenderNumber);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting tender folder from SharePoint: {ex.Message}");
+                    }
+
+                    // Remove documents from database
+                    _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
+                }
+
+                // Remove the draft itself
+                _context.TenderAdminsDraft.Remove(draft);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Draft deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting draft: {ex}");
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the draft" });
+            }
+        }
+
+        // This method deal with deleting a draft via edit
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDraftDocument([FromBody] DeleteDraftDocumentRequest req)
@@ -1501,7 +1482,50 @@ namespace SABC_Phase2.Controllers
             return Json(new { success = true });
         }
 
-      
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteScheduled([FromBody] DeleteDraftReq request)
+        {
+            try
+            {
+                if (request == null || request.Id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid scheduled tender ID" });
+
+                var scheduledTender = await _context.ScheduledTenders
+                    .Include(t => t.Documents)
+                    .FirstOrDefaultAsync(t => t.Id == request.Id);
+
+                if (scheduledTender == null)
+                    return NotFound(new { success = false, message = "Scheduled tender not found" });
+
+                var sharePointService = new SharePointService(_configuration);
+                if (scheduledTender.Documents != null && scheduledTender.Documents.Any())
+                {
+                    foreach (var document in scheduledTender.Documents)
+                    {
+                        try
+                        {
+                            await sharePointService.DeleteDocumentAsync(document.SharePointPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error but continue
+                        }
+                    }
+                    _context.ScheduledTendersDocuments.RemoveRange(scheduledTender.Documents);
+                }
+
+                _context.ScheduledTenders.Remove(scheduledTender);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Scheduled tender deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the scheduled tender" });
+            }
+        }
+
     }
 
     public class DeleteDraftDocumentRequest

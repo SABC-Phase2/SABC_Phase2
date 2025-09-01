@@ -215,5 +215,77 @@ namespace SABC_Phase2.Services
             };
             await _graphClient.Drives[_driveId].Items[folder.Id].PatchAsync(update);
         }
+
+        public async Task DeleteTenderFolderAsync(string tenderNumber)
+        {
+            try
+            {
+                var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tenderNumber);
+
+                // Get root children to find the tender folder
+                var rootChildren = await _graphClient.Drives[_driveId]
+                    .Items["root"]
+                    .Children
+                    .GetAsync();
+
+                var tenderFolder = rootChildren.Value.FirstOrDefault(x =>
+                    x.Name == safeTenderNumber && x.Folder != null);
+
+                if (tenderFolder != null)
+                {
+                    // Delete the entire tender folder and all its contents
+                    await _graphClient.Drives[_driveId]
+                        .Items[tenderFolder.Id]
+                        .DeleteAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to avoid breaking the draft deletion
+                Console.WriteLine($"Error deleting tender folder from SharePoint: {ex.Message}");
+            }
+        }
+
+        public async Task DeleteAdminDocsFolder(string tenderNumber)
+        {
+            try
+            {
+                var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tenderNumber);
+
+                // Get root children to find the tender folder
+                var rootChildren = await _graphClient.Drives[_driveId]
+                    .Items["root"]
+                    .Children
+                    .GetAsync();
+
+                var tenderFolder = rootChildren.Value.FirstOrDefault(x =>
+                    x.Name == safeTenderNumber && x.Folder != null);
+
+                if (tenderFolder != null)
+                {
+                    // Get tender folder children to find Admin docs folder
+                    var tenderChildren = await _graphClient.Drives[_driveId]
+                        .Items[tenderFolder.Id]
+                        .Children
+                        .GetAsync();
+
+                    var adminDocsFolder = tenderChildren.Value.FirstOrDefault(x =>
+                        x.Name == "Admin docs" && x.Folder != null);
+
+                    if (adminDocsFolder != null)
+                    {
+                        // Delete the Admin docs folder and all its contents
+                        await _graphClient.Drives[_driveId]
+                            .Items[adminDocsFolder.Id]
+                            .DeleteAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to avoid breaking the draft deletion
+                Console.WriteLine($"Error deleting Admin docs folder from SharePoint: {ex.Message}");
+            }
+        }
     }
 }

@@ -447,10 +447,10 @@ namespace SABC_Phase2.Controllers
                 ApplicationId = a.Id,
                 TenderNumber = a.Tender?.TenderNumber ?? "",
                 DateSubmitted = a.DateApplied?.ToString("dd/MM/yyyy") ?? "",
-                TimeSubmitted = a.DateApplied?.ToString("hh:mm tt") ?? "",
+                TimeSubmitted = a.DateApplied?.ToString("HH:mm tt") ?? "",
                 Status = a.Tender?.Status ?? "",
                 ClosingDateTime = a.Tender != null
-                    ? $"{a.Tender.ClosingDate:dd/MM/yyyy} @ {(a.Tender.ClosingTime.HasValue ? DateTime.Today.Add(a.Tender.ClosingTime.Value).ToString("hh:mm tt") : "")}"
+                    ? $"{a.Tender.ClosingDate:dd/MM/yyyy} @ {(a.Tender.ClosingTime.HasValue ? DateTime.Today.Add(a.Tender.ClosingTime.Value).ToString("HH:mm tt") : "")}"
                     : "",
                 TenderId = a.Tender?.Id ?? 0
             }).ToList();
@@ -651,12 +651,14 @@ namespace SABC_Phase2.Controllers
         // Redirects the user to the SharePoint document URL for viewing the PDF in SharePoint
         public async Task<IActionResult> ViewDocument(int id)
         {
-            // Look up the document in the database by its primary key (int Id)
-            var doc = await _context.TenderApplicationDraftDocuments.FindAsync(id);
-            if (doc == null) return NotFound();
+            // Find the document by id
+            var doc = await _context.ApplicationDocuments.FindAsync(id);
+            if (doc == null || string.IsNullOrEmpty(doc.SharePointPath))
+                return NotFound();
 
-            // Redirect the user to the SharePoint URL (opens PDF in new tab)
+            // If you store the file in SharePoint, redirect to its URL
             return Redirect(doc.SharePointPath);
+
         }
 
         // POST: /OVRS_User/DeleteDocument/{id}

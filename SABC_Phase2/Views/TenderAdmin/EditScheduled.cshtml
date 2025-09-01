@@ -326,20 +326,20 @@
                  // Set initial values from model
         @if (Model.ScheduledTime.HasValue)
         {
-                    var t = Model.ScheduledTime.Value;
-                    <text>
-                    hoursInput.value = "@((t.Hours % 12 == 0 ? 12 : t.Hours % 12).ToString().PadLeft(2, '0'))";
-                    minutesInput.value = "@t.Minutes.ToString("D2")";
-                    let isAM = @(t.Hours < 12).ToString().ToLower();
-                    </text>
+                        var t = Model.ScheduledTime.Value;
+                        <text>
+                        hoursInput.value = "@((t.Hours % 12 == 0 ? 12 : t.Hours % 12).ToString().PadLeft(2, '0'))";
+                        minutesInput.value = "@t.Minutes.ToString("D2")";
+                        let isAM = @(t.Hours < 12).ToString().ToLower();
+                        </text>
         }
         else
         {
-                    <text>
-                    hoursInput.value = "08";
-                    minutesInput.value = "00";
-                    let isAM = true;
-                    </text>
+                        <text>
+                        hoursInput.value = "08";
+                        minutesInput.value = "00";
+                        let isAM = true;
+                        </text>
         }
 
             function updateHiddenTimeValue() {
