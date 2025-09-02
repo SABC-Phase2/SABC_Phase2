@@ -1,5 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using NodaTime;
 using SABC_Phase2.Data;
 using SABC_Phase2.Models.OVRS;
 using SABC_Phase2.Models.Phase1_LegacyDB;
@@ -9,8 +14,6 @@ using SABC_Phase2.ViewModels;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Claims;
-using Microsoft.Extensions.Logging;
-using NodaTime;
 
 namespace SABC_Phase2.Controllers
 {
@@ -18,6 +21,10 @@ namespace SABC_Phase2.Controllers
     /// Controller responsible for all OVRS user-facing operations,
     /// including tender application, tender drafts, and document management.
     /// </summary>
+    /// 
+
+
+ 
     public class OVRS_UserController : Controller
     {
         // Dependency-injected database context for EF Core operations.
@@ -1442,6 +1449,79 @@ namespace SABC_Phase2.Controllers
                 originalData = originalData
             });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAccount(string ConfirmEmail, string ConfirmPhrase)
+        {
+            try
+            {
+                // 1. Get the current user's Phase 2 UserId from claims
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+                {
+                    TempData["ErrorMessage"] = "Unable to identify current user. Please log in again.";
+                    return RedirectToAction(nameof(OVRS_Profiles));
+                }
+
+                // 2. Get the current user's data from Phase 2 DB to validate email
+                var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+                if (phase2User == null || phase2User.LegacyUserId == null)
+                {
+                    TempData["ErrorMessage"] = "User account not found. Please log in again.";
+                    return RedirectToAction(nameof(OVRS_Profiles));
+                }
+
+                // 3. Get the legacy user to validate email
+                var legacyUser = await _legacyContext.TblUsers
+                    .FirstOrDefaultAsync(u => u.UserId == phase2User.LegacyUserId.Value);
+
+                if (legacyUser == null)
+                {
+                    TempData["ErrorMessage"] = "User account not found in legacy system.";
+                    return RedirectToAction(nameof(OVRS_Profiles));
+                }
+
+                // 4. Validate email confirmation
+                if (string.IsNullOrWhiteSpace(ConfirmEmail) ||
+                    ConfirmEmail.Trim().ToLower() != legacyUser.Email?.ToLower())
+                {
+                    TempData["ErrorMessage"] = "Email confirmation does not match your current email address.";
+                    return RedirectToAction(nameof(OVRS_Profiles));
+                }
+
+                // 5. Validate delete phrase
+                if (string.IsNullOrWhiteSpace(ConfirmPhrase) ||
+                    ConfirmPhrase.Trim() != "Delete my account")
+                {
+                    TempData["ErrorMessage"] = "Confirmation phrase does not match exactly.";
+                    return RedirectToAction(nameof(OVRS_Profiles));
+                }
+
+                // 6. Soft delete in Phase 2 by setting AccountStatus = 0
+                phase2User.AccountStatus = 0;
+                _context.Users.Update(phase2User);
+                await _context.SaveChangesAsync();
+
+                // 7. (Optional) If you also want to disable the user in legacy DB instead of deleting:
+                // legacyUser.Active = 0;  // Example field if exists
+                // await _legacyContext.SaveChangesAsync();
+
+                // 8. Sign out the user
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                TempData["AccountDeletedMessage"] =
+                    "Your account has been deactivated successfully. You can no longer log in.";
+                return RedirectToAction("AllTenders", "OVRS_User");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in DeleteAccount: {ex.Message}");
+                TempData["ErrorMessage"] = "An unexpected error occurred. Please try again or contact support.";
+                return RedirectToAction(nameof(OVRS_Profiles));
+            }
+        }
+
     }
     public class DeleteDraftRequest
     {

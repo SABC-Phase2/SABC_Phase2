@@ -193,9 +193,16 @@ namespace SABC_Phase2.Controllers
 
                 using (SqlCommand cmd = new SqlCommand(
                     @"IF EXISTS (SELECT 1 FROM dbo.Users WHERE LegacyUserId = @LegacyUserId)
-                        UPDATE dbo.Users SET [Role] = @Role WHERE LegacyUserId = @LegacyUserId
-                    ELSE
-                        INSERT INTO dbo.Users ([Role], [LegacyUserId]) VALUES (@Role, @LegacyUserId)", defaultConn))
+            BEGIN
+                UPDATE dbo.Users 
+                SET [Role] = @Role
+                WHERE LegacyUserId = @LegacyUserId
+            END
+          ELSE
+            BEGIN
+                INSERT INTO dbo.Users ([Role], [LegacyUserId], [AccountStatus])
+                VALUES (@Role, @LegacyUserId, 1) -- ✅ New users start with AccountStatus = 1 (Active)
+            END", defaultConn))
                 {
                     cmd.Parameters.Add("@LegacyUserId", SqlDbType.Int).Value = legacyUserId.Value;
                     cmd.Parameters.AddWithValue("@Role", role);
@@ -203,19 +210,41 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // ---------- 4. Retrieve the user's Phase 2 UserId for claim setup ----------
+
+            // ---------- 4. Retrieve the user's Phase 2 UserId and AccountStatus for claim setup ----------
             int newUserId;
+            int accountStatus;
             using (SqlConnection defaultConn = new SqlConnection(defaultConnString))
             {
                 await defaultConn.OpenAsync();
                 using (SqlCommand cmd = new SqlCommand(
-                    "SELECT Id FROM dbo.Users WHERE LegacyUserId = @LegacyUserId", defaultConn))
+                    "SELECT Id, AccountStatus FROM dbo.Users WHERE LegacyUserId = @LegacyUserId", defaultConn))
                 {
                     cmd.Parameters.Add("@LegacyUserId", SqlDbType.Int).Value = legacyUserId.Value;
-                    var result = await cmd.ExecuteScalarAsync();
-                    newUserId = Convert.ToInt32(result);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            newUserId = Convert.ToInt32(reader["Id"]);
+                            accountStatus = Convert.ToInt32(reader["AccountStatus"]);
+                        }
+                        else
+                        {
+                            ViewBag.Error = "Unable to locate your account. Please contact support.";
+                            return View("~/Views/Authentication/Login.cshtml");
+                        }
+                    }
                 }
             }
+
+            // 🚫 If AccountStatus = 0, block login
+            if (accountStatus == 0)
+            {
+                ViewBag.Error = "Your account has been deactivated. Please contact support.";
+                return View("~/Views/Authentication/Login.cshtml");
+            }
+
 
             // ---------- 5. Create authentication claims principal for the OVRS_User ----------
             var userClaims = new List<Claim>

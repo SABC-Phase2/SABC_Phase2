@@ -92,6 +92,9 @@ namespace SABC_Phase2.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AccountStatus")
+                        .HasColumnType("int");
+
                     b.Property<int?>("LegacyUserId")
                         .HasColumnType("int");
 

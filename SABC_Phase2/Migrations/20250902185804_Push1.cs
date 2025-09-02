@@ -79,7 +79,17 @@ namespace SABC_Phase2.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LegacyUserId = table.Column<int>(type: "int", nullable: true)
+                    LegacyUserId = table.Column<int>(type: "int", nullable: true),
+                    OriginalEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OriginalPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OriginalCountryCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OtpCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OtpExpiration = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PendingPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PendingCountryCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PendingEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OtpType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AccountStatus = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {

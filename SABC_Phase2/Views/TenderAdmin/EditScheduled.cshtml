@@ -107,8 +107,9 @@
                 <div class="form-group full-width">
                     <label>Scheduled Publish Date & Time</label>
                     <input type="text" class="form-control"
-                           value="@(Model.ScheduledPublishDateTime.HasValue? Model.ScheduledPublishDateTime.Value.ToString("yyyy-MM-dd HH:mm") : "")"
+                           value="@(localScheduled.HasValue? localScheduled.Value.ToString("yyyy-MM-dd HH:mm") : "")"
                            readonly />
+
                 </div>
 
                 <!-- Schedule Tender Section -->

@@ -12,8 +12,8 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250826084324_Push5")]
-    partial class Push5
+    [Migration("20250902185804_Push1")]
+    partial class Push1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -95,8 +95,20 @@ namespace SABC_Phase2.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AccountStatus")
+                        .HasColumnType("int");
+
                     b.Property<int?>("LegacyUserId")
                         .HasColumnType("int");
+
+                    b.Property<string>("OriginalCountryCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalPhoneNumber")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OtpCode")
                         .HasColumnType("nvarchar(max)");
@@ -106,9 +118,6 @@ namespace SABC_Phase2.Migrations
 
                     b.Property<string>("OtpType")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("PasswordLastUpdated")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("PendingCountryCode")
                         .HasColumnType("nvarchar(max)");
