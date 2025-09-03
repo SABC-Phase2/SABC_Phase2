@@ -145,7 +145,7 @@
 
 <!-- Already Applied Modal -->
 <div id="alreadyAppliedModal" class="modal" style="display:none;">
-    <div class="modal-content">
+    <div class="modal-content already-applied-modal-content">
         <span class="close" onclick="closeAlreadyAppliedModal()">&times;</span>
         <div class="modal-icon-container">
             <div class="error-icon-circle">
@@ -155,7 +155,7 @@
         <h2 class="modal-error-title">Already Applied</h2>
         <p class="modal-message">You have already applied for this tender. Only one submission is allowed per tender.</p>
         <div class="modal-btn-container">
-            <button class="modal-login-btn" onclick="closeAlreadyAppliedModal()">
+            <button class="modal-ok-btn" onclick="closeAlreadyAppliedModal()">
                 <i class="fas fa-check"></i> OK
             </button>
         </div>
@@ -191,6 +191,39 @@
 </script>
 
 <style>
+
+    /* Make Already Applied Modal Smaller */
+    .already-applied-modal-content {
+        width: 440px !important;
+        padding: 28px 24px !important;
+        margin: 12% auto !important;
+    }
+
+    /* OK Button Style */
+    .modal-ok-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: linear-gradient(90deg, #1a7f37 60%, #22c55e 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 10px 32px;
+        box-shadow: none;
+        outline: none;
+        transition: background 0.2s, box-shadow 0.2s;
+        min-width: 100px;
+        cursor: pointer;
+    }
+
+        .modal-ok-btn:hover, .modal-ok-btn:focus {
+            background: linear-gradient(90deg, #15803d 60%, #16a34a 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(34,197,94,0.16);
+        }
     /* ------------------------------------------------------ */
     /* Modal Popup styles */
     /* Modal Popup styles */

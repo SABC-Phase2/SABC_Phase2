@@ -205,10 +205,11 @@
                         }
 
                     }
-                    <span id="noAwardedDocMsg" @( (Model.AwardedDocuments != null && Model.AwardedDocuments.Any()) ? "style='display:none;'" : "" )>
+                    <span id="noAwardedDocMsg" class="text-danger" @( (Model.AwardedDocuments != null && Model.AwardedDocuments.Any()) ? "style='display:none;'" : "" )>
 
                         No awarded document uploaded
                     </span>
+
                 </div>
             </div>
 
@@ -272,14 +273,15 @@
 <!-- Success Modal -->
 <div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center">
-            <div class="modal-header border-0">
-                <h5 class="modal-title w-100" id="successModalLabel" style="color: #16a34a;">
-                    Success
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="successModalLabel" style="width:100%;text-align:center; color: #16a34a;">
+                    <span style="font-weight:bold;">Success</span>
                 </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p id="successMessage" style="font-size:1.1rem;"></p>
+                <p id="successMessage" style="font-size:1.25rem; font-weight:600; color: #222;"></p>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
                 <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
@@ -875,6 +877,11 @@
 }
 
 <style>
+
+    #successModal .modal-dialog {
+        max-width: 340px;
+        margin: 1.75rem auto;
+    }
 
     #AwardedTenderDropdown option {
         color: #000 !important;

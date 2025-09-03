@@ -162,7 +162,7 @@
                         <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
                             <div>
                                 <strong>@doc.FileName</strong>
-                         
+
                             </div>
                             <div class="uploaded-file-actions d-flex gap-2">
                                 <button type="button" class="btn btn-outline-primary btn-sm view-upload-btn" title="View" onclick="window.open('@doc.SharePointPath', '_blank')">
@@ -216,16 +216,18 @@
     </div>
 </div>
 
+<!-- Success Modal -->
 <div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center">
-            <div class="modal-header border-0">
-                <h5 class="modal-title w-100" id="successModalLabel" style="color: #16a34a;">
-                    Success
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="successModalLabel" style="width:100%;text-align:center; color: #16a34a;">
+                    <span style="font-weight:bold;">Success</span>
                 </h5>
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p id="successMessage" style="font-size:1.1rem;"></p>
+                <p id="successMessage" style="font-size:1.25rem; font-weight:600; color: #222;"></p>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
                 <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
@@ -238,426 +240,510 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+                document.addEventListener('DOMContentLoaded', function () {
 
 
 
-              // ---------- Document Delete Modal Logic ----------
-            let docToDeleteEntry = null;
-            let docToDeleteCheckbox = null;
+                      // ---------- Document Delete Modal Logic ----------
+                    let docToDeleteEntry = null;
+                    let docToDeleteCheckbox = null;
 
-            // Attach event listeners to all existing document delete buttons (multi-step)
-            document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    docToDeleteEntry = btn.closest('.uploaded-file-entry.existing-doc');
-                    const docId = btn.getAttribute('data-doc-id');
-                    docToDeleteCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
-                    // Show confirmation modal
-                    var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
-                    modal.show();
-                });
-            });
-
-            // Confirm delete
-                  // Confirm delete
-        document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
-            if (docToDeleteCheckbox) {
-                docToDeleteCheckbox.checked = true;
-            }
-            if (docToDeleteEntry) {
-                // keep checkbox inside the form but remove the visible doc entry
-                const hiddenCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
-               if (hiddenCheckbox) {
-    hiddenCheckbox.style.display = "none"; // keep it invisible
-    docToDeleteEntry.parentNode.insertBefore(hiddenCheckbox, docToDeleteEntry);
-}
-docToDeleteEntry.remove();
-
-            }
-            // Hide modal
-            var modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocModal'));
-            modal.hide();
-            // Reset
-            docToDeleteEntry = null;
-            docToDeleteCheckbox = null;
-        });
-
-
-            // Cancel delete (optional, modal will close automatically)
-            document.getElementById('cancelDeleteDocBtn').addEventListener('click', function() {
-                docToDeleteEntry = null;
-                docToDeleteCheckbox = null;
-            });
-
-
-
-            // ---------- Scheduling Logic ----------
-            const checkbox = document.getElementById('IsScheduled');
-            const scheduleFields = document.getElementById('scheduleFields');
-
-            function updateScheduleVisibility() {
-                scheduleFields.classList.toggle('show', checkbox.checked);
-            }
-
-            updateScheduleVisibility();
-            checkbox.addEventListener('change', updateScheduleVisibility);
-
-            // ---------- Tab Logic ----------
-            const tabs = ['details', 'documents'];
-            let currentTab = 'details';
-
-            window.showTab = function(tabName) {
-                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-                document.getElementById(tabName).classList.add('active');
-                document.getElementById('tab' + capitalize(tabName)).classList.add('active');
-                currentTab = tabName;
-            };
-
-            function capitalize(str) {
-                return str.charAt(0).toUpperCase() + str.slice(1);
-            }
-
-            // ---------- File Upload Logic ----------
-            const fileInput = document.getElementById("UploadedFiles");
-            const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
-            const uploadInputGroup = document.getElementById("uploadInputGroup");
-            let selectedFiles = [];
-
-            if (fileInput) {
-                fileInput.addEventListener("change", function () {
-                    const files = Array.from(fileInput.files);
-                    files.forEach(file => {
-                        if (file.type !== "application/pdf") {
-                            alert(`${file.name} is not a PDF file. Only PDF files are allowed.`);
-                            return;
-                        }
-                        // Check for duplicate by name+size
-                        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
-                            selectedFiles.push(file);
-                        }
+                    // Attach event listeners to all existing document delete buttons (multi-step)
+                    document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            docToDeleteEntry = btn.closest('.uploaded-file-entry.existing-doc');
+                            const docId = btn.getAttribute('data-doc-id');
+                            docToDeleteCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
+                            // Show confirmation modal
+                            var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+                            modal.show();
+                        });
                     });
 
-                    updateFilesDisplay();
-                    fileInput.value = ""; // Reset input
-                });
-            }
-
-            function updateFilesDisplay() {
-                // Remove all new uploaded entries (keep existing ones)
-                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
-
-                selectedFiles.forEach(function (file, index) {
-                    const fileRow = document.createElement("div");
-                    fileRow.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
-
-                    const fileDetails = document.createElement("div");
-                    const fileName = document.createElement("strong");
-                    fileName.textContent = file.name;
-
-                    const fileMeta = document.createElement("div");
-                    fileMeta.className = "text-muted small mt-1";
-                    fileMeta.style.fontSize = "0.75rem";
-                    const size = formatFileSize(file.size);
-                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    fileMeta.textContent = `${size} • Added at ${time}`;
-
-                    fileDetails.appendChild(fileName);
-                    fileDetails.appendChild(fileMeta);
-
-                    const actions = document.createElement("div");
-                    actions.className = "uploaded-file-actions d-flex gap-2";
-
-                    const viewBtn = document.createElement("button");
-                    viewBtn.type = "button";
-                    viewBtn.className = "btn btn-outline-primary btn-sm";
-                    viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                    viewBtn.title = "View";
-                    viewBtn.addEventListener('click', function () {
-                        const fileURL = URL.createObjectURL(file);
-                        window.open(fileURL, "_blank");
-                    });
-
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.type = "button";
-                    deleteBtn.className = "btn btn-outline-danger btn-sm";
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                    deleteBtn.title = "Remove";
-                    deleteBtn.addEventListener('click', function () {
-                        selectedFiles.splice(index, 1);
-                        updateFilesDisplay();
-                    });
-
-                    actions.appendChild(viewBtn);
-                    actions.appendChild(deleteBtn);
-                    fileRow.appendChild(fileDetails);
-                    fileRow.appendChild(actions);
-                    uploadedFilesContainer.appendChild(fileRow);
-                });
-            }
-
-            function formatFileSize(bytes) {
-                if (bytes < 1024) return `${bytes} B`;
-                else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-                else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-            }
-
-            // ---------- Validation Utilities ----------
-            function showFieldError(fieldIdOrName, message, tabName) {
-                let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
-                if (field) {
-                    let label = null;
-                    if (field.id) {
-                        label = document.querySelector(`label[for='${field.id}']`);
+                    // Confirm delete
+                          // Confirm delete
+                document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
+                    if (docToDeleteCheckbox) {
+                        docToDeleteCheckbox.checked = true;
                     }
-                    if (!label) {
-                        let formGroup = field.closest('.form-group');
-                        if (formGroup) {
-                            label = formGroup.querySelector('label');
-                        }
-                    }
-
-                    if (label) {
-                        let oldError = label.parentNode.querySelector('.validation-custom-error');
-                        if (oldError) oldError.remove();
-
-                        let errorSpan = document.createElement('span');
-                        errorSpan.className = 'validation-custom-error text-danger ms-2';
-                        errorSpan.innerText = message;
-                        errorSpan.style.fontWeight = 'bold';
-                        label.appendChild(errorSpan);
-                    }
-                    field.classList.add('field-error-highlight');
-                }
-            }
-
-            function clearAllCustomErrors() {
-                document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
-                document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
-            }
-
-            function clearFieldError(e) {
-                let field = e.target;
-                let label = null;
-                if (field.id) {
-                    label = document.querySelector(`label[for='${field.id}']`);
-                }
-                if (!label) {
-                    let formGroup = field.closest('.form-group');
-                    if (formGroup) {
-                        label = formGroup.querySelector('label');
-                    }
-                }
-                if (label) {
-                    let oldError = label.parentNode.querySelector('.validation-custom-error');
-                    if (oldError) oldError.remove();
-                }
-                field.classList.remove('field-error-highlight');
-            }
-
-            // Add event listeners for clearing errors on input
-            document.querySelectorAll('input, textarea, select').forEach(e => {
-                e.addEventListener('input', clearFieldError);
-                e.addEventListener('change', clearFieldError);
-            });
-
-            // ---------- Form Submission Logic ----------
-            window.submitForm = function() {
-                const saveBtn = document.getElementById('continueBtn');
-
-                // Prevent multiple submissions
-                if (saveBtn.classList.contains('loading')) {
-                    return;
-                }
-
-                // Add loading state
-                saveBtn.classList.add('loading');
-                saveBtn.innerHTML = 'Saving<span class="loading-dots"></span>';
-                saveBtn.disabled = true;
-
-                clearAllCustomErrors();
-
-                // VALIDATION SECTION
-                let errors = [];
-                let errorFields = [];
-                let errorTabs = [];
-
-                // Required fields validation
-                let tenderType = document.querySelector('input[name="TenderType"]:checked');
-                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
-                let closingDate = document.querySelector('input[name="ClosingDate"]');
-                let closingTime = document.querySelector('input[name="ClosingTime"]');
-                let title = document.querySelector('input[name="Title"]');
-                let description = document.querySelector('textarea[name="Description"]');
-                let status = document.getElementById('StatusDropdown').value;
-
-                if (!tenderType) {
-                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
-                    errorFields.push('TenderType'); errorTabs.push('details');
-                }
-                if (!tenderNumber.value.trim()) {
-                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
-                    errorFields.push('TenderNumber'); errorTabs.push('details');
-                }
-                if (!closingDate.value.trim()) {
-                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
-                    errorFields.push('ClosingDate'); errorTabs.push('details');
-                }
-                if (!closingTime.value.trim()) {
-                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
-                    errorFields.push('ClosingTime'); errorTabs.push('details');
-                }
-                if (!title.value.trim()) {
-                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
-                    errorFields.push('Title'); errorTabs.push('details');
-                }
-                if (!description.value.trim()) {
-                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
-                    errorFields.push('Description'); errorTabs.push('details');
-                }
-                if (!status) {
-                    errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
-                    errorFields.push('StatusDropdown'); errorTabs.push('details');
-                }
-
-                // Scheduling validation
-                const isScheduled = document.getElementById('IsScheduled').checked;
-                if (isScheduled) {
-                    const scheduledDate = document.getElementById('ScheduledDate');
-                    const scheduledTime = document.getElementById('ScheduledTime');
-
-                    if (!scheduledDate.value.trim()) {
-                        errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required when scheduling is enabled', tab: 'details'});
-                        errorFields.push('ScheduledDate'); errorTabs.push('details');
-                    }
-                    if (!scheduledTime.value.trim()) {
-                        errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required when scheduling is enabled', tab: 'details'});
-                        errorFields.push('ScheduledTime'); errorTabs.push('details');
-                    }
-                }
-
-                // Document validation - count existing (not marked for deletion) + new uploads
-                      // Document validation - count existing (not marked for deletion and not hidden) + new uploads
-        const existingDocsCount =
-            Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
-                .filter(div => {
-                    // Check if element is visually hidden
-                    if (div.style.display === 'none') {
-                        return false;
-                    }
-
-                    const docId = div.getAttribute('data-doc-id');
-                    const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
-                    return !(delCheckbox && delCheckbox.checked);
-                }).length
-            + selectedFiles.length;
-
-                if (existingDocsCount === 0) {
-                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
-                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
-                }
-
-                // Show all errors
-                if (errors.length > 0) {
-                    // Remove loading state if validation fails
-                    saveBtn.classList.remove('loading');
-                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                    saveBtn.disabled = false;
-
-                    errors.forEach(function(err) {
-                        showFieldError(err.field, err.message, err.tab);
-                    });
-
-                    // Switch to first errored tab and focus field
-                    showTab(errors[0].tab);
-                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                    if (firstField) {
-                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                        firstField.focus();
-                    }
-                    return;
-                }
-
-                // Get form and prepare FormData
-                let form = document.querySelector('form[asp-action="EditScheduled"]') || document.querySelector('form[action*="EditScheduled"]');
-                if (!form) {
-                    alert("Form not found!");
-                    saveBtn.classList.remove('loading');
-                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                    saveBtn.disabled = false;
-                    return;
-                }
-
-                let formData = new FormData(form);
-
-                // Remove any existing files from input (to avoid duplicates)
-                formData.delete('UploadedFiles');
-
-                // Append all selected files
-                selectedFiles.forEach(function(file) {
-                    formData.append('UploadedFiles', file, file.name);
-                });
-
-                // Submit with authentication-friendly headers
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    }
-                })
-                .then(async response => {
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
-                        const data = await response.json();
-                               if (data.success) {
-            // Fill modal message with tender number
-            const tenderNumber = document.querySelector('input[name="TenderNumber"]').value;
-            document.getElementById('successMessage').textContent =
-                `Tender ${tenderNumber} was successfully updated.`;
-
-            // Show success modal
-            var successModal = new bootstrap.Modal(document.getElementById('successModal'));
-            successModal.show();
-
-            // On OK button click, redirect
-            document.getElementById('successOkBtn').onclick = function () {
-                window.location.href = data.redirectUrl || '/TenderAdmin/ScheduledIndex';
-            };
+                    if (docToDeleteEntry) {
+                        // keep checkbox inside the form but remove the visible doc entry
+                        const hiddenCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
+                       if (hiddenCheckbox) {
+            hiddenCheckbox.style.display = "none"; // keep it invisible
+            docToDeleteEntry.parentNode.insertBefore(hiddenCheckbox, docToDeleteEntry);
         }
-         else {
-                            alert("Failed to save changes: " + (data.message || "Unknown error"));
-                        }
-                    } else if (response.redirected) {
-                        // Preserve authentication state on redirect
-                        window.location.href = response.url;
-                    } else {
-                        // Replace content while preserving session
-                        response.text().then(html => {
-                            document.body.innerHTML = html;
-                            window.scrollTo(0, 0);
+        docToDeleteEntry.remove();
+
+                    }
+                    // Hide modal
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocModal'));
+                    modal.hide();
+                    // Reset
+                    docToDeleteEntry = null;
+                    docToDeleteCheckbox = null;
+                });
+
+
+                    // Cancel delete (optional, modal will close automatically)
+                    document.getElementById('cancelDeleteDocBtn').addEventListener('click', function() {
+                        docToDeleteEntry = null;
+                        docToDeleteCheckbox = null;
+                    });
+
+
+
+                    // ---------- Scheduling Logic ----------
+                    const checkbox = document.getElementById('IsScheduled');
+                    const scheduleFields = document.getElementById('scheduleFields');
+
+                    function updateScheduleVisibility() {
+                        scheduleFields.classList.toggle('show', checkbox.checked);
+                    }
+
+                    updateScheduleVisibility();
+                    checkbox.addEventListener('change', updateScheduleVisibility);
+
+                    // ---------- Tab Logic ----------
+                    const tabs = ['details', 'documents'];
+                    let currentTab = 'details';
+
+                    window.showTab = function(tabName) {
+                        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                        document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                        document.getElementById(tabName).classList.add('active');
+                        document.getElementById('tab' + capitalize(tabName)).classList.add('active');
+                        currentTab = tabName;
+                    };
+
+                    function capitalize(str) {
+                        return str.charAt(0).toUpperCase() + str.slice(1);
+                    }
+
+                    // ---------- File Upload Logic ----------
+                    const fileInput = document.getElementById("UploadedFiles");
+                    const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
+                    const uploadInputGroup = document.getElementById("uploadInputGroup");
+                    let selectedFiles = [];
+
+                    if (fileInput) {
+                        fileInput.addEventListener("change", function () {
+                            const files = Array.from(fileInput.files);
+                            files.forEach(file => {
+                                if (file.type !== "application/pdf") {
+                                    alert(`${file.name} is not a PDF file. Only PDF files are allowed.`);
+                                    return;
+                                }
+                                // Check for duplicate by name+size
+                                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                                    selectedFiles.push(file);
+                                }
+                            });
+
+                            updateFilesDisplay();
+                            fileInput.value = ""; // Reset input
                         });
                     }
-                })
-                .catch(error => {
-                    console.error('Submission error:', error);
-                    alert("An error occurred while saving changes.");
-                })
-                .finally(() => {
-                    // Remove loading state
-                    saveBtn.classList.remove('loading');
-                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                    saveBtn.disabled = false;
-                });
-            };
 
-            // Initialize tab display
-            showTab(currentTab);
-        });
+                    function updateFilesDisplay() {
+                        // Remove all new uploaded entries (keep existing ones)
+                        document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+                        selectedFiles.forEach(function (file, index) {
+                            const fileRow = document.createElement("div");
+                            fileRow.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+
+                            const fileDetails = document.createElement("div");
+                            const fileName = document.createElement("strong");
+                            fileName.textContent = file.name;
+
+                            const fileMeta = document.createElement("div");
+                            fileMeta.className = "text-muted small mt-1";
+                            fileMeta.style.fontSize = "0.75rem";
+                            const size = formatFileSize(file.size);
+                            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            fileMeta.textContent = `${size} • Added at ${time}`;
+
+                            fileDetails.appendChild(fileName);
+                            fileDetails.appendChild(fileMeta);
+
+                            const actions = document.createElement("div");
+                            actions.className = "uploaded-file-actions d-flex gap-2";
+
+                            const viewBtn = document.createElement("button");
+                            viewBtn.type = "button";
+                            viewBtn.className = "btn btn-outline-primary btn-sm";
+                            viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                            viewBtn.title = "View";
+                            viewBtn.addEventListener('click', function () {
+                                const fileURL = URL.createObjectURL(file);
+                                window.open(fileURL, "_blank");
+                            });
+
+                            const deleteBtn = document.createElement("button");
+                            deleteBtn.type = "button";
+                            deleteBtn.className = "btn btn-outline-danger btn-sm";
+                            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                            deleteBtn.title = "Remove";
+                            deleteBtn.addEventListener('click', function () {
+                                selectedFiles.splice(index, 1);
+                                updateFilesDisplay();
+                            });
+
+                            actions.appendChild(viewBtn);
+                            actions.appendChild(deleteBtn);
+                            fileRow.appendChild(fileDetails);
+                            fileRow.appendChild(actions);
+                            uploadedFilesContainer.appendChild(fileRow);
+                        });
+                    }
+
+                    function formatFileSize(bytes) {
+                        if (bytes < 1024) return `${bytes} B`;
+                        else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                        else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                    }
+
+                    // ---------- Validation Utilities ----------
+                            function showFieldError(fieldIdOrName, message, tabName) {
+                    if (fieldIdOrName === 'UploadedFiles') {
+                        // Place error below upload input group
+                        let group = document.getElementById('uploadInputGroup');
+                        if (group) {
+                            let oldError = group.parentNode.querySelector('.validation-custom-error');
+                            if (oldError) oldError.remove();
+
+                            let errorSpan = document.createElement('span');
+                            errorSpan.className = 'validation-custom-error text-danger';
+                            errorSpan.innerText = message;
+                            errorSpan.style.fontSize = '0.98rem';
+                            errorSpan.style.fontWeight = '500';
+                            errorSpan.style.display = 'block';
+                            errorSpan.style.marginTop = '8px';
+                            group.parentNode.insertBefore(errorSpan, group.nextSibling);
+                        }
+                        return;
+                    }
+                    // Default for other fields
+                    let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
+                    if (field) {
+                        let label = null;
+                        if (field.id) {
+                            label = document.querySelector(`label[for='${field.id}']`);
+                        }
+                        if (!label) {
+                            let formGroup = field.closest('.form-group');
+                            if (formGroup) {
+                                label = formGroup.querySelector('label');
+                            }
+                        }
+
+                        if (label) {
+                            let oldError = label.parentNode.querySelector('.validation-custom-error');
+                            if (oldError) oldError.remove();
+
+                            let errorSpan = document.createElement('span');
+                            errorSpan.className = 'validation-custom-error text-danger ms-2';
+                            errorSpan.innerText = message;
+                            errorSpan.style.fontSize = '0.98rem';
+                            errorSpan.style.fontWeight = '500';
+                            label.appendChild(errorSpan);
+                        }
+                        field.classList.add('field-error-highlight');
+                    }
+                }
+
+                    function clearAllCustomErrors() {
+                        document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
+                        document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
+                    }
+
+                    function clearFieldError(e) {
+                        let field = e.target;
+                        let label = null;
+                        if (field.id) {
+                            label = document.querySelector(`label[for='${field.id}']`);
+                        }
+                        if (!label) {
+                            let formGroup = field.closest('.form-group');
+                            if (formGroup) {
+                                label = formGroup.querySelector('label');
+                            }
+                        }
+                        if (label) {
+                            let oldError = label.parentNode.querySelector('.validation-custom-error');
+                            if (oldError) oldError.remove();
+                        }
+                        field.classList.remove('field-error-highlight');
+                    }
+
+                    // Add event listeners for clearing errors on input
+                    document.querySelectorAll('input, textarea, select').forEach(e => {
+                        e.addEventListener('input', clearFieldError);
+                        e.addEventListener('change', clearFieldError);
+                    });
+
+                    // ---------- Form Submission Logic ----------
+                    window.submitForm = function() {
+                        const saveBtn = document.getElementById('continueBtn');
+
+                        // Prevent multiple submissions
+                        if (saveBtn.classList.contains('loading')) {
+                            return;
+                        }
+
+                        // Add loading state
+                        saveBtn.classList.add('loading');
+                        saveBtn.innerHTML = 'Saving<span class="loading-dots"></span>';
+                        saveBtn.disabled = true;
+
+                        clearAllCustomErrors();
+
+                        // VALIDATION SECTION
+                        let errors = [];
+                        let errorFields = [];
+                        let errorTabs = [];
+
+                        // Required fields validation
+                        let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                        let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                        let closingDate = document.querySelector('input[name="ClosingDate"]');
+                        let closingTime = document.querySelector('input[name="ClosingTime"]');
+                        let title = document.querySelector('input[name="Title"]');
+                        let description = document.querySelector('textarea[name="Description"]');
+                        let status = document.getElementById('StatusDropdown').value;
+
+                        if (!tenderType) {
+                            errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                            errorFields.push('TenderType'); errorTabs.push('details');
+                        }
+                        if (!tenderNumber.value.trim()) {
+                            errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                            errorFields.push('TenderNumber'); errorTabs.push('details');
+                        }
+                        if (!closingDate.value.trim()) {
+                            errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                            errorFields.push('ClosingDate'); errorTabs.push('details');
+                        }
+                        if (!closingTime.value.trim()) {
+                            errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                            errorFields.push('ClosingTime'); errorTabs.push('details');
+                        }
+                        if (!title.value.trim()) {
+                            errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                            errorFields.push('Title'); errorTabs.push('details');
+                        }
+                        if (!description.value.trim()) {
+                            errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                            errorFields.push('Description'); errorTabs.push('details');
+                        }
+                        if (!status) {
+                            errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
+                            errorFields.push('StatusDropdown'); errorTabs.push('details');
+                        }
+
+                        // Scheduling validation
+                        const isScheduled = document.getElementById('IsScheduled').checked;
+                        if (isScheduled) {
+                            const scheduledDate = document.getElementById('ScheduledDate');
+                            const scheduledTime = document.getElementById('ScheduledTime');
+
+                            if (!scheduledDate.value.trim()) {
+                                errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required when scheduling is enabled', tab: 'details'});
+                                errorFields.push('ScheduledDate'); errorTabs.push('details');
+                            }
+                            if (!scheduledTime.value.trim()) {
+                                errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required when scheduling is enabled', tab: 'details'});
+                                errorFields.push('ScheduledTime'); errorTabs.push('details');
+                            }
+                        }
+
+                        // Document validation - count existing (not marked for deletion) + new uploads
+                              // Document validation - count existing (not marked for deletion and not hidden) + new uploads
+                const existingDocsCount =
+                    Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+                        .filter(div => {
+                            // Check if element is visually hidden
+                            if (div.style.display === 'none') {
+                                return false;
+                            }
+
+                            const docId = div.getAttribute('data-doc-id');
+                            const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
+                            return !(delCheckbox && delCheckbox.checked);
+                        }).length
+                    + selectedFiles.length;
+
+                        if (existingDocsCount === 0) {
+                            errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
+                            errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                        }
+
+                        // Show all errors
+                        if (errors.length > 0) {
+                            // Remove loading state if validation fails
+                            saveBtn.classList.remove('loading');
+                            saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                            saveBtn.disabled = false;
+
+                            errors.forEach(function(err) {
+                                showFieldError(err.field, err.message, err.tab);
+                            });
+
+                            // Switch to first errored tab and focus field
+                            showTab(errors[0].tab);
+                            let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                            if (firstField) {
+                                firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                                firstField.focus();
+                            }
+                            return;
+                        }
+
+                        // Get form and prepare FormData
+                        let form = document.querySelector('form[asp-action="EditScheduled"]') || document.querySelector('form[action*="EditScheduled"]');
+                        if (!form) {
+                            alert("Form not found!");
+                            saveBtn.classList.remove('loading');
+                            saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                            saveBtn.disabled = false;
+                            return;
+                        }
+
+                        let formData = new FormData(form);
+
+                        // Remove any existing files from input (to avoid duplicates)
+                        formData.delete('UploadedFiles');
+
+                        // Append all selected files
+                        selectedFiles.forEach(function(file) {
+                            formData.append('UploadedFiles', file, file.name);
+                        });
+
+                        // Submit with authentication-friendly headers
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                            }
+                        })
+                        .then(async response => {
+                            const contentType = response.headers.get("content-type");
+                            if (contentType && contentType.includes("application/json")) {
+                                const data = await response.json();
+                                       if (data.success) {
+                    // Fill modal message with tender number
+                    const tenderNumber = document.querySelector('input[name="TenderNumber"]').value;
+                    document.getElementById('successMessage').textContent =
+                        `Tender ${tenderNumber} was successfully updated.`;
+
+                    // Show success modal
+                    var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+
+                    // On OK button click, redirect
+                    document.getElementById('successOkBtn').onclick = function () {
+                        window.location.href = data.redirectUrl || '/TenderAdmin/ScheduledIndex';
+                    };
+                }
+                 else {
+                                    alert("Failed to save changes: " + (data.message || "Unknown error"));
+                                }
+                            } else if (response.redirected) {
+                                // Preserve authentication state on redirect
+                                window.location.href = response.url;
+                            } else {
+                                // Replace content while preserving session
+                                response.text().then(html => {
+                                    document.body.innerHTML = html;
+                                    window.scrollTo(0, 0);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Submission error:', error);
+                            alert("An error occurred while saving changes.");
+                        })
+                        .finally(() => {
+                            // Remove loading state
+                            saveBtn.classList.remove('loading');
+                            saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                            saveBtn.disabled = false;
+                        });
+                    };
+
+                    // Initialize tab display
+                    showTab(currentTab);
+                });
     </script>
 }
 
 <style>
+
+    .validation-custom-error {
+        font-size: 0.98rem !important;
+        font-weight: 500 !important;
+        color: #e11d48 !important;
+        margin-top: 8px !important;
+        margin-bottom: 0 !important;
+        display: block !important;
+    }
+
+    #successModal .modal-dialog {
+        max-width: 340px;
+        margin: 1.75rem auto;
+    }
+
+    #successModal .modal-content {
+        border-radius: 14px;
+        box-shadow: 0 6px 32px rgba(22,163,74,0.10), 0 1.5px 4px rgba(0,0,0,0.04);
+        padding: 0;
+        background: #fff;
+    }
+
+    #successModal .modal-header {
+        border-bottom: none;
+        padding: 18px 24px 0 24px;
+        text-align: center;
+    }
+
+    #successModal .modal-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #16a34a;
+        letter-spacing: 0.01em;
+    }
+
+    #successModal .modal-body {
+        padding: 12px 24px 0 24px;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    #successModal .modal-footer {
+        border-top: none;
+        padding: 16px 24px 20px 24px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    #successModal .btn-success {
+        background: linear-gradient(90deg, #16a34a 60%, #22c55e 100%);
+        border: none;
+        font-weight: 600;
+        padding: 8px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-shadow: 0 2px 8px rgba(22,163,74,0.08);
+    }
+
+        #successModal .btn-success:hover, #successModal .btn-success:focus {
+            background: linear-gradient(90deg, #15803d 60%, #16a34a 100%);
+            color: #fff;
+        }
+
     .custom-dropdown {
         appearance: none;
         -webkit-appearance: none;
