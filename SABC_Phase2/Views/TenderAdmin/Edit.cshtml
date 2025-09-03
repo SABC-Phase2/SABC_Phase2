@@ -107,14 +107,14 @@
                         <label id="AwardedTenderLabel" for="AwardedTenderDropdown" class="mb-1">Awarded To <span class="text-danger">*</span></label>
                         <select asp-for="AwardedTender"
                                 id="AwardedTenderDropdown"
-                                class="form-control custom-dropdown">
+                                class="form-control custom-dropdown"
+                                data-awarded-value="@Model.AwardedTender">
                             <option value="" disabled selected hidden>~Select company to award tender to~</option>
                             @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
                             {
                                 @foreach (var company in Model.ApplicantCompanies)
                                 {
-                                    <option value="@company.CompanyName"
-                                            selected="@(Model.AwardedTender == company.CompanyName)">
+                                    <option value="@company.CompanyName" selected="@(Model.AwardedTender == company.CompanyName)">
                                         @company.CompanyName
                                     </option>
                                 }
@@ -229,9 +229,6 @@
 <div class="action-buttons">
     <button type="button" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
     <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Save Changes <span class="arrow-icon"></span></button>
-    <button type="button" id="debugBtn" class="btn btn-info" onclick="debugCompanies()">Debug Companies</button>
-    <!-- Add this right after your Debug Companies button for testing -->
-    <button type="button" id="testBtn" class="btn btn-warning" onclick="testDropdown()">Test Dropdown Data</button>
 </div>
 
 <!-- Awarded Tender Modal -->
@@ -297,141 +294,42 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
-                      let docToDeleteEntry = null;
-        let docToDeleteCheckbox = null;
+            let docToDeleteEntry = null;
+            let docToDeleteCheckbox = null;
+            let companiesLoaded = false; // Track if companies have been loaded
 
-        // Attach event listeners to all existing document delete buttons (multi-step)
-        document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                docToDeleteEntry = btn.closest('.uploaded-file-entry.existing-doc');
-                docToDeleteCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
-                // Show confirmation modal
-                var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
-                modal.show();
-            });
-        });
-
-                // Add this function to test the dropdown data
-        window.testDropdown = function() {
-            const dropdown = document.getElementById('AwardedTenderDropdown');
-            console.log('=== DROPDOWN TEST ===');
-            console.log('Dropdown element:', dropdown);
-            console.log('Dropdown innerHTML:', dropdown.innerHTML);
-            console.log('Dropdown options count:', dropdown.options.length);
-
-            for (let i = 0; i < dropdown.options.length; i++) {
-                const option = dropdown.options[i];
-                console.log(`Option ${i}:`, {
-                    value: option.value,
-                    text: option.text,
-                    innerHTML: option.innerHTML
+            // Attach event listeners to all existing document delete buttons (multi-step)
+            document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    docToDeleteEntry = btn.closest('.uploaded-file-entry.existing-doc');
+                    docToDeleteCheckbox = docToDeleteEntry.querySelector('input[type="checkbox"][name="DocumentsToDelete"]');
+                    // Show confirmation modal
+                    var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+                    modal.show();
                 });
-            }
+            });
 
-            console.log('Current selected value:', dropdown.value);
-            console.log('Current selected index:', dropdown.selectedIndex);
-            alert('Check console for dropdown data');
-        };
-
-                      // Enhanced debug function
-        window.debugCompanies = async function() {
-            const tenderId = document.querySelector('input[name="Id"]')?.value;
-            console.log('=== COMPANY DEBUG START ===');
-            console.log('Tender ID:', tenderId);
-
-            if (!tenderId) {
-                console.log('ERROR: No tender ID found');
-                alert('No tender ID found!');
-                return;
-            }
-
-            // Debug 1: Check Applied_For_Tenders
-            console.log('--- Step 1: Checking Applied_For_Tenders ---');
-            try {
-                const response1 = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
-                const responseText = await response1.text();
-                console.log('Raw response text:', responseText);
-
-                let data1;
-                try {
-                    data1 = JSON.parse(responseText);
-                } catch (parseError) {
-                    console.error('Failed to parse JSON:', parseError);
-                    console.log('Response was:', responseText);
-                    return;
+            // Confirm delete
+            document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
+                if (docToDeleteCheckbox) {
+                    docToDeleteCheckbox.checked = true;
                 }
-
-                console.log('Parsed GetApplicantCompanies Response:', data1);
-                console.log('Response structure:', JSON.stringify(data1, null, 2));
-
-                if (data1.success) {
-                    console.log('Companies found:', data1.companies);
-                    console.log('Number of companies:', data1.companies?.length || 0);
-
-                    if (data1.companies && data1.companies.length > 0) {
-                        data1.companies.forEach((company, index) => {
-                            console.log(`Company ${index + 1}:`, company);
-                            console.log(`Company ${index + 1} properties:`, Object.keys(company));
-                            console.log(`Company ${index + 1} values:`, Object.values(company));
-                        });
-                    } else {
-                        console.log('No companies returned from API');
-                    }
-                } else {
-                    console.log('API call failed:', data1.message, data1.error);
+                if (docToDeleteEntry) {
+                    docToDeleteEntry.style.display = 'none';
                 }
+                // Hide modal
+                var modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocModal'));
+                modal.hide();
+                // Reset
+                docToDeleteEntry = null;
+                docToDeleteCheckbox = null;
+            });
 
-                // Also check the current model data
-                console.log('--- Model ApplicantCompanies ---');
-                @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
-                {
-                            <text>
-                            console.log('Model ApplicantCompanies:', [
-                                @foreach (var company in Model.ApplicantCompanies)
-                                {
-                                            <text>{ UserId: @company.UserId, CompanyName: "@company.CompanyName" },</text>
-                                }
-                            ]);
-                            </text>
-                }
-                else
-                {
-                            <text>
-                            console.log('Model ApplicantCompanies: []');
-                            </text>
-                }
-
-                alert('Debug complete! Check console for details.');
-
-            } catch (error) {
-                console.error('Error during debug:', error);
-                alert('Error during debug: ' + error.message);
-            }
-
-            console.log('=== COMPANY DEBUG END ===');
-        };
-
-        // Confirm delete
-        document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
-            if (docToDeleteCheckbox) {
-                docToDeleteCheckbox.checked = true;
-            }
-            if (docToDeleteEntry) {
-                docToDeleteEntry.style.display = 'none';
-            }
-            // Hide modal
-            var modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocModal'));
-            modal.hide();
-            // Reset
-            docToDeleteEntry = null;
-            docToDeleteCheckbox = null;
-        });
-
-        // Cancel delete (optional, modal will close automatically)
-        document.getElementById('cancelDeleteDocBtn').addEventListener('click', function() {
-            docToDeleteEntry = null;
-            docToDeleteCheckbox = null;
-        });
+            // Cancel delete (optional, modal will close automatically)
+            document.getElementById('cancelDeleteDocBtn').addEventListener('click', function() {
+                docToDeleteEntry = null;
+                docToDeleteCheckbox = null;
+            });
 
             // ---------- Tab Logic ----------
             const tabs = ['details', 'documents'];
@@ -467,93 +365,135 @@
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
             const awardedDocumentsContainer = document.getElementById('awardedDocumentsContainer');
 
-                              // Replace your existing loadApplicantCompanies function with this one
-        async function loadApplicantCompanies(tenderId) {
-            const dropdown = document.getElementById('AwardedTenderDropdown');
-            if (!dropdown) return;
+            // FIXED: Improved company loading function that preserves selected value
+            async function loadApplicantCompanies(tenderId) {
+                const dropdown = document.getElementById('AwardedTenderDropdown');
+                if (!dropdown) return;
 
-            console.log('Loading applicant companies for tender:', tenderId);
+                // Get the current awarded tender value from the model or dropdown
+                const currentAwardedTender = dropdown.getAttribute('data-awarded-value') || dropdown.value;
 
-            try {
-                const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
-                const data = await response.json();
+                console.log('Loading applicant companies for tender:', tenderId);
+                console.log('Current awarded tender value:', currentAwardedTender);
 
-                console.log('Full response data:', JSON.stringify(data, null, 2));
+                try {
+                    const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
+                    const data = await response.json();
 
-                if (data.success) {
-                    // Clear existing options except the first placeholder
-                    dropdown.innerHTML = '<option value="" disabled selected hidden>~Select company to award tender to~</option>';
+                    console.log('Full response data:', JSON.stringify(data, null, 2));
 
-                    if (data.companies && data.companies.length > 0) {
-                        console.log('Processing companies:', data.companies);
+                    if (data.success) {
+                        // Clear existing options except the first placeholder
+                        dropdown.innerHTML = '<option value="" disabled>~Select company to award tender to~</option>';
 
-                        data.companies.forEach((company, index) => {
-                            console.log(`Processing company ${index}:`, company);
-                            console.log(`Company properties:`, Object.keys(company));
+                        let hasCurrentValue = false;
 
-                            const option = document.createElement('option');
+                        if (data.companies && data.companies.length > 0) {
+                            console.log('Processing companies:', data.companies);
 
-                            // Try different possible property names
-                            let companyName = '';
-                            if (company.CompanyName) {
-                                companyName = company.CompanyName;
-                            } else if (company.companyName) {
-                                companyName = company.companyName;
-                            } else if (company.name) {
-                                companyName = company.name;
-                            } else if (company.Name) {
-                                companyName = company.Name;
-                            } else {
-                                // If none of the above work, stringify the object to see what we have
-                                console.error('Could not find company name in:', company);
-                                companyName = `Company ${index + 1}`;
+                            data.companies.forEach((company, index) => {
+                                console.log(`Processing company ${index}:`, company);
+                                console.log(`Company properties:`, Object.keys(company));
+
+                                const option = document.createElement('option');
+
+                                // Try different possible property names
+                                let companyName = '';
+                                if (company.CompanyName) {
+                                    companyName = company.CompanyName;
+                                } else if (company.companyName) {
+                                    companyName = company.companyName;
+                                } else if (company.name) {
+                                    companyName = company.name;
+                                } else if (company.Name) {
+                                    companyName = company.Name;
+                                } else {
+                                    console.error('Could not find company name in:', company);
+                                    companyName = `Company ${index + 1}`;
+                                }
+
+                                option.value = companyName;
+                                option.textContent = companyName;
+                                
+                                // Check if this is the currently awarded company
+                                if (currentAwardedTender && companyName === currentAwardedTender) {
+                                    option.selected = true;
+                                    hasCurrentValue = true;
+                                    console.log(`Selected company: ${companyName}`);
+                                }
+                                
+                                dropdown.appendChild(option);
+                                console.log(`Added option - Value: "${option.value}", Text: "${option.textContent}", Selected: ${option.selected}`);
+                            });
+
+                            // If we have a current value but didn't find it in the companies, 
+                            // it might be from a previous award, so add it as an option
+                            if (currentAwardedTender && !hasCurrentValue) {
+                                const option = document.createElement('option');
+                                option.value = currentAwardedTender;
+                                option.textContent = currentAwardedTender + ' (Previously Awarded)';
+                                option.selected = true;
+                                dropdown.appendChild(option);
+                                console.log(`Added previously awarded company: ${currentAwardedTender}`);
                             }
 
-                            option.value = companyName;
-                            option.textContent = companyName;
-                            option.innerHTML = companyName;
+                        } else {
+                            console.log('No companies found');
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "No companies applied for this tender";
+                            option.disabled = true;
                             dropdown.appendChild(option);
+                            
+                            // If there's a previously awarded company, still add it
+                            if (currentAwardedTender) {
+                                const awardedOption = document.createElement('option');
+                                awardedOption.value = currentAwardedTender;
+                                awardedOption.textContent = currentAwardedTender + ' (Previously Awarded)';
+                                awardedOption.selected = true;
+                                dropdown.appendChild(awardedOption);
+                            }
+                        }
 
-                            console.log(`Added option - Value: "${option.value}", Text: "${option.textContent}"`);
-                        });
+                        // Update the dropdown's data attribute to reflect the current selection
+                        if (dropdown.value) {
+                            dropdown.setAttribute('data-awarded-value', dropdown.value);
+                        }
 
                         console.log('Final dropdown HTML:', dropdown.innerHTML);
+                        console.log('Final selected value:', dropdown.value);
                     } else {
-                        console.log('No companies found, adding empty message');
-                        const option = document.createElement('option');
-                        option.value = "";
-                        option.textContent = "No companies applied for this tender";
-                        option.disabled = true;
-                        dropdown.appendChild(option);
+                        console.error('API call failed:', data.message, data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading applicant companies:', error);
+                }
+            }
+
+            // FIXED: Updated visibility function to handle company loading properly
+            function updateAwardedTenderVisibility() {
+                if (statusDropdown.value === 'Awarded Tender') {
+                    awardedContainer.style.display = 'block';
+                    if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'none';
+                    if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'block';
+
+                    // Only load companies if they haven't been loaded yet or if the dropdown is empty
+                    const tenderId = document.querySelector('input[name="Id"]')?.value;
+                    const dropdown = document.getElementById('AwardedTenderDropdown');
+                    
+                    if (tenderId && (!companiesLoaded || dropdown.options.length <= 1)) {
+                        loadApplicantCompanies(tenderId).then(() => {
+                            companiesLoaded = true;
+                        });
                     }
                 } else {
-                    console.error('API call failed:', data.message, data.error);
+                    awardedContainer.style.display = 'none';
+                    if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'block';
+                    if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'none';
+                    // Don't clear the dropdown value when hiding - preserve it for later
                 }
-            } catch (error) {
-                console.error('Error loading applicant companies:', error);
+                toggleNoAwardedDocMsg();
             }
-        }
-
-        // Update the existing updateAwardedTenderVisibility function
-        function updateAwardedTenderVisibility() {
-            if (statusDropdown.value === 'Awarded Tender') {
-                awardedContainer.style.display = 'block';
-                if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'none';
-                if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'block';
-
-                // Load companies when switching to awarded status
-                const tenderId = document.querySelector('input[name="Id"]')?.value;
-                if (tenderId) {
-                    loadApplicantCompanies(tenderId);
-                }
-            } else {
-                awardedContainer.style.display = 'none';
-                if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'block';
-                if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'none';
-                document.getElementById('AwardedTenderDropdown').value = '';
-            }
-            toggleNoAwardedDocMsg();
-        }
 
             if (statusDropdown) {
                 statusDropdown.addEventListener('change', updateAwardedTenderVisibility);
@@ -599,52 +539,51 @@
                 });
             }
 
-                                   function updateFilesDisplay() {
-            // Remove all new uploaded entries (not existing ones)
-            document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+            function updateFilesDisplay() {
+                // Remove all new uploaded entries (not existing ones)
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
 
-            selectedFiles.forEach(function (file, idx) {
-                const entryDiv = document.createElement('div');
-                entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
-                entryDiv.innerHTML = `
-                    <div>
-                        <strong>${file.name}</strong>
-                    </div>
-                    <div class="uploaded-file-actions d-flex gap-2">
-                        <button type="button" class="icon-btn view-upload-btn" title="View">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                `;
+                selectedFiles.forEach(function (file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
+                    entryDiv.innerHTML = `
+                        <div>
+                            <strong>${file.name}</strong>
+                        </div>
+                        <div class="uploaded-file-actions d-flex gap-2">
+                            <button type="button" class="icon-btn view-upload-btn" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
 
-                // View button logic
-                entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, '_blank');
+                    // View button logic
+                    entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
+                        const fileURL = URL.createObjectURL(file);
+                        window.open(fileURL, '_blank');
+                    });
+
+                    // Remove button logic
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        // Remove the file from selectedFiles by index
+                        selectedFiles.splice(idx, 1);
+                        updateFilesDisplay();
+                        toggleNoAwardedDocMsg();
+                    });
+
+                    // Append to awarded or main documents container based on status
+                    if (statusDropdown.value === 'Awarded Tender') {
+                        if (awardedDocumentsContainer) awardedDocumentsContainer.appendChild(entryDiv);
+                    } else {
+                        if (uploadedFilesContainer) uploadedFilesContainer.appendChild(entryDiv);
+                    }
                 });
 
-                // Remove button logic
-                entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                    // Remove the file from selectedFiles by index
-                    selectedFiles.splice(idx, 1);
-                    updateFilesDisplay();
-                    toggleNoAwardedDocMsg();
-                });
-
-                // Append to awarded or main documents container based on status
-                if (statusDropdown.value === 'Awarded Tender') {
-                    if (awardedDocumentsContainer) awardedDocumentsContainer.appendChild(entryDiv);
-                } else {
-                    if (uploadedFilesContainer) uploadedFilesContainer.appendChild(entryDiv);
-                }
-            });
-
-            toggleNoAwardedDocMsg();
-        }
-
+                toggleNoAwardedDocMsg();
+            }
 
             // ---------- Validation Utilities ----------
             function showFieldError(fieldIdOrName, message, tabName) {
@@ -728,214 +667,205 @@
             });
 
             // ---------- Form Submission Logic: Attach all selected files and Validate ----------
-        window.submitForm = function() {
-            const saveBtn = document.getElementById('continueBtn');
+            window.submitForm = function() {
+                const saveBtn = document.getElementById('continueBtn');
 
-            // Prevent multiple submissions
-            if (saveBtn.classList.contains('loading')) {
-                return;
-            }
-
-            // Add loading state
-            saveBtn.classList.add('loading');
-            saveBtn.innerHTML = 'Saving<span class="loading-dots"></span>';
-            saveBtn.disabled = true;
-
-            clearAllCustomErrors();
-
-            // VALIDATION SECTION
-            let errors = [];
-            let errorFields = [];
-            let errorTabs = [];
-
-            // Required fields (details tab)
-            let tenderType = document.querySelector('input[name="TenderType"]:checked');
-            let tenderNumber = document.querySelector('input[name="TenderNumber"]');
-            let closingDate = document.querySelector('input[name="ClosingDate"]');
-            let closingTime = document.querySelector('input[name="ClosingTime"]');
-            let title = document.querySelector('input[name="Title"]');
-            let description = document.querySelector('textarea[name="Description"]');
-            let status = statusDropdown.value;
-            let awardedTenderNote = document.getElementById('AwardedTenderNote');
-
-            if (!tenderType) {
-                errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
-                errorFields.push('TenderType'); errorTabs.push('details');
-            }
-            if (!tenderNumber.value.trim()) {
-                errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
-                errorFields.push('TenderNumber'); errorTabs.push('details');
-            }
-            if (!closingDate.value.trim()) {
-                errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
-                errorFields.push('ClosingDate'); errorTabs.push('details');
-            }
-            if (!closingTime.value.trim()) {
-                errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
-                errorFields.push('ClosingTime'); errorTabs.push('details');
-            }
-            if (!title.value.trim()) {
-                errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
-                errorFields.push('Title'); errorTabs.push('details');
-            }
-            if (!description.value.trim()) {
-                errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
-                errorFields.push('Description'); errorTabs.push('details');
-            }
-            if (!status) {
-                errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
-                errorFields.push('StatusDropdown'); errorTabs.push('details');
-            }
-
-            // Awarded Note required if status is Awarded Tender
-        if (status === 'Awarded Tender') {
-            let awardedTenderDropdown = document.getElementById('AwardedTenderDropdown');
-            console.log('Dropdown validation - Value:', awardedTenderDropdown.value);
-            console.log('Dropdown validation - Selected index:', awardedTenderDropdown.selectedIndex);
-            console.log('Dropdown validation - Selected option:', awardedTenderDropdown.selectedOptions[0]);
-
-            if (!awardedTenderDropdown.value || awardedTenderDropdown.value.trim() === '') {
-                errors.push({field: 'AwardedTenderDropdown', message: 'Please select a company to award the tender to', tab: 'details'});
-                errorFields.push('AwardedTenderDropdown'); errorTabs.push('details');
-            }
-                // Count only awarded docs not marked for deletion + new uploads
-                  const awardedDocCount =
-
-        Array.from(awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
-
-            .filter(div => {
-
-                const docId = div.getAttribute('data-doc-id');
-
-                // FIX: Use AwardedDocumentsToDelete for awarded docs
-
-                const delCheckbox = document.querySelector(`input[name="AwardedDocumentsToDelete"][value="${docId}"]`);
-
-                return !(delCheckbox && delCheckbox.checked);
-
-            }).length
-
-        +
-
-        awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
-
-                if (awardedDocCount === 0) {
-                    errors.push({field: 'AwardedDocuments', message: 'You must upload at least one awarded document.', tab: 'documents'});
-                    errorFields.push('AwardedDocuments'); errorTabs.push('documents');
+                // Prevent multiple submissions
+                if (saveBtn.classList.contains('loading')) {
+                    return;
                 }
-            } else {
-                // For supporting docs: count existing (not marked for deletion) + new uploads
-                const existingDocsCount =
-                    Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
-                        .filter(div => {
-                            const docId = div.getAttribute('data-doc-id');
-                            const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
-                            return !(delCheckbox && delCheckbox.checked);
-                        }).length
-                    +
-                    uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
-                if (existingDocsCount === 0) {
-                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
-                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
+
+                // Add loading state
+                saveBtn.classList.add('loading');
+                saveBtn.innerHTML = 'Saving<span class="loading-dots"></span>';
+                saveBtn.disabled = true;
+
+                clearAllCustomErrors();
+
+                // VALIDATION SECTION
+                let errors = [];
+                let errorFields = [];
+                let errorTabs = [];
+
+                // Required fields (details tab)
+                let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                let closingDate = document.querySelector('input[name="ClosingDate"]');
+                let closingTime = document.querySelector('input[name="ClosingTime"]');
+                let title = document.querySelector('input[name="Title"]');
+                let description = document.querySelector('textarea[name="Description"]');
+                let status = statusDropdown.value;
+                let awardedTenderNote = document.getElementById('AwardedTenderNote');
+
+                if (!tenderType) {
+                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                    errorFields.push('TenderType'); errorTabs.push('details');
                 }
-            }
-
-            // Show all errors next to their fields
-            if (errors.length > 0) {
-                // Remove loading state if validation fails
-                saveBtn.classList.remove('loading');
-                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                saveBtn.disabled = false;
-
-                errors.forEach(function(err) {
-                    showFieldError(err.field, err.message, err.tab);
-                });
-                // Switch to first errored tab and focus field
-                showTab(errors[0].tab);
-                let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                if (firstField) {
-                    firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                    firstField.focus();
+                if (!tenderNumber.value.trim()) {
+                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                    errorFields.push('TenderNumber'); errorTabs.push('details');
                 }
-                return;
-            }
-
-            let form = document.querySelector('form[asp-action="Edit"]') || document.querySelector('form[action*="Edit"]');
-            if (!form) {
-                alert("Form not found!");
-                // Remove loading state if form not found
-                saveBtn.classList.remove('loading');
-                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                saveBtn.disabled = false;
-                return;
-            }
-
-            let formData = new FormData(form);
-
-            // Remove any existing files from input (to avoid duplicates)
-            formData.delete('UploadedFiles');
-
-            // Append all files from selectedFiles array
-            selectedFiles.forEach(function(file) {
-                formData.append('UploadedFiles', file, file.name);
-            });
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                if (!closingDate.value.trim()) {
+                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                    errorFields.push('ClosingDate'); errorTabs.push('details');
                 }
-            })
-                 .then(async response => {
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                const data = await response.json();
-                if (data.success && data.awarded) {
-                    // Show awarded tender modal
-                    document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
-                    var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
-                    modal.show();
-                    document.getElementById('awardedModalCloseBtn').onclick = function () {
-                        window.location.href = data.redirectUrl || '/TenderAdmin/Index';
-                    };
-                } else if (data.success) {
-                    // Show general success modal
-                    const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value;
-                    document.getElementById('successMessage').textContent =
-                        `Tender ${tenderNumber} was successfully updated.`;
+                if (!closingTime.value.trim()) {
+                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                    errorFields.push('ClosingTime'); errorTabs.push('details');
+                }
+                if (!title.value.trim()) {
+                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                    errorFields.push('Title'); errorTabs.push('details');
+                }
+                if (!description.value.trim()) {
+                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                    errorFields.push('Description'); errorTabs.push('details');
+                }
+                if (!status) {
+                    errors.push({field: 'StatusDropdown', message: 'Tender Status is required', tab: 'details'});
+                    errorFields.push('StatusDropdown'); errorTabs.push('details');
+                }
 
-                    // Show success modal
-                    var successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
+                // Awarded Note required if status is Awarded Tender
+                if (status === 'Awarded Tender') {
+                    let awardedTenderDropdown = document.getElementById('AwardedTenderDropdown');
+                    console.log('Dropdown validation - Value:', awardedTenderDropdown.value);
+                    console.log('Dropdown validation - Selected index:', awardedTenderDropdown.selectedIndex);
+                    console.log('Dropdown validation - Selected option:', awardedTenderDropdown.selectedOptions[0]);
 
-                    // On OK button click, redirect
-                    document.getElementById('successOkBtn').onclick = function () {
-                        window.location.href = data.redirectUrl || '/TenderAdmin/Index';
-                    };
+                    if (!awardedTenderDropdown.value || awardedTenderDropdown.value.trim() === '') {
+                        errors.push({field: 'AwardedTenderDropdown', message: 'Please select a company to award the tender to', tab: 'details'});
+                        errorFields.push('AwardedTenderDropdown'); errorTabs.push('details');
+                    }
+                    // Count only awarded docs not marked for deletion + new uploads
+                    const awardedDocCount =
+                        Array.from(awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+                            .filter(div => {
+                                const docId = div.getAttribute('data-doc-id');
+                                // FIX: Use AwardedDocumentsToDelete for awarded docs
+                                const delCheckbox = document.querySelector(`input[name="AwardedDocumentsToDelete"][value="${docId}"]`);
+                                return !(delCheckbox && delCheckbox.checked);
+                            }).length
+                        +
+                        awardedDocumentsContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+
+                    if (awardedDocCount === 0) {
+                        errors.push({field: 'AwardedDocuments', message: 'You must upload at least one awarded document.', tab: 'documents'});
+                        errorFields.push('AwardedDocuments'); errorTabs.push('documents');
+                    }
                 } else {
-                    alert("Failed to save changes: " + (data.message || "Unknown error"));
+                    // For supporting docs: count existing (not marked for deletion) + new uploads
+                    const existingDocsCount =
+                        Array.from(uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.existing-doc'))
+                            .filter(div => {
+                                const docId = div.getAttribute('data-doc-id');
+                                const delCheckbox = document.querySelector(`input[name="DocumentsToDelete"][value="${docId}"]`);
+                                return !(delCheckbox && delCheckbox.checked);
+                            }).length
+                        +
+                        uploadedFilesContainer.querySelectorAll('.uploaded-file-entry.new-doc').length;
+                    if (existingDocsCount === 0) {
+                        errors.push({field: 'UploadedFiles', message: 'You must upload at least one supporting document.', tab: 'documents'});
+                        errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                    }
                 }
-            } else if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                response.text().then(html => {
-                    document.body.innerHTML = html;
-                    window.scrollTo(0, 0);
+
+                // Show all errors next to their fields
+                if (errors.length > 0) {
+                    // Remove loading state if validation fails
+                    saveBtn.classList.remove('loading');
+                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                    saveBtn.disabled = false;
+
+                    errors.forEach(function(err) {
+                        showFieldError(err.field, err.message, err.tab);
+                    });
+                    // Switch to first errored tab and focus field
+                    showTab(errors[0].tab);
+                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                    if (firstField) {
+                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                        firstField.focus();
+                    }
+                    return;
+                }
+
+                let form = document.querySelector('form[asp-action="Edit"]') || document.querySelector('form[action*="Edit"]');
+                if (!form) {
+                    alert("Form not found!");
+                    // Remove loading state if form not found
+                    saveBtn.classList.remove('loading');
+                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                    saveBtn.disabled = false;
+                    return;
+                }
+
+                let formData = new FormData(form);
+
+                // Remove any existing files from input (to avoid duplicates)
+                formData.delete('UploadedFiles');
+
+                // Append all files from selectedFiles array
+                selectedFiles.forEach(function(file) {
+                    formData.append('UploadedFiles', file, file.name);
                 });
-            }
-        })
-            .catch(error => {
-                console.error(error);
-                alert("An error occurred while saving changes.");
-            })
-            .finally(() => {
-                // Remove loading state after response (success or error)
-                saveBtn.classList.remove('loading');
-                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                saveBtn.disabled = false;
-            });
-        };
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                    .then(async response => {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const data = await response.json();
+                            if (data.success && data.awarded) {
+                                // Show awarded tender modal
+                                document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
+                                var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
+                                modal.show();
+                                document.getElementById('awardedModalCloseBtn').onclick = function () {
+                                    window.location.href = data.redirectUrl || '/TenderAdmin/Index';
+                                };
+                            } else if (data.success) {
+                                // Show general success modal
+                                const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value;
+                                document.getElementById('successMessage').textContent =
+                                    `Tender ${tenderNumber} was successfully updated.`;
+
+                                // Show success modal
+                                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                                successModal.show();
+
+                                // On OK button click, redirect
+                                document.getElementById('successOkBtn').onclick = function () {
+                                    window.location.href = data.redirectUrl || '/TenderAdmin/Index';
+                                };
+                            } else {
+                                alert("Failed to save changes: " + (data.message || "Unknown error"));
+                            }
+                        } else if (response.redirected) {
+                            window.location.href = response.url;
+                        } else {
+                            response.text().then(html => {
+                                document.body.innerHTML = html;
+                                window.scrollTo(0, 0);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        alert("An error occurred while saving changes.");
+                    })
+                    .finally(() => {
+                        // Remove loading state after response (success or error)
+                        saveBtn.classList.remove('loading');
+                        saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                        saveBtn.disabled = false;
+                    });
+            };
 
             // Show initial tab and toggle no-doc message on load
             showTab(currentTab);
@@ -944,19 +874,18 @@
     </script>
 }
 
-
 <style>
 
     #AwardedTenderDropdown option {
-    color: #000 !important;
-    background-color: #fff !important;
-    padding: 5px;
-}
+        color: #000 !important;
+        background-color: #fff !important;
+        padding: 5px;
+    }
 
-#AwardedTenderDropdown {
-    color: #000 !important;
-    background-color: #fff !important;
-}
+    #AwardedTenderDropdown {
+        color: #000 !important;
+        background-color: #fff !important;
+    }
 
     .custom-dropdown {
         appearance: none;

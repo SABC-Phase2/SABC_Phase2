@@ -772,6 +772,7 @@ namespace SABC_Phase2.Controllers
 
             return View("Edit", dto);
         }
+       
         [HttpGet]
         public async Task<IActionResult> GetApplicantCompanies(int tenderId)
         {
