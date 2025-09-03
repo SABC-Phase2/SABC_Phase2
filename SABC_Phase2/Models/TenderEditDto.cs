@@ -50,5 +50,7 @@ namespace SABC_Phase2.Models
         public List<TenderDocumentViewModel> AwardedDocuments { get; set; } = new();
 
         public List<int> AwardedDocumentsToDelete { get; set; } = new();
+
+        public List<ApplicantCompanyViewModel> ApplicantCompanies { get; set; } = new List<ApplicantCompanyViewModel>();
     }
 }

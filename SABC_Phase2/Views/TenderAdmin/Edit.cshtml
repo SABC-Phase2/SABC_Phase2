@@ -104,14 +104,26 @@
                     </div>
                     <!-- Awarded Tender Input, shown only if 'Awarded Tender' is selected -->
                     <div id="AwardedTenderContainer" style="flex: 1; display: none;">
-                        <label id="AwardedTenderLabel" for="AwardedTenderNote" class="mb-1">Awarded To <span class="text-danger">*</span></label>
-                        <input asp-for="AwardedTender"
-                               id="AwardedTenderNote"
-                               class="form-control"
-                               placeholder="Enter award details or notes" />
+                        <label id="AwardedTenderLabel" for="AwardedTenderDropdown" class="mb-1">Awarded To <span class="text-danger">*</span></label>
+                        <select asp-for="AwardedTender"
+                                id="AwardedTenderDropdown"
+                                class="form-control custom-dropdown">
+                            <option value="" disabled selected hidden>~Select company to award tender to~</option>
+                            @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
+                            {
+                                @foreach (var company in Model.ApplicantCompanies)
+                                {
+                                    <option value="@company.CompanyName"
+                                            selected="@(Model.AwardedTender == company.CompanyName)">
+                                        @company.CompanyName
+                                    </option>
+                                }
+                            }
+                        </select>
                         <span asp-validation-for="AwardedTender" class="text-danger"></span>
                     </div>
                 </div>
+
 
                 <!-- Tender Title (full width) -->
                 <div class="form-group full-width">
@@ -217,6 +229,9 @@
 <div class="action-buttons">
     <button type="button" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
     <button type="button" id="continueBtn" class="action-btn continue-btn" onclick="submitForm()">Save Changes <span class="arrow-icon"></span></button>
+    <button type="button" id="debugBtn" class="btn btn-info" onclick="debugCompanies()">Debug Companies</button>
+    <!-- Add this right after your Debug Companies button for testing -->
+    <button type="button" id="testBtn" class="btn btn-warning" onclick="testDropdown()">Test Dropdown Data</button>
 </div>
 
 <!-- Awarded Tender Modal -->
@@ -296,6 +311,106 @@
             });
         });
 
+                // Add this function to test the dropdown data
+        window.testDropdown = function() {
+            const dropdown = document.getElementById('AwardedTenderDropdown');
+            console.log('=== DROPDOWN TEST ===');
+            console.log('Dropdown element:', dropdown);
+            console.log('Dropdown innerHTML:', dropdown.innerHTML);
+            console.log('Dropdown options count:', dropdown.options.length);
+
+            for (let i = 0; i < dropdown.options.length; i++) {
+                const option = dropdown.options[i];
+                console.log(`Option ${i}:`, {
+                    value: option.value,
+                    text: option.text,
+                    innerHTML: option.innerHTML
+                });
+            }
+
+            console.log('Current selected value:', dropdown.value);
+            console.log('Current selected index:', dropdown.selectedIndex);
+            alert('Check console for dropdown data');
+        };
+
+                      // Enhanced debug function
+        window.debugCompanies = async function() {
+            const tenderId = document.querySelector('input[name="Id"]')?.value;
+            console.log('=== COMPANY DEBUG START ===');
+            console.log('Tender ID:', tenderId);
+
+            if (!tenderId) {
+                console.log('ERROR: No tender ID found');
+                alert('No tender ID found!');
+                return;
+            }
+
+            // Debug 1: Check Applied_For_Tenders
+            console.log('--- Step 1: Checking Applied_For_Tenders ---');
+            try {
+                const response1 = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
+                const responseText = await response1.text();
+                console.log('Raw response text:', responseText);
+
+                let data1;
+                try {
+                    data1 = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Failed to parse JSON:', parseError);
+                    console.log('Response was:', responseText);
+                    return;
+                }
+
+                console.log('Parsed GetApplicantCompanies Response:', data1);
+                console.log('Response structure:', JSON.stringify(data1, null, 2));
+
+                if (data1.success) {
+                    console.log('Companies found:', data1.companies);
+                    console.log('Number of companies:', data1.companies?.length || 0);
+
+                    if (data1.companies && data1.companies.length > 0) {
+                        data1.companies.forEach((company, index) => {
+                            console.log(`Company ${index + 1}:`, company);
+                            console.log(`Company ${index + 1} properties:`, Object.keys(company));
+                            console.log(`Company ${index + 1} values:`, Object.values(company));
+                        });
+                    } else {
+                        console.log('No companies returned from API');
+                    }
+                } else {
+                    console.log('API call failed:', data1.message, data1.error);
+                }
+
+                // Also check the current model data
+                console.log('--- Model ApplicantCompanies ---');
+                @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
+                {
+                            <text>
+                            console.log('Model ApplicantCompanies:', [
+                                @foreach (var company in Model.ApplicantCompanies)
+                                {
+                                            <text>{ UserId: @company.UserId, CompanyName: "@company.CompanyName" },</text>
+                                }
+                            ]);
+                            </text>
+                }
+                else
+                {
+                            <text>
+                            console.log('Model ApplicantCompanies: []');
+                            </text>
+                }
+
+                alert('Debug complete! Check console for details.');
+
+            } catch (error) {
+                console.error('Error during debug:', error);
+                alert('Error during debug: ' + error.message);
+            }
+
+            console.log('=== COMPANY DEBUG END ===');
+        };
+
         // Confirm delete
         document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
             if (docToDeleteCheckbox) {
@@ -352,19 +467,93 @@
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
             const awardedDocumentsContainer = document.getElementById('awardedDocumentsContainer');
 
-            function updateAwardedTenderVisibility() {
-                if (statusDropdown.value === 'Awarded Tender') {
-                    awardedContainer.style.display = 'block';
-                    if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'none';
-                    if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'block';
+                              // Replace your existing loadApplicantCompanies function with this one
+        async function loadApplicantCompanies(tenderId) {
+            const dropdown = document.getElementById('AwardedTenderDropdown');
+            if (!dropdown) return;
+
+            console.log('Loading applicant companies for tender:', tenderId);
+
+            try {
+                const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
+                const data = await response.json();
+
+                console.log('Full response data:', JSON.stringify(data, null, 2));
+
+                if (data.success) {
+                    // Clear existing options except the first placeholder
+                    dropdown.innerHTML = '<option value="" disabled selected hidden>~Select company to award tender to~</option>';
+
+                    if (data.companies && data.companies.length > 0) {
+                        console.log('Processing companies:', data.companies);
+
+                        data.companies.forEach((company, index) => {
+                            console.log(`Processing company ${index}:`, company);
+                            console.log(`Company properties:`, Object.keys(company));
+
+                            const option = document.createElement('option');
+
+                            // Try different possible property names
+                            let companyName = '';
+                            if (company.CompanyName) {
+                                companyName = company.CompanyName;
+                            } else if (company.companyName) {
+                                companyName = company.companyName;
+                            } else if (company.name) {
+                                companyName = company.name;
+                            } else if (company.Name) {
+                                companyName = company.Name;
+                            } else {
+                                // If none of the above work, stringify the object to see what we have
+                                console.error('Could not find company name in:', company);
+                                companyName = `Company ${index + 1}`;
+                            }
+
+                            option.value = companyName;
+                            option.textContent = companyName;
+                            option.innerHTML = companyName;
+                            dropdown.appendChild(option);
+
+                            console.log(`Added option - Value: "${option.value}", Text: "${option.textContent}"`);
+                        });
+
+                        console.log('Final dropdown HTML:', dropdown.innerHTML);
+                    } else {
+                        console.log('No companies found, adding empty message');
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "No companies applied for this tender";
+                        option.disabled = true;
+                        dropdown.appendChild(option);
+                    }
                 } else {
-                    awardedContainer.style.display = 'none';
-                    if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'block';
-                    if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'none';
-                    document.getElementById('AwardedTenderNote').value = '';
+                    console.error('API call failed:', data.message, data.error);
                 }
-                toggleNoAwardedDocMsg();
+            } catch (error) {
+                console.error('Error loading applicant companies:', error);
             }
+        }
+
+        // Update the existing updateAwardedTenderVisibility function
+        function updateAwardedTenderVisibility() {
+            if (statusDropdown.value === 'Awarded Tender') {
+                awardedContainer.style.display = 'block';
+                if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'none';
+                if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'block';
+
+                // Load companies when switching to awarded status
+                const tenderId = document.querySelector('input[name="Id"]')?.value;
+                if (tenderId) {
+                    loadApplicantCompanies(tenderId);
+                }
+            } else {
+                awardedContainer.style.display = 'none';
+                if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'block';
+                if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'none';
+                document.getElementById('AwardedTenderDropdown').value = '';
+            }
+            toggleNoAwardedDocMsg();
+        }
 
             if (statusDropdown) {
                 statusDropdown.addEventListener('change', updateAwardedTenderVisibility);
@@ -599,11 +788,16 @@
             }
 
             // Awarded Note required if status is Awarded Tender
-            if (status === 'Awarded Tender') {
-                if (!awardedTenderNote.value.trim()) {
-                    errors.push({field: 'AwardedTenderNote', message: 'Awarded field is required', tab: 'details'});
-                    errorFields.push('AwardedTenderNote'); errorTabs.push('details');
-                }
+        if (status === 'Awarded Tender') {
+            let awardedTenderDropdown = document.getElementById('AwardedTenderDropdown');
+            console.log('Dropdown validation - Value:', awardedTenderDropdown.value);
+            console.log('Dropdown validation - Selected index:', awardedTenderDropdown.selectedIndex);
+            console.log('Dropdown validation - Selected option:', awardedTenderDropdown.selectedOptions[0]);
+
+            if (!awardedTenderDropdown.value || awardedTenderDropdown.value.trim() === '') {
+                errors.push({field: 'AwardedTenderDropdown', message: 'Please select a company to award the tender to', tab: 'details'});
+                errorFields.push('AwardedTenderDropdown'); errorTabs.push('details');
+            }
                 // Count only awarded docs not marked for deletion + new uploads
                   const awardedDocCount =
 
@@ -752,6 +946,18 @@
 
 
 <style>
+
+    #AwardedTenderDropdown option {
+    color: #000 !important;
+    background-color: #fff !important;
+    padding: 5px;
+}
+
+#AwardedTenderDropdown {
+    color: #000 !important;
+    background-color: #fff !important;
+}
+
     .custom-dropdown {
         appearance: none;
         -webkit-appearance: none;

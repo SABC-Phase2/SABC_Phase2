@@ -650,6 +650,9 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
+            // Add this debug line at the start
+            Console.WriteLine($"DEBUG: Editing tender with ID: {id}");
+
             var tender = await _context.Tenders
                 .Include(t => t.AwardedTender)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -666,7 +669,7 @@ namespace SABC_Phase2.Controllers
             {
                 Id = doc.Id,
                 FileName = doc.FileName,
-                SharePointPath = doc.SharePointPath // <-- use SharePointPath instead of FilePath
+                SharePointPath = doc.SharePointPath
             }).ToList();
 
             // Load awarded documents if any
@@ -681,8 +684,72 @@ namespace SABC_Phase2.Controllers
                 {
                     Id = doc.Id,
                     FileName = doc.FileName,
-                    SharePointPath = doc.SharePointPath // <-- use SharePointPath instead of FilePath
+                    SharePointPath = doc.SharePointPath
                 }).ToList();
+            }
+
+            // Get companies that applied for this tender - FIXED VERSION
+            var applicantCompanies = new List<ApplicantCompanyViewModel>();
+            try
+            {
+                Console.WriteLine($"DEBUG: Looking for applicants for tender ID: {tender.Id}");
+
+                var applicantUserIds = await _context.Applied_For_Tenders
+                    .Where(aft => aft.TenderId == tender.Id)
+                    .Select(aft => aft.OVRS_UserId)
+                    .ToListAsync();
+
+                Console.WriteLine($"DEBUG: Found {applicantUserIds.Count} applicant user IDs: {string.Join(", ", applicantUserIds)}");
+
+                if (applicantUserIds.Any())
+                {
+                    // Get legacy IDs one by one to avoid OPENJSON issues
+                    var userLegacyIds = new List<int>();
+                    foreach (var userId in applicantUserIds)
+                    {
+                        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                        if (user != null && user.LegacyUserId.HasValue)
+                        {
+                            userLegacyIds.Add(user.LegacyUserId.Value);
+                        }
+                    }
+
+                    Console.WriteLine($"DEBUG: Found {userLegacyIds.Count} legacy IDs: {string.Join(", ", userLegacyIds)}");
+
+                    // Get company names one by one to avoid OPENJSON issues
+                    foreach (var legacyId in userLegacyIds)
+                    {
+                        var supplier = await _legacyContext.TblSuppliers
+                            .FirstOrDefaultAsync(s => s.UserId == legacyId);
+
+                        if (supplier != null)
+                        {
+                            var companyName = !string.IsNullOrWhiteSpace(supplier.TradingName)
+                                ? supplier.TradingName
+                                : supplier.LegalName;
+
+                            if (!string.IsNullOrWhiteSpace(companyName))
+                            {
+                                applicantCompanies.Add(new ApplicantCompanyViewModel
+                                {
+                                    UserId = supplier.UserId,
+                                    CompanyName = companyName
+                                });
+                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}");
+                            }
+                        }
+                    }
+
+                    // Sort the companies
+                    applicantCompanies = applicantCompanies.OrderBy(c => c.CompanyName).ToList();
+
+                    Console.WriteLine($"DEBUG: Final applicant companies count: {applicantCompanies.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception in Edit GET: {ex.Message}");
+                applicantCompanies = new List<ApplicantCompanyViewModel>();
             }
 
             var dto = new TenderEditDto
@@ -697,12 +764,92 @@ namespace SABC_Phase2.Controllers
                 Description = tender.Description,
                 AwardedTender = tender.AwardedTender?.AwardedCompanyName,
                 ExistingDocuments = mainDocumentList,
-                AwardedDocuments = awardedDocumentList
+                AwardedDocuments = awardedDocumentList,
+                ApplicantCompanies = applicantCompanies
             };
+
+            Console.WriteLine($"DEBUG: DTO ApplicantCompanies count: {dto.ApplicantCompanies.Count}");
 
             return View("Edit", dto);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetApplicantCompanies(int tenderId)
+        {
+            try
+            {
+                // Debug: Log the tender ID
+                Console.WriteLine($"DEBUG: Getting applicant companies for tender ID: {tenderId}");
 
+                // Get all users who applied for this tender
+                var applicantUserIds = await _context.Applied_For_Tenders
+                    .Where(aft => aft.TenderId == tenderId)
+                    .Select(aft => aft.OVRS_UserId)
+                    .ToListAsync();
+
+                Console.WriteLine($"DEBUG: Found {applicantUserIds.Count} applicant user IDs: {string.Join(", ", applicantUserIds)}");
+
+                if (!applicantUserIds.Any())
+                {
+                    Console.WriteLine("DEBUG: No applicants found for this tender");
+                    return Json(new { success = true, companies = new List<object>() });
+                }
+
+                // Get companies one by one to avoid OPENJSON issues
+                var companies = new List<object>();
+
+                foreach (var userId in applicantUserIds)
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user != null && user.LegacyUserId.HasValue)
+                    {
+                        var supplier = await _legacyContext.TblSuppliers
+                            .FirstOrDefaultAsync(s => s.UserId == user.LegacyUserId.Value);
+
+                        if (supplier != null)
+                        {
+                            var companyName = !string.IsNullOrWhiteSpace(supplier.TradingName)
+                                ? supplier.TradingName
+                                : supplier.LegalName;
+
+                            if (!string.IsNullOrWhiteSpace(companyName))
+                            {
+                                // Create explicit object to ensure JSON serialization works correctly
+                                var companyObj = new
+                                {
+                                    UserId = supplier.UserId,
+                                    CompanyName = companyName
+                                };
+
+                                companies.Add(companyObj);
+                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}");
+                                Console.WriteLine($"DEBUG: Company object: {System.Text.Json.JsonSerializer.Serialize(companyObj)}");
+                            }
+                        }
+                    }
+                }
+
+                // Sort the companies
+                companies = companies
+                    .Cast<dynamic>()
+                    .OrderBy(c => c.CompanyName)
+                    .Cast<object>()
+                    .ToList();
+
+                Console.WriteLine($"DEBUG: Found {companies.Count} companies with names");
+                Console.WriteLine($"DEBUG: Final companies JSON: {System.Text.Json.JsonSerializer.Serialize(companies)}");
+
+                var result = new { success = true, companies = companies };
+                Console.WriteLine($"DEBUG: Final result JSON: {System.Text.Json.JsonSerializer.Serialize(result)}");
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception occurred: {ex.Message}");
+                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
+                return Json(new { success = false, message = "Failed to load applicant companies", error = ex.Message });
+            }
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
