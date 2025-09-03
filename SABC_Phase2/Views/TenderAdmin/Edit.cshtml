@@ -257,6 +257,26 @@
     </div>
 </div>
 
+<!-- Success Modal -->
+<div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center">
+            <div class="modal-header border-0">
+                <h5 class="modal-title w-100" id="successModalLabel" style="color: #16a34a;">
+                    Success
+                </h5>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage" style="font-size:1.1rem;"></p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 @section Scripts {
     <script>
@@ -673,32 +693,44 @@
                     'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                 }
             })
-            .then(async response => {
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    const data = await response.json();
-                    if (data.success && data.awarded) {
-                        document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
-                        var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
-                        modal.show();
-                        document.getElementById('awardedModalCloseBtn').onclick = function () {
-                            window.location.reload();
-                        };
-                    } else if (data.success) {
-                        // redirect or show success
+                 .then(async response => {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                if (data.success && data.awarded) {
+                    // Show awarded tender modal
+                    document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';
+                    var modal = new bootstrap.Modal(document.getElementById('awardedModal'));
+                    modal.show();
+                    document.getElementById('awardedModalCloseBtn').onclick = function () {
                         window.location.href = data.redirectUrl || '/TenderAdmin/Index';
-                    } else {
-                        alert("Failed to save changes.");
-                    }
-                } else if (response.redirected) {
-                    window.location.href = response.url;
+                    };
+                } else if (data.success) {
+                    // Show general success modal
+                    const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value;
+                    document.getElementById('successMessage').textContent =
+                        `Tender ${tenderNumber} was successfully updated.`;
+
+                    // Show success modal
+                    var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+
+                    // On OK button click, redirect
+                    document.getElementById('successOkBtn').onclick = function () {
+                        window.location.href = data.redirectUrl || '/TenderAdmin/Index';
+                    };
                 } else {
-                    response.text().then(html => {
-                        document.body.innerHTML = html;
-                        window.scrollTo(0, 0);
-                    });
+                    alert("Failed to save changes: " + (data.message || "Unknown error"));
                 }
-            })
+            } else if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                response.text().then(html => {
+                    document.body.innerHTML = html;
+                    window.scrollTo(0, 0);
+                });
+            }
+        })
             .catch(error => {
                 console.error(error);
                 alert("An error occurred while saving changes.");

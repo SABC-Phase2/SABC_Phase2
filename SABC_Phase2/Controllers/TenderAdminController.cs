@@ -737,6 +737,12 @@ namespace SABC_Phase2.Controllers
 
             if (!ModelState.IsValid)
             {
+                // Check if this is an AJAX request
+                if (Request.Headers["Content-Type"].ToString().Contains("multipart/form-data") ||
+                    Request.Headers["RequestVerificationToken"].Any())
+                {
+                    return Json(new { success = false, message = "Invalid data submitted" });
+                }
                 return View("Edit", dto);
             }
 
@@ -971,6 +977,7 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
+            // With this:
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
                 return Json(new
@@ -982,7 +989,14 @@ namespace SABC_Phase2.Controllers
                 });
             }
 
-            return RedirectToAction("Index");
+            // Return JSON for regular success too
+            return Json(new
+            {
+                success = true,
+                tenderNumber = tender.TenderNumber,
+                redirectUrl = Url.Action("Index", "TenderAdmin"),
+                awarded = false
+            });
         }
 
         [HttpGet]
