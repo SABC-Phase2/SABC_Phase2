@@ -290,7 +290,24 @@
     </div>
 </div>
 
-
+<!-- Modal: Awarded Company Account Deleted -->
+<div class="modal fade" id="deletedAccountModal" tabindex="-1" aria-labelledby="deletedAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deletedAccountModalLabel">Company Account Deleted</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                The selected company <strong id="deletedCompanyName"></strong> has had their account deleted.<br />
+                Please select another company to award this tender to.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -823,6 +840,21 @@
                         const contentType = response.headers.get("content-type");
                         if (contentType && contentType.includes("application/json")) {
                             const data = await response.json();
+
+                                    if (data.deletedAccount) {
+            // Show the modal popup with company name
+            document.getElementById('deletedCompanyName').textContent = data.companyName || '';
+            var modal = new bootstrap.Modal(document.getElementById('deletedAccountModal'));
+            modal.show();
+
+            // Remove loading state
+            saveBtn.classList.remove('loading');
+            saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+            saveBtn.disabled = false;
+            return; // stop further processing
+        }
+
+
                             if (data.success && data.awarded) {
                                 // Show awarded tender modal
                                 document.getElementById('awardedModalTenderNumber').textContent = data.tenderNumber || '';

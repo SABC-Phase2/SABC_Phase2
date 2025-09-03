@@ -772,7 +772,7 @@ namespace SABC_Phase2.Controllers
 
             return View("Edit", dto);
         }
-       
+
         [HttpGet]
         public async Task<IActionResult> GetApplicantCompanies(int tenderId)
         {
@@ -969,7 +969,7 @@ namespace SABC_Phase2.Controllers
             tender.Title = dto.Title;
             tender.Description = dto.Description;
 
-           
+
 
             // --- RENAME SHAREPOINT FOLDER IF TENDER NUMBER CHANGED ---
             if (tenderNumberChanged)
@@ -1125,16 +1125,28 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
-            // With this:
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
-                return Json(new
+                // 1. Find supplier by tradingname (or legalname if needed)
+                var supplier = await _legacyContext.TblSuppliers
+                    .FirstOrDefaultAsync(s => s.TradingName == dto.AwardedTender || s.LegalName == dto.AwardedTender);
+
+                if (supplier != null)
                 {
-                    success = true,
-                    tenderNumber = tender.TenderNumber,
-                    redirectUrl = Url.Action("Index", "TenderAdmin"),
-                    awarded = true
-                });
+                    // 2. Find user in Phase 2 db by legacy user id
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.LegacyUserId == supplier.UserId);
+
+                    if (user != null && user.AccountStatus == 0)
+                    {
+                        // 3. User account is deleted, block the award, return error for JS
+                        return Json(new
+                        {
+                            success = false,
+                            deletedAccount = true,
+                            companyName = supplier.TradingName ?? supplier.LegalName
+                        });
+                    }
+                }
             }
 
             // Return JSON for regular success too
@@ -1672,4 +1684,3 @@ namespace SABC_Phase2.Controllers
         public int Id { get; set; }
     }
 }
-
