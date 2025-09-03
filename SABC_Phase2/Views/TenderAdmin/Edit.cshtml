@@ -105,21 +105,52 @@
                     <!-- Awarded Tender Input, shown only if 'Awarded Tender' is selected -->
                     <div id="AwardedTenderContainer" style="flex: 1; display: none;">
                         <label id="AwardedTenderLabel" for="AwardedTenderDropdown" class="mb-1">Awarded To <span class="text-danger">*</span></label>
-                        <select asp-for="AwardedTender"
-                                id="AwardedTenderDropdown"
-                                class="form-control custom-dropdown"
-                                data-awarded-value="@Model.AwardedTender">
-                            <option value="" disabled selected hidden>~Select company to award tender to~</option>
-                            @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
-                            {
-                                @foreach (var company in Model.ApplicantCompanies)
+
+                        <!-- Custom Dropdown Container -->
+                        <div class="custom-dropdown-container" id="customDropdownContainer">
+                            <!-- Hidden select for form submission -->
+                            <select asp-for="AwardedTender"
+                                    id="AwardedTenderDropdown"
+                                    class="form-control"
+                                    data-awarded-value="@Model.AwardedTender"
+                                    style="display: none;">
+                                <option value="" disabled selected hidden>~Select company to award tender to~</option>
+                                @if (Model.ApplicantCompanies != null && Model.ApplicantCompanies.Any())
                                 {
-                                    <option value="@company.CompanyName" selected="@(Model.AwardedTender == company.CompanyName)">
-                                        @company.CompanyName
-                                    </option>
+                                    @foreach (var company in Model.ApplicantCompanies)
+                                    {
+                                        <option value="@company.CompanyName" selected="@(Model.AwardedTender == company.CompanyName)">
+                                            @company.CompanyName
+                                        </option>
+                                    }
                                 }
-                            }
-                        </select>
+                            </select>
+
+                            <!-- Custom Dropdown Display -->
+                            <div class="custom-dropdown-display form-control custom-dropdown" id="customDropdownDisplay">
+                                <span class="selected-text">~Select company to award tender to~</span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+
+                            <!-- Dropdown Menu -->
+                            <div class="custom-dropdown-menu" id="customDropdownMenu">
+                                <!-- Search Input inside dropdown -->
+                                <div class="dropdown-search-container">
+                                    <input type="text"
+                                           class="form-control dropdown-search-input"
+                                           id="dropdownSearchInput"
+                                           placeholder="Search for a company..."
+                                           autocomplete="off" />
+                                    <i class="fas fa-search search-icon"></i>
+                                </div>
+
+                                <!-- Options Container -->
+                                <div class="dropdown-options" id="dropdownOptions">
+                                    <!-- Options will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
                         <span asp-validation-for="AwardedTender" class="text-danger"></span>
                     </div>
                 </div>
@@ -317,6 +348,10 @@
             let docToDeleteCheckbox = null;
             let companiesLoaded = false; // Track if companies have been loaded
 
+            // === Custom Company Dropdown with Integrated Search ===
+            let allCompanyOptions = [];
+            let isDropdownOpen = false;
+
             // Attach event listeners to all existing document delete buttons (multi-step)
             document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
@@ -384,123 +419,247 @@
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
             const awardedDocumentsContainer = document.getElementById('awardedDocumentsContainer');
 
-            // FIXED: Improved company loading function that preserves selected value
+            // Initialize custom dropdown
+            function initializeCustomDropdown() {
+                const displayElement = document.getElementById('customDropdownDisplay');
+                const menuElement = document.getElementById('customDropdownMenu');
+                const searchInput = document.getElementById('dropdownSearchInput');
+                const optionsContainer = document.getElementById('dropdownOptions');
+                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+
+                if (!displayElement || !menuElement || !searchInput || !optionsContainer || !hiddenSelect) {
+                    console.error('Custom dropdown elements not found');
+                    return;
+                }
+
+                // Remove any existing event listeners by cloning elements
+                const newDisplayElement = displayElement.cloneNode(true);
+                displayElement.parentNode.replaceChild(newDisplayElement, displayElement);
+
+                const newSearchInput = document.getElementById('dropdownSearchInput');
+                const newMenuElement = document.getElementById('customDropdownMenu');
+
+                // Toggle dropdown on display click
+                newDisplayElement.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    console.log('Dropdown clicked');
+                    toggleCustomDropdown();
+                });
+
+                // Search functionality
+                newSearchInput.addEventListener('input', function() {
+                    filterDropdownOptions(this.value);
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!document.getElementById('customDropdownContainer').contains(e.target)) {
+                        closeCustomDropdown();
+                    }
+                });
+
+                // Prevent dropdown from closing when clicking inside the menu
+                newMenuElement.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+
+                // Handle keyboard navigation
+                newSearchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        closeCustomDropdown();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const firstOption = document.getElementById('dropdownOptions').querySelector('.dropdown-option:not(.disabled)');
+                        if (firstOption) {
+                            selectOption(firstOption.textContent, firstOption.getAttribute('data-value'));
+                        }
+                    }
+                });
+
+                console.log('Custom dropdown initialized successfully');
+            }
+
+            function toggleCustomDropdown() {
+                console.log('Toggle dropdown, current state:', isDropdownOpen);
+                if (isDropdownOpen) {
+                    closeCustomDropdown();
+                } else {
+                    openCustomDropdown();
+                }
+            }
+
+            function openCustomDropdown() {
+                const displayElement = document.getElementById('customDropdownDisplay');
+                const menuElement = document.getElementById('customDropdownMenu');
+                const searchInput = document.getElementById('dropdownSearchInput');
+                const arrow = displayElement.querySelector('.dropdown-arrow');
+
+                console.log('Opening dropdown');
+                displayElement.classList.add('active');
+                menuElement.classList.add('show');
+                arrow.classList.add('rotate');
+                isDropdownOpen = true;
+
+                // Clear search and show all options
+                searchInput.value = '';
+                filterDropdownOptions('');
+
+                // Focus on search input
+                setTimeout(() => searchInput.focus(), 100);
+            }
+
+            function closeCustomDropdown() {
+                const displayElement = document.getElementById('customDropdownDisplay');
+                const menuElement = document.getElementById('customDropdownMenu');
+                const arrow = displayElement.querySelector('.dropdown-arrow');
+
+                if (displayElement && menuElement && arrow) {
+                    console.log('Closing dropdown');
+                    displayElement.classList.remove('active');
+                    menuElement.classList.remove('show');
+                    arrow.classList.remove('rotate');
+                    isDropdownOpen = false;
+                }
+            }
+
+            function filterDropdownOptions(searchText) {
+                const normalizedSearch = searchText.toLowerCase().trim();
+
+                let filteredOptions = allCompanyOptions;
+
+                if (normalizedSearch !== '') {
+                    filteredOptions = allCompanyOptions.filter(option =>
+                        option.companyName.toLowerCase().includes(normalizedSearch)
+                    );
+                }
+
+                renderDropdownOptions(filteredOptions);
+            }
+
+            function renderDropdownOptions(options) {
+                const optionsContainer = document.getElementById('dropdownOptions');
+                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+                const currentValue = hiddenSelect.value;
+
+                optionsContainer.innerHTML = '';
+
+                if (options.length === 0) {
+                    const noResults = document.createElement('div');
+                    noResults.className = 'no-results';
+                    noResults.textContent = 'No companies match your search';
+                    optionsContainer.appendChild(noResults);
+                    return;
+                }
+
+                options.forEach(option => {
+                    const optionElement = document.createElement('div');
+                    optionElement.className = 'dropdown-option';
+                    optionElement.textContent = option.companyName;
+                    optionElement.setAttribute('data-value', option.companyName);
+
+                    if (option.companyName === currentValue) {
+                        optionElement.classList.add('selected');
+                    }
+
+                    optionElement.addEventListener('click', function() {
+                        selectOption(option.companyName, option.companyName);
+                    });
+
+                    optionsContainer.appendChild(optionElement);
+                });
+            }
+
+            function selectOption(displayText, value) {
+                const displayElement = document.getElementById('customDropdownDisplay');
+                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+                const selectedTextElement = displayElement.querySelector('.selected-text');
+
+                selectedTextElement.textContent = displayText;
+                hiddenSelect.value = value;
+
+                // Trigger change event for validation
+                hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+                closeCustomDropdown();
+            }
+
+            // Load applicant companies function
             async function loadApplicantCompanies(tenderId) {
-                const dropdown = document.getElementById('AwardedTenderDropdown');
-                if (!dropdown) return;
+                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+                if (!hiddenSelect) return;
 
-                // Get the current awarded tender value from the model or dropdown
-                const currentAwardedTender = dropdown.getAttribute('data-awarded-value') || dropdown.value;
-
-                console.log('Loading applicant companies for tender:', tenderId);
-                console.log('Current awarded tender value:', currentAwardedTender);
+                const currentAwardedTender = hiddenSelect.getAttribute('data-awarded-value') || hiddenSelect.value;
 
                 try {
                     const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
                     const data = await response.json();
 
-                    console.log('Full response data:', JSON.stringify(data, null, 2));
-
                     if (data.success) {
-                        // Clear existing options except the first placeholder
-                        dropdown.innerHTML = '<option value="" disabled>~Select company to award tender to~</option>';
-
-                        let hasCurrentValue = false;
+                        allCompanyOptions = [];
 
                         if (data.companies && data.companies.length > 0) {
-                            console.log('Processing companies:', data.companies);
-
                             data.companies.forEach((company, index) => {
-                                console.log(`Processing company ${index}:`, company);
-                                console.log(`Company properties:`, Object.keys(company));
-
-                                const option = document.createElement('option');
-
-                                // Try different possible property names
-                                let companyName = '';
-                                if (company.CompanyName) {
-                                    companyName = company.CompanyName;
-                                } else if (company.companyName) {
-                                    companyName = company.companyName;
-                                } else if (company.name) {
-                                    companyName = company.name;
-                                } else if (company.Name) {
-                                    companyName = company.Name;
-                                } else {
-                                    console.error('Could not find company name in:', company);
-                                    companyName = `Company ${index + 1}`;
-                                }
-
-                                option.value = companyName;
-                                option.textContent = companyName;
-                                
-                                // Check if this is the currently awarded company
-                                if (currentAwardedTender && companyName === currentAwardedTender) {
-                                    option.selected = true;
-                                    hasCurrentValue = true;
-                                    console.log(`Selected company: ${companyName}`);
-                                }
-                                
-                                dropdown.appendChild(option);
-                                console.log(`Added option - Value: "${option.value}", Text: "${option.textContent}", Selected: ${option.selected}`);
+                                let companyName = company.CompanyName || company.companyName || company.name || company.Name || `Company ${index + 1}`;
+                                allCompanyOptions.push({ companyName });
                             });
 
-                            // If we have a current value but didn't find it in the companies, 
-                            // it might be from a previous award, so add it as an option
-                            if (currentAwardedTender && !hasCurrentValue) {
-                                const option = document.createElement('option');
-                                option.value = currentAwardedTender;
-                                option.textContent = currentAwardedTender + ' (Previously Awarded)';
-                                option.selected = true;
-                                dropdown.appendChild(option);
-                                console.log(`Added previously awarded company: ${currentAwardedTender}`);
+                            // Add previously awarded if not in list
+                            if (currentAwardedTender && !allCompanyOptions.find(c => c.companyName === currentAwardedTender)) {
+                                allCompanyOptions.push({ companyName: currentAwardedTender });
                             }
+                        }
 
+                        // Update hidden select options for form submission
+                        updateHiddenSelectOptions();
+
+                        // Update display text if there's a current value
+                        if (currentAwardedTender) {
+                            selectOption(currentAwardedTender, currentAwardedTender);
                         } else {
-                            console.log('No companies found');
-                            const option = document.createElement('option');
-                            option.value = "";
-                            option.textContent = "No companies applied for this tender";
-                            option.disabled = true;
-                            dropdown.appendChild(option);
-                            
-                            // If there's a previously awarded company, still add it
-                            if (currentAwardedTender) {
-                                const awardedOption = document.createElement('option');
-                                awardedOption.value = currentAwardedTender;
-                                awardedOption.textContent = currentAwardedTender + ' (Previously Awarded)';
-                                awardedOption.selected = true;
-                                dropdown.appendChild(awardedOption);
+                            const selectedTextElement = document.getElementById('customDropdownDisplay')?.querySelector('.selected-text');
+                            if (selectedTextElement) {
+                                selectedTextElement.textContent = '~Select company to award tender to~';
                             }
                         }
-
-                        // Update the dropdown's data attribute to reflect the current selection
-                        if (dropdown.value) {
-                            dropdown.setAttribute('data-awarded-value', dropdown.value);
-                        }
-
-                        console.log('Final dropdown HTML:', dropdown.innerHTML);
-                        console.log('Final selected value:', dropdown.value);
-                    } else {
-                        console.error('API call failed:', data.message, data.error);
                     }
                 } catch (error) {
                     console.error('Error loading applicant companies:', error);
                 }
             }
 
-            // FIXED: Updated visibility function to handle company loading properly
+            function updateHiddenSelectOptions() {
+                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+                const currentValue = hiddenSelect.value;
+
+                // Clear existing options except the default
+                hiddenSelect.innerHTML = '<option value="" disabled>~Select company to award tender to~</option>';
+
+                allCompanyOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.companyName;
+                    optionElement.textContent = option.companyName;
+                    if (option.companyName === currentValue) {
+                        optionElement.selected = true;
+                    }
+                    hiddenSelect.appendChild(optionElement);
+                });
+            }
+
+            // Update the visibility function
             function updateAwardedTenderVisibility() {
                 if (statusDropdown.value === 'Awarded Tender') {
                     awardedContainer.style.display = 'block';
                     if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'none';
                     if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'block';
 
-                    // Only load companies if they haven't been loaded yet or if the dropdown is empty
+                    // Initialize custom dropdown after the container is visible
+                    setTimeout(() => {
+                        initializeCustomDropdown();
+                    }, 100);
+
+                    // Load companies if needed
                     const tenderId = document.querySelector('input[name="Id"]')?.value;
-                    const dropdown = document.getElementById('AwardedTenderDropdown');
-                    
-                    if (tenderId && (!companiesLoaded || dropdown.options.length <= 1)) {
+                    if (tenderId && (!companiesLoaded || allCompanyOptions.length === 0)) {
                         loadApplicantCompanies(tenderId).then(() => {
                             companiesLoaded = true;
                         });
@@ -509,7 +668,7 @@
                     awardedContainer.style.display = 'none';
                     if (uploadedFilesContainer) uploadedFilesContainer.style.display = 'block';
                     if (awardedDocumentsContainer) awardedDocumentsContainer.style.display = 'none';
-                    // Don't clear the dropdown value when hiding - preserve it for later
+                    closeCustomDropdown(); // Close dropdown if open
                 }
                 toggleNoAwardedDocMsg();
             }
@@ -841,19 +1000,18 @@
                         if (contentType && contentType.includes("application/json")) {
                             const data = await response.json();
 
-                                    if (data.deletedAccount) {
-            // Show the modal popup with company name
-            document.getElementById('deletedCompanyName').textContent = data.companyName || '';
-            var modal = new bootstrap.Modal(document.getElementById('deletedAccountModal'));
-            modal.show();
+                            if (data.deletedAccount) {
+                                // Show the modal popup with company name
+                                document.getElementById('deletedCompanyName').textContent = data.companyName || '';
+                                var modal = new bootstrap.Modal(document.getElementById('deletedAccountModal'));
+                                modal.show();
 
-            // Remove loading state
-            saveBtn.classList.remove('loading');
-            saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-            saveBtn.disabled = false;
-            return; // stop further processing
-        }
-
+                                // Remove loading state
+                                saveBtn.classList.remove('loading');
+                                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                                saveBtn.disabled = false;
+                                return; // stop further processing
+                            }
 
                             if (data.success && data.awarded) {
                                 // Show awarded tender modal
@@ -907,8 +1065,126 @@
         });
     </script>
 }
-
 <style>
+
+    /* Custom Dropdown Styles */
+    .custom-dropdown-container {
+        position: relative;
+        width: 100%;
+    }
+
+    .custom-dropdown-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        background-color: white;
+        border: 1px solid #ced4da;
+        padding: 0.375rem 0.75rem;
+        min-height: calc(1.5em + 0.75rem + 2px);
+    }
+
+        .custom-dropdown-display:hover {
+            border-color: #80bdff;
+        }
+
+        .custom-dropdown-display.active {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+    .dropdown-arrow {
+        transition: transform 0.2s ease;
+        color: #6c757d;
+    }
+
+        .dropdown-arrow.rotate {
+            transform: rotate(180deg);
+        }
+
+    .custom-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 0.25rem 0.25rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+        z-index: 1000;
+        display: none;
+        max-height: 300px;
+        overflow: hidden;
+    }
+
+        .custom-dropdown-menu.show {
+            display: block;
+        }
+
+    .dropdown-search-container {
+        position: relative;
+        padding: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .dropdown-search-input {
+        padding-right: 2rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+
+        .dropdown-search-input:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+    .search-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+    }
+
+    .dropdown-options {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .dropdown-option {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+        transition: background-color 0.15s ease;
+    }
+
+        .dropdown-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-option.selected {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .dropdown-option.disabled {
+            color: #6c757d;
+            cursor: not-allowed;
+            background-color: #f8f9fa;
+        }
+
+    .no-results {
+        padding: 0.75rem;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
 
     #successModal .modal-dialog {
         max-width: 340px;
