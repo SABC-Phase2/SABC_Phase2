@@ -62,10 +62,14 @@
             <div style="color:#d32f2f;font-size:0.95rem;font-weight:500;margin-bottom:10px;">
                 *This section has a maximum upload limit of 100MB!
             </div>
+            <!-- Add inline validation message -->
+            <div id="documentValidationError" style="color:#d32f2f;font-size:0.95rem;font-weight:500;margin-bottom:10px;display:none;">
+                <i class="fas fa-exclamation-circle"></i> Submission requires at least one document upload. Please upload a document to proceed.
+            </div>
         </div>
 
         <!-- Update your HTML to remove the checkbox delete option -->
-        <div id="uploadedFilesContainer" class="mt-3">
+        <div id="uploadedFilesContainer" class="mt-3 pdf-scroll-container">
             @if (documents != null && documents.Any())
             {
                 foreach (var doc in documents)
@@ -73,9 +77,6 @@
                     <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light" data-doc-id="@doc.Id">
                         <div>
                             <strong>@doc.FileName</strong>
-                            @*  <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                @(doc.FileSize > 0 ? $"{FormatFileSize(doc.FileSize)} • " : "")Uploaded @doc.CreatedDate.ToString("dd MMM yyyy HH:mm")
-                            </div> *@
                         </div>
                         <div class="uploaded-file-actions d-flex">
                             <a href="@Url.Action("ViewDocument", "OVRS_User", new { id = doc.Id })"
@@ -186,22 +187,30 @@
 <!-- Success Modal -->
 <div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="successModalLabel" style="width:100%;text-align:center; color: #16a34a;">
-                    <span style="font-weight:bold;">Success</span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+        <div class="modal-content" style="text-align:center; border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <div class="modal-header border-0" style="padding: 30px 30px 10px 30px;">
+                <!-- Green Tick Icon -->
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 80px; height: 80px; margin: 0 auto; display: block;" />
             </div>
-            <div class="modal-body">
-                <p id="successMessage" style="font-size:1.25rem; font-weight:600; color: #222;"></p>
+            <div class="modal-body" style="padding: 10px 30px 30px 30px;">
+                <!-- Main Title -->
+                <h4 id="successTitle" style="font-size: 1.5rem; font-weight: 700; color: #16a34a; margin-bottom: 15px;">
+                    Submission Updated
+                </h4>
+                <!-- Secondary Message -->
+                <p id="successMessage" style="font-size: 1rem; font-weight: 400; color: #666; margin-bottom: 25px; line-height: 1.4;">
+                    Your submission for <span id="tenderNumberSpan" style="font-weight: 600; color: #333;"></span> was updated successfully.
+                </p>
             </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
+            <div class="modal-footer border-0 d-flex justify-content-center" style="padding: 0 30px 30px 30px;">
+                <button type="button" id="successOkBtn" class="btn btn-success" style="min-width: 120px; padding: 12px 24px; font-weight: 600; border-radius: 8px; background-color: #16a34a; border-color: #16a34a;">
+                    OK
+                </button>
             </div>
         </div>
     </div>
 </div>
+
 
 @section Scripts {
     <script>
@@ -230,6 +239,38 @@
             };
         }
 
+        // ✅ Updated Success Modal Function
+        function showSuccessModal(tenderNumber, redirectUrl) {
+            const modal = document.getElementById('successModal');
+
+            // Set the tender number in the message
+            document.getElementById('tenderNumberSpan').textContent = tenderNumber || 'this tender';
+
+            // Show modal using Bootstrap
+            var successModal = new bootstrap.Modal(modal);
+            successModal.show();
+
+            // Handle OK button click
+            document.getElementById('successOkBtn').onclick = function() {
+                successModal.hide();
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                }
+            };
+        }
+
+        // ======= Inline Validation Functions =======
+        function showInlineValidation() {
+            const errorDiv = document.getElementById('documentValidationError');
+            errorDiv.style.display = 'block';
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideInlineValidation() {
+            const errorDiv = document.getElementById('documentValidationError');
+            errorDiv.style.display = 'none';
+        }
+
         // ======= PDF Upload Logic =======
         const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
         let storedFiles = [];
@@ -249,7 +290,15 @@
             const docsToDelete = Array.from(document.querySelectorAll('input[name="DocumentsToDelete"]:checked'));
             const remainingExistingDocs = existingDocs.length - docsToDelete.length;
             const newFilesCount = storedFiles.length;
-            return (remainingExistingDocs + newFilesCount) > 0;
+            const hasDocuments = (remainingExistingDocs + newFilesCount) > 0;
+
+            if (hasDocuments) {
+                hideInlineValidation();
+            } else {
+                showInlineValidation();
+            }
+
+            return hasDocuments;
         }
 
         function validateDocumentCountAfterDelete(indexToRemove) {
@@ -282,17 +331,16 @@
                 totalSize += file.size;
             }
             renderUploadedFiles();
-            fileInput.value = ""; // Reset for next upload
+            validateDocumentCount();
+            fileInput.value = "";
         });
 
-        // Render uploaded PDFs preview (updated version)
+        // Render uploaded PDFs preview
         function renderUploadedFiles() {
-            // Keep server-side docs (already rendered by Razor)
             const existingDocs = Array.from(uploadedFilesContainer.querySelectorAll('.existing-doc'));
             uploadedFilesContainer.innerHTML = "";
             existingDocs.forEach(doc => uploadedFilesContainer.appendChild(doc));
 
-            // Render client-side PDFs
             storedFiles.forEach((fileInfo, index) => {
                 const { file, uploadedAt } = fileInfo;
                 const fileRow = document.createElement("div");
@@ -313,7 +361,6 @@
                 const actions = document.createElement("div");
                 actions.className = "uploaded-file-actions d-flex";
 
-                // View button
                 const viewBtn = document.createElement("button");
                 viewBtn.type = "button";
                 viewBtn.className = "btn btn-outline-primary btn-sm me-2";
@@ -324,7 +371,6 @@
                     window.open(fileURL, "_blank");
                 };
 
-                // Delete button
                 const deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "btn btn-outline-danger btn-sm";
@@ -337,6 +383,7 @@
                     }
                     storedFiles.splice(index, 1);
                     renderUploadedFiles();
+                    validateDocumentCount();
                 };
 
                 actions.appendChild(viewBtn);
@@ -347,19 +394,21 @@
             });
         }
 
-        // Form submission handler
+        // ✅ Updated Form submission handler
         editForm.addEventListener("submit", function (e) {
             if (!validateDocumentCount()) {
                 e.preventDefault();
-                showValidationError("You must keep at least one document.\n\n" +
-                    "• Keep at least one existing document, or\n" +
-                    "• Upload at least one new document");
                 return;
             }
 
             const submitBtn = editForm.querySelector('.submit-btn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+            function resetSubmitButton() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Update Submission <span class="arrow-icon"></span>';
+            }
 
             if (storedFiles.length > 0) {
                 e.preventDefault();
@@ -369,38 +418,55 @@
                 fetch(editForm.action, {
                     method: "POST",
                     body: formData,
-                    headers: {}
-                })
-                .then(response => {
-                    if (response.redirected) {
-                         if (response.redirected) {
-            // Show modal before redirecting
-            showSuccessModal("Your submission was updated successfully.", response.url);
-        } else if (response.headers.get("content-type")?.includes("application/json")) {
-            return response.json().then(data => {
-                if (data.success && data.redirectUrl) {
-                    showSuccessModal("Your submission was updated successfully.", data.redirectUrl);
-                } else {
-                    showErrorModal(data.message || "Update succeeded but no redirect URL was provided.");
-                    resetSubmitButton();
-                }
-            });
-        }
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                     }
-                    return response.text().then(html => document.body.innerHTML = html);
+                })
+                .then(async response => {
+                    const contentType = response.headers.get("content-type");
+
+                    // Check if response is JSON
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // ✅ Get tender number from form or response
+                            const tenderNumber = data.tenderNumber ||
+                                               document.querySelector('input[name="TenderNumber"]')?.value ||
+                                               document.querySelector('[data-tender-number]')?.getAttribute('data-tender-number') ||
+                                               'this tender';
+
+                            const redirectUrl = data.redirectUrl || '/OVRS_User/OVRS_Submissions_Drafts';
+
+                            // Show success modal with tender number
+                            showSuccessModal(tenderNumber, redirectUrl);
+                        } else {
+                            showErrorModal(data.message || "Failed to update submission.");
+                            resetSubmitButton();
+                        }
+                    }
+                    // Handle redirect responses
+                    else if (response.redirected) {
+                        const tenderNumber = document.querySelector('input[name="TenderNumber"]')?.value || 'this tender';
+                        showSuccessModal(tenderNumber, response.url);
+                    }
+                    // Handle HTML responses (validation errors)
+                    else {
+                        response.text().then(html => {
+                            document.body.innerHTML = html;
+                            resetSubmitButton();
+                        });
+                    }
                 })
                 .catch(error => {
+                    console.error('Submission error:', error);
                     showErrorModal("An error occurred while updating your submission. Please try again.");
                     resetSubmitButton();
                 });
             }
-
-            function resetSubmitButton() {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Update Submission <span class="arrow-icon"></span>';
-            }
         });
 
+        // Rest of your existing code remains the same...
         // Existing document delete checkbox handler
         $(document).on('change', 'input[name="DocumentsToDelete"]', function() {
             if (!validateDocumentCount()) {
@@ -409,7 +475,7 @@
             }
         });
 
-               let currentDocumentToDelete = null;
+        let currentDocumentToDelete = null;
 
         // Attach click handler to all delete buttons
         document.querySelectorAll('.delete-existing-doc').forEach(btn => {
@@ -431,11 +497,9 @@
         // Handle confirm delete in modal
         document.getElementById('confirmDeleteDocumentBtn').addEventListener('click', function() {
             if (currentDocumentToDelete) {
-                // Hide modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteDocumentModal'));
                 modal.hide();
 
-                // AJAX call to delete document
                 fetch('/OVRS_User/DeleteDocument/' + currentDocumentToDelete.id, {
                     method: 'POST',
                     headers: {
@@ -446,6 +510,7 @@
                 .then(data => {
                     if (data.success) {
                         currentDocumentToDelete.element.remove();
+                        validateDocumentCount();
                     } else {
                         showErrorModal(data.message || "Failed to delete document.");
                     }
@@ -458,32 +523,20 @@
                 });
             }
         });
-                // Add this function to your JS section
-        function showSuccessModal(message, redirectUrl) {
-            const modal = document.getElementById('successModal');
-            document.getElementById('successModalMessage').textContent = message;
-            modal.classList.add('show');
-            modal.style.display = 'flex';
 
-            document.getElementById('successModalCloseBtn').onclick = function() {
-                modal.classList.remove('show');
-                modal.style.display = 'none';
-                if (redirectUrl) {
-                    window.location.href = redirectUrl;
-                }
-            };
-        }
-
-              // Special validation for existing doc delete operations
         function validateDocumentCountAfterDeleteExisting(docIdToRemove) {
             const existingDocs = Array.from(document.querySelectorAll('.existing-doc'))
                 .filter(doc => doc.dataset.docId !== docIdToRemove.toString());
             const newFilesCount = storedFiles.length;
             return (existingDocs.length + newFilesCount) > 0;
         }
+
+        // Initialize validation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            validateDocumentCount();
+        });
     </script>
 }
-<!-- Copy and reuse the styles from your application form for visual consistency -->
 <style>
     #deleteDocumentModal .modal-dialog {
         max-width: 340px;
@@ -849,6 +902,11 @@
     .readonly-label {
         color: #222;
         font-weight: 600;
+    }
+
+    .pdf-scroll-container {
+        max-height: 140px; /* fits 2 rows, adjust if needed */
+        overflow-y: auto;
     }
 
     .readonly-input {

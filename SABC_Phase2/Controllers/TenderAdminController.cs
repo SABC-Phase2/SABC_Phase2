@@ -814,25 +814,27 @@ namespace SABC_Phase2.Controllers
 
                             if (!string.IsNullOrWhiteSpace(companyName))
                             {
-                                // Create explicit object to ensure JSON serialization works correctly
+                                // Include account status information
                                 var companyObj = new
                                 {
                                     UserId = supplier.UserId,
-                                    CompanyName = companyName
+                                    CompanyName = companyName,
+                                    IsAccountDeleted = user.AccountStatus == 0 // Check if account is deleted
                                 };
 
                                 companies.Add(companyObj);
-                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}");
+                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}, Account Deleted: {user.AccountStatus == 0}");
                                 Console.WriteLine($"DEBUG: Company object: {System.Text.Json.JsonSerializer.Serialize(companyObj)}");
                             }
                         }
                     }
                 }
 
-                // Sort the companies
+                // Sort the companies - active companies first, then deleted accounts
                 companies = companies
                     .Cast<dynamic>()
-                    .OrderBy(c => c.CompanyName)
+                    .OrderBy(c => c.IsAccountDeleted) // Active accounts first
+                    .ThenBy(c => c.CompanyName)
                     .Cast<object>()
                     .ToList();
 
@@ -856,7 +858,6 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenderEditDto dto)
         {
-
             // --- TENDER NUMBER UNIQUENESS VALIDATION ON EDIT ---
             if (!string.IsNullOrWhiteSpace(dto.TenderNumber))
             {
@@ -882,7 +883,6 @@ namespace SABC_Phase2.Controllers
                     ModelState.AddModelError("TenderNumber", "This Tender Number was used for a \"Scheduled Tender\".");
             }
 
-
             if (!ModelState.IsValid)
             {
                 // Check if this is an AJAX request
@@ -903,6 +903,30 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
+            // --- EARLY CHECK: Prevent awarding to deleted company BEFORE ANY DATA CHANGES ---
+            if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
+            {
+                // 1. Find supplier by tradingname (or legalname if needed)
+                var supplier = await _legacyContext.TblSuppliers
+                    .FirstOrDefaultAsync(s => s.TradingName == dto.AwardedTender || s.LegalName == dto.AwardedTender);
+
+                if (supplier != null)
+                {
+                    // 2. Find user in Phase 2 db by legacy user id
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.LegacyUserId == supplier.UserId);
+
+                    if (user != null && user.AccountStatus == 0)
+                    {
+                        // 3. User account is deleted, block the award, return error for JS
+                        return Json(new
+                        {
+                            success = false,
+                            deletedAccount = true,
+                            companyName = supplier.TradingName ?? supplier.LegalName
+                        });
+                    }
+                }
+            }
 
             // --- AWARDED DOCUMENT VALIDATION ---
             if (dto.Status == "Awarded Tender")
@@ -968,8 +992,6 @@ namespace SABC_Phase2.Controllers
             tender.Status = dto.Status;
             tender.Title = dto.Title;
             tender.Description = dto.Description;
-
-
 
             // --- RENAME SHAREPOINT FOLDER IF TENDER NUMBER CHANGED ---
             if (tenderNumberChanged)
@@ -1125,37 +1147,16 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
-            if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
-            {
-                // 1. Find supplier by tradingname (or legalname if needed)
-                var supplier = await _legacyContext.TblSuppliers
-                    .FirstOrDefaultAsync(s => s.TradingName == dto.AwardedTender || s.LegalName == dto.AwardedTender);
+            // Determine if this was an award operation
+            bool isAwarded = dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender);
 
-                if (supplier != null)
-                {
-                    // 2. Find user in Phase 2 db by legacy user id
-                    var user = await _context.Users.FirstOrDefaultAsync(u => u.LegacyUserId == supplier.UserId);
-
-                    if (user != null && user.AccountStatus == 0)
-                    {
-                        // 3. User account is deleted, block the award, return error for JS
-                        return Json(new
-                        {
-                            success = false,
-                            deletedAccount = true,
-                            companyName = supplier.TradingName ?? supplier.LegalName
-                        });
-                    }
-                }
-            }
-
-            // Return JSON for regular success too
+            // Return JSON for regular success, set awarded appropriately
             return Json(new
             {
                 success = true,
                 tenderNumber = tender.TenderNumber,
                 redirectUrl = Url.Action("Index", "TenderAdmin"),
-                awarded = false
+                awarded = isAwarded
             });
         }
 

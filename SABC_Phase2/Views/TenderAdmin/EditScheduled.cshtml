@@ -220,14 +220,15 @@
 <div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="successModalLabel" style="width:100%;text-align:center; color: #16a34a;">
-                    <span style="font-weight:bold;">Success</span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            <div class="modal-header d-block border-0" style="padding-bottom:0;">
+                <!-- Tender Number Heading in Green -->
+                <h4 id="successModalTenderNumber" style="font-size:1.5rem; font-weight:700; color:#16a34a; margin-bottom:0;"></h4>
             </div>
-            <div class="modal-body">
-                <p id="successMessage" style="font-size:1.25rem; font-weight:600; color: #222;"></p>
+            <!-- Green Tick -->
+            <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 18px auto 0 auto; display: block;" />
+            <div class="modal-body" style="padding-top:18px;">
+                <!-- Big Green Text -->
+                <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">Scheduled Tender Successfully Updated</div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
                 <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
@@ -630,27 +631,25 @@
                         })
                         .then(async response => {
                             const contentType = response.headers.get("content-type");
-                            if (contentType && contentType.includes("application/json")) {
-                                const data = await response.json();
-                                       if (data.success) {
-                    // Fill modal message with tender number
-                    const tenderNumber = document.querySelector('input[name="TenderNumber"]').value;
-                    document.getElementById('successMessage').textContent =
-                        `Tender ${tenderNumber} was successfully updated.`;
+                       if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            if (data.success) {
+                // Set the green tender number heading
+                const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value || '';
+                document.getElementById('successModalTenderNumber').textContent = tenderNumber;
 
-                    // Show success modal
-                    var successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
+                // Show success modal
+                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
 
-                    // On OK button click, redirect
-                    document.getElementById('successOkBtn').onclick = function () {
-                        window.location.href = data.redirectUrl || '/TenderAdmin/ScheduledIndex';
-                    };
-                }
-                 else {
-                                    alert("Failed to save changes: " + (data.message || "Unknown error"));
-                                }
-                            } else if (response.redirected) {
+                // On OK button click, redirect
+                document.getElementById('successOkBtn').onclick = function () {
+                    window.location.href = data.redirectUrl || '/TenderAdmin/ScheduledIndex';
+                };
+            } else {
+                alert("Failed to save changes: " + (data.message || "Unknown error"));
+            }
+        } else if (response.redirected) {
                                 // Preserve authentication state on redirect
                                 window.location.href = response.url;
                             } else {

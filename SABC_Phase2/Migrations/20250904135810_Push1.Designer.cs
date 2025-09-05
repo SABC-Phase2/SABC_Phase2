@@ -12,7 +12,7 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250902185804_Push1")]
+    [Migration("20250904135810_Push1")]
     partial class Push1
     {
         /// <inheritdoc />

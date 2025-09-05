@@ -217,16 +217,16 @@
         <div class="modal-content" style="text-align:center;">
             <div class="modal-header d-block border-0">
                 <h5 class="modal-title w-100" id="publishSuccessModalLabel" style="width:100%;text-align:center;">
-                    <span id="modalTenderNumber" style="font-weight:bold;"></span>
+                    <span id="modalTenderNumber" style="font-weight:700; color:#16a34a; font-size:1.5rem;"></span>
                 </h5>
                 <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p style="font-size:1.35rem; font-weight:600;">Published Successfully</p>
+                <!-- Published Successfully in green and bold -->
+                <p style="font-size:1.4rem; font-weight:700; color:#16a34a;">Published Successfully</p>
             </div>
-
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="modalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <button type="button" id="modalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
             </div>
         </div>
     </div>
@@ -249,25 +249,30 @@
         </div>
     </div>
 </div>
+
+
 <!-- Modal Popup for Scheduled Tender Success -->
 <div id="scheduledSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="scheduledSuccessModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
             <div class="modal-header d-block border-0">
+                <!-- Tender Number in green and bold -->
                 <h5 class="modal-title w-100" id="scheduledSuccessModalLabel" style="width:100%;text-align:center;">
-                    <span id="scheduledModalTenderNumber" style="font-weight:bold;"></span>
+                    <span id="scheduledModalTenderNumber" style="font-weight:bold; color:#16a34a; font-size:1.4rem;"></span>
                 </h5>
                 <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p style="font-size:1.25rem; font-weight:600;">Tender Successfully Scheduled</p>
-                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
+                <!-- Large green text -->
+                <p style="font-size:1.3rem; font-weight:700; color:#16a34a;">Tender Scheduled Successfully</p>
+                <!-- Small grey text and blue link -->
+                <div style="font-size:0.98rem; color: #888; margin-top:10px;">
                     Your Tender has been saved to
-                    <a href="#" id="scheduledTendersLink" style="color:#222; text-decoration:underline; font-weight:500;">Scheduled Tenders</a>
+                    <a href="#" id="scheduledTendersLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">Scheduled Tenders</a>
                 </div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="scheduledModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <button type="button" id="scheduledModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
             </div>
         </div>
     </div>
@@ -280,19 +285,19 @@
         <div class="modal-content" style="text-align:center;">
             <div class="modal-header d-block border-0">
                 <h5 class="modal-title w-100" id="draftSavedModalLabel" style="width:100%;text-align:center;">
-                    <span id="draftModalTenderNumber" style="font-weight:bold;"></span>
+                    <span id="draftModalTenderNumber" style="font-weight:bold; color:#16a34a;"></span>
                 </h5>
                 <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p style="font-size:1.25rem; font-weight:600;">Draft saved</p>
-                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
+                <p style="font-size:1.25rem; font-weight:600; color:#16a34a;">Draft Saved Succesfully</p>
+                <div style="font-size:0.95rem; color: #888; margin-top:10px;">
                     Your draft has been saved to
-                    <a href="#" id="draftResponsesLink" style="color:#222; text-decoration:underline; font-weight:500;">draft responses</a>
+                    <a href="#" id="draftResponsesLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">draft responses</a>
                 </div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="draftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <button type="button" id="draftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
             </div>
         </div>
     </div>

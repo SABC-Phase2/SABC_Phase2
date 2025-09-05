@@ -26,6 +26,7 @@
     <div class="details-underline"></div>
 
     <form id="tenderAppForm" asp-action="SubmitTenderApplication" enctype="multipart/form-data" method="post" autocomplete="off">
+        @Html.AntiForgeryToken()
         <div class="tender-details-form">
             <input type="hidden" name="LegacyUserId" value="@(Model.LegacyUserId?.ToString() ?? "")" />
             <input type="hidden" name="TenderId" value="@Model.Tender.Id" />
@@ -71,6 +72,10 @@
             <div class="details-underline" style="margin-bottom:10px;"></div>
             <div style="color:#d32f2f;font-size:0.95rem;font-weight:500;margin-bottom:10px;">
                 *This section has a maximum upload limit of 100MB!
+            </div>
+            <div id="documentRequiredError"
+                 style="color:#e11d48;font-size:0.85rem;font-weight:500;margin-bottom:10px;display:none;">
+                Submission requires at least one document upload. Please upload a document to proceed.
             </div>
         </div>
 
@@ -129,70 +134,53 @@
 
 
 
-<!-- Modal Popups -->
+<!-- Redesigned Success Modal with Green Tender Number -->
 <div id="applicationSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="applicationSuccessModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="applicationSuccessModalLabel" style="width:100%;text-align:center; color:#1a7f37;">
-
-                    Application Submitted
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 74px; height: 74px; margin: 12px auto 0 auto; display: block;" />
+            <div class="modal-header d-block border-0" style="padding-bottom: 0;">
+                <!-- Tender Number (header) -->
+                <h4 id="applicationSuccessModalTenderNumber" style="font-size:1.7rem; font-weight:700; color:#16a34a; margin-bottom:0;"></h4>
             </div>
-            <div class="modal-body">
-                <p style="font-size:1.35rem; font-weight:600; color:#1a7f37;">Your tender application was submitted successfully!</p>
+            <!-- Green Tick -->
+            <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 74px; height: 74px; margin: 18px auto 0 auto; display: block;" />
+            <div class="modal-body" style="padding-top: 18px;">
+                <!-- Large green text -->
+                <div style="font-size:1.5rem; font-weight:700; color:#16a34a; margin-bottom: 6px;">Submitted Successfully</div>
+                <!-- Small grey text -->
+                <div style="font-size:1rem; color:#888;">Confirmation email sent</div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="applicationSuccessModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <!-- Green Ok Button -->
+                <button type="button" id="applicationSuccessModalCloseBtn" class="btn btn-success" style="min-width:100px; font-weight:600;">OK</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="submissionErrorModal" class="modal fade" tabindex="-1" aria-labelledby="submissionErrorModalLabel" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="submissionErrorModalLabel" style="width:100%;text-align:center; color:#e11d48;">
-
-                    Submission Error
-                </h5>
-            </div>
-            <div class="modal-body">
-                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
-                <p style="font-size:1.15rem; font-weight:500; color:#1a7f37; margin-top:12px;">
-
-                    Please upload a document to submit your response.
-                </p>
-            </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="submissionErrorModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modal Popup for Draft Save Success (OVRS User) -->
 <div id="ovrsDraftSavedModal" class="modal fade" tabindex="-1" aria-labelledby="ovrsDraftSavedModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="ovrsDraftSavedModalLabel" style="width:100%;text-align:center;">
-                    <span id="ovrsDraftModalTenderNumber" style="font-weight:bold;"></span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            <div class="modal-header d-block border-0" style="padding-bottom:0;">
+                <!-- Tender Number in green, as heading -->
+                <h4 id="ovrsDraftModalTenderNumber" style="font-size:1.5rem; font-weight:700; color:#16a34a; margin-bottom:0;"></h4>
             </div>
-            <div class="modal-body">
-                <p style="font-size:1.25rem; font-weight:600;">Draft saved</p>
-                <div style="font-size:0.95rem; color: #222; margin-top:10px;">
-
+            <!-- Green Tick -->
+            <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 18px auto 0 auto; display: block;" />
+            <div class="modal-body" style="padding-top:18px;">
+                <!-- Large green text -->
+                <div style="font-size:1.4rem; font-weight:700; color:#16a34a; margin-bottom: 8px;">Draft Saved</div>
+                <!-- Small text, blue hyperlink -->
+                <div style="font-size:1rem; color:#888;">
                     Your draft has been saved to
-                    <a href="#" id="ovrsDraftResponsesLink" style="color:#222; text-decoration:underline; font-weight:500;">draft responses</a>
+                    <a href="#" id="ovrsDraftResponsesLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">Draft Response</a>
                 </div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="ovrsDraftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <!-- Green Ok Button -->
+                <button type="button" id="ovrsDraftModalCloseBtn" class="btn btn-success" style="min-width:100px; font-weight:600;">OK</button>
             </div>
         </div>
     </div>
@@ -281,6 +269,9 @@
             }
             renderUploadedFiles();
             fileInput.value = "";
+
+              document.getElementById('documentRequiredError').style.display = 'none';
+
         });
 
         // ------------------- Render Uploaded Files -------------------
@@ -343,40 +334,68 @@
         }
 
         // ------------------- Form Submission -------------------
+              // ✅ Updated Form submission handler
         submitBtn.addEventListener("click", function (e) {
+            // Hide the inline error every time they try to submit
+            document.getElementById('documentRequiredError').style.display = 'none';
+
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
 
             const hasNewFiles = storedFiles.length > 0;
             const hasExistingDocs = document.querySelectorAll('.existing-doc').length > 0;
             if (!hasNewFiles && !hasExistingDocs) {
-                showSubmissionErrorModal();
+                // Show the inline error (no modal)
+                document.getElementById('documentRequiredError').style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                // Optionally scroll to error
+                document.getElementById('documentRequiredError').scrollIntoView({behavior: "smooth"});
                 return;
             }
+
 
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => formData.append("UploadedFiles", fileInfo.file));
 
             fetch(form.action, {
                 method: "POST",
-                body: formData
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
             })
-            .then(response => {
-                if (response.headers.get("content-type")?.includes("application/json")) {
-                    return response.json().then(data => {
-                        if (data.success) showApplicationSuccessModal();
-                        else {
-                            alert(data.message || "Submission failed.");
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
-                        }
+            .then(async response => {
+                const contentType = response.headers.get("content-type");
+
+                // Check if response is JSON
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // ✅ Show modal with tender number and redirect URL
+                        showApplicationSuccessModal(data.tenderNumber, data.redirectUrl);
+                    } else {
+                        alert(data.message || "Submission failed.");
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                    }
+                }
+                // Handle redirect responses (fallback)
+                else if (response.redirected) {
+                    showApplicationSuccessModal(null, response.url);
+                }
+                // Handle HTML responses (validation errors)
+                else {
+                    response.text().then(html => {
+                        document.body.innerHTML = html;
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
                     });
-                } else if (response.redirected) window.location.href = response.url;
-                else response.text().then(html => document.body.innerHTML = html);
+                }
             })
-            .catch(() => {
+            .catch(error => {
+                console.error('Submission error:', error);
                 alert("Error submitting application.");
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
@@ -384,14 +403,22 @@
         });
 
         // ------------------- Modals -------------------
-        function showApplicationSuccessModal() {
+        // ✅ Updated Success Modal Function
+        function showApplicationSuccessModal(tenderNumber, redirectUrl) {
             const modal = document.getElementById('applicationSuccessModal');
+            // Fill in tender number as header
+            document.getElementById('applicationSuccessModalTenderNumber').textContent = tenderNumber || '';
+            // Show modal
             modal.classList.add('show');
             modal.style.display = 'flex';
             document.getElementById('applicationSuccessModalCloseBtn').onclick = function() {
                 modal.classList.remove('show');
                 modal.style.display = 'none';
-                window.location.href = '/OVRS_User/Index';
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    window.location.href = '/OVRS_User/OVRS_Documents';
+                }
             };
         }
 
@@ -406,15 +433,20 @@
         }
 
         // ------------------- FIX: Draft Saved Modal Opens Drafts Section -------------------
-        function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
-            document.getElementById('ovrsDraftModalTenderNumber').innerText = tenderNumber || '';
+         function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
+            // Set tender number in green heading
+            document.getElementById('ovrsDraftModalTenderNumber').textContent = tenderNumber || '';
+            // Set Draft Response link (blue)
             const draftsLink = document.getElementById('ovrsDraftResponsesLink');
-            // Always open the drafts section and list view
             draftsLink.href = draftResponsesUrl || '/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list';
+            draftsLink.style.color = '#2563eb';
+            draftsLink.textContent = "Draft Response";
 
+            // Show modal
             const modal = document.getElementById('ovrsDraftSavedModal');
             modal.classList.add('show');
             modal.style.display = 'flex';
+
             document.getElementById('ovrsDraftModalCloseBtn').onclick = function() {
                 modal.classList.remove('show');
                 modal.style.display = 'none';
@@ -458,11 +490,11 @@
                     draftBtn.querySelector('.btn-text').classList.remove('d-none');
                     draftBtn.querySelector('.spinner-border').classList.add('d-none');
                 }
-                if (data.success) {
-                    if (!isAuto) {
-                        const tenderNumber = form.querySelector("input[name='TenderNumber']")?.value || "";
-                        showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
-                    }
+                  if (data.success) {
+        if (!isAuto) {
+            const tenderNumber = data.tenderNumber || form.querySelector("input[name='TenderNumber']")?.value || "";
+            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
+        }
                     if (data.draftId) {
                         if (!draftIdField) {
                             const input = document.createElement("input");

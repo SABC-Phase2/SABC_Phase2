@@ -124,20 +124,20 @@
     }
 </div>
 
-<!-- Modal Popup -->
+<!-- Login To Respond to Tender Popup -->
 <div id="loginModal" class="modal" style="display:none;">
     <div class="modal-content">
         <span class="close" onclick="closeLoginModal()">&times;</span>
-        <div class="modal-icon-container">
-            <div class="error-icon-circle">
-                <i class="fas fa-times"></i>
-            </div>
-        </div>
-        <h2 class="modal-error-title">Error</h2>
-        <p class="modal-message">Please Register to respond to a tender.</p>
+        <!-- X cross image -->
+        <img src="~/lib/Images/X-Box.png" alt="Error" style="width: 60px; height: 60px; margin: 0 auto 18px auto; display: block;" />
+        <!-- Error in red -->
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444; margin-bottom: 6px;">Error</div>
+        <!-- Grey message -->
+        <div style="font-size:1.1rem; color:#888;">Please login to respond to a tender</div>
+        <!-- Close button (optional, can use the X in top right if needed) -->
         <div class="modal-btn-container">
             <a href="@Url.Action("Login", "Account")" class="modal-login-btn">
-                <i class="fas fa-sign-in-alt"></i> Login / Register
+              Login
             </a>
         </div>
     </div>

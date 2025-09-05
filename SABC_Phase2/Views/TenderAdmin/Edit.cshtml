@@ -269,15 +269,15 @@
         <div class="modal-content" style="text-align:center;">
             <div class="modal-header d-block border-0">
                 <h5 class="modal-title w-100" id="awardedModalLabel" style="width:100%;text-align:center;">
-                    <span id="awardedModalTenderNumber" style="font-weight:bold;"></span>
+                    <span id="awardedModalTenderNumber" style="font-weight:bold; color:#16a34a; font-size:1.4rem;"></span>
                 </h5>
                 <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
             </div>
             <div class="modal-body">
-                <p style="font-size:1.25rem; font-weight:600;">Successfully Awarded the tender</p>
+                <p style="font-size:1.3rem; font-weight:700; color:#16a34a;">Successfully Awarded the Tender</p>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="awardedModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <button type="button" id="awardedModalCloseBtn" class="btn btn-success" style="min-width:100px; font-weight:600;">OK</button>
             </div>
         </div>
     </div>
@@ -305,14 +305,15 @@
 <div id="successModal" class="modal fade" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="successModalLabel" style="width:100%;text-align:center; color: #16a34a;">
-                    <span style="font-weight:bold;">Success</span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            <div class="modal-header d-block border-0" style="padding-bottom:0;">
+                <!-- Tender Number Heading in Green -->
+                <h4 id="successModalTenderNumber" style="font-size:1.5rem; font-weight:700; color:#16a34a; margin-bottom:0;"></h4>
             </div>
-            <div class="modal-body">
-                <p id="successMessage" style="font-size:1.25rem; font-weight:600; color: #222;"></p>
+            <!-- Green Tick -->
+            <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 18px auto 0 auto; display: block;" />
+            <div class="modal-body" style="padding-top:18px;">
+                <!-- Big Green Text -->
+                <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">Tender Successfully Updated</div>
             </div>
             <div class="modal-footer border-0 d-flex justify-content-center">
                 <button type="button" id="successOkBtn" class="btn btn-success" style="min-width:120px;">OK</button>
@@ -351,6 +352,7 @@
             // === Custom Company Dropdown with Integrated Search ===
             let allCompanyOptions = [];
             let isDropdownOpen = false;
+             let hasShownDeletedAccountPopup = false;
 
             // Attach event listeners to all existing document delete buttons (multi-step)
             document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
@@ -536,38 +538,62 @@
                 renderDropdownOptions(filteredOptions);
             }
 
-            function renderDropdownOptions(options) {
-                const optionsContainer = document.getElementById('dropdownOptions');
-                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
-                const currentValue = hiddenSelect.value;
+                function renderDropdownOptions(options) {
+            const optionsContainer = document.getElementById('dropdownOptions');
+            const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+            const currentValue = hiddenSelect.value;
 
-                optionsContainer.innerHTML = '';
+            optionsContainer.innerHTML = '';
 
-                if (options.length === 0) {
-                    const noResults = document.createElement('div');
-                    noResults.className = 'no-results';
-                    noResults.textContent = 'No companies match your search';
-                    optionsContainer.appendChild(noResults);
-                    return;
-                }
+            if (options.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No companies match your search';
+                optionsContainer.appendChild(noResults);
+                return;
+            }
 
-                options.forEach(option => {
-                    const optionElement = document.createElement('div');
-                    optionElement.className = 'dropdown-option';
-                    optionElement.textContent = option.companyName;
-                    optionElement.setAttribute('data-value', option.companyName);
+            options.forEach(option => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'dropdown-option';
+                optionElement.textContent = option.companyName;
+                optionElement.setAttribute('data-value', option.companyName);
 
+                // Only show deleted account styling if popup has been shown
+                if (option.isAccountDeleted && hasShownDeletedAccountPopup) {
+                    optionElement.classList.add('deleted-account');
+                    optionElement.classList.add('disabled');
+                    optionElement.style.opacity = '0.5';
+                    optionElement.style.color = '#999';
+                    optionElement.style.cursor = 'not-allowed';
+                    optionElement.style.textDecoration = 'line-through';
+
+                    // Add a label to indicate deleted account
+                    optionElement.innerHTML = `${option.companyName} <small class="text-muted">(Account Deleted)</small>`;
+
+                    // Prevent selection of deleted accounts
+                    optionElement.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('This company account has been deleted and cannot be selected.');
+                    });
+                } else {
+                    // Normal behavior for all accounts (including deleted ones before popup is shown)
                     if (option.companyName === currentValue) {
                         optionElement.classList.add('selected');
                     }
 
                     optionElement.addEventListener('click', function() {
+                        // If this is a deleted account and popup hasn't been shown yet, allow selection
+                        // The backend will catch it and show the popup
                         selectOption(option.companyName, option.companyName);
                     });
+                }
 
-                    optionsContainer.appendChild(optionElement);
-                });
-            }
+                optionsContainer.appendChild(optionElement);
+            });
+        }
+
 
             function selectOption(displayText, value) {
                 const displayElement = document.getElementById('customDropdownDisplay');
@@ -584,66 +610,85 @@
             }
 
             // Load applicant companies function
-            async function loadApplicantCompanies(tenderId) {
-                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
-                if (!hiddenSelect) return;
+        // Update the loadApplicantCompanies function
+        async function loadApplicantCompanies(tenderId) {
+            const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+            if (!hiddenSelect) return;
 
-                const currentAwardedTender = hiddenSelect.getAttribute('data-awarded-value') || hiddenSelect.value;
+            const currentAwardedTender = hiddenSelect.getAttribute('data-awarded-value') || hiddenSelect.value;
 
-                try {
-                    const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
-                    const data = await response.json();
+            try {
+                const response = await fetch(`/TenderAdmin/GetApplicantCompanies?tenderId=${tenderId}`);
+                const data = await response.json();
 
-                    if (data.success) {
-                        allCompanyOptions = [];
+                if (data.success) {
+                    allCompanyOptions = [];
 
-                        if (data.companies && data.companies.length > 0) {
-                            data.companies.forEach((company, index) => {
-                                let companyName = company.CompanyName || company.companyName || company.name || company.Name || `Company ${index + 1}`;
-                                allCompanyOptions.push({ companyName });
+                    if (data.companies && data.companies.length > 0) {
+                        data.companies.forEach((company, index) => {
+                            let companyName = company.CompanyName || company.companyName || company.name || company.Name || `Company ${index + 1}`;
+                            let isAccountDeleted = company.IsAccountDeleted || company.isAccountDeleted || false;
+
+                            allCompanyOptions.push({
+                                companyName: companyName,
+                                isAccountDeleted: isAccountDeleted
                             });
+                        });
 
-                            // Add previously awarded if not in list
-                            if (currentAwardedTender && !allCompanyOptions.find(c => c.companyName === currentAwardedTender)) {
-                                allCompanyOptions.push({ companyName: currentAwardedTender });
-                            }
-                        }
-
-                        // Update hidden select options for form submission
-                        updateHiddenSelectOptions();
-
-                        // Update display text if there's a current value
-                        if (currentAwardedTender) {
-                            selectOption(currentAwardedTender, currentAwardedTender);
-                        } else {
-                            const selectedTextElement = document.getElementById('customDropdownDisplay')?.querySelector('.selected-text');
-                            if (selectedTextElement) {
-                                selectedTextElement.textContent = '~Select company to award tender to~';
-                            }
+                        // Add previously awarded if not in list
+                        if (currentAwardedTender && !allCompanyOptions.find(c => c.companyName === currentAwardedTender)) {
+                            allCompanyOptions.push({
+                                companyName: currentAwardedTender,
+                                isAccountDeleted: false // Assume not deleted if not in current list
+                            });
                         }
                     }
-                } catch (error) {
-                    console.error('Error loading applicant companies:', error);
+
+                    // Update hidden select options for form submission
+                    updateHiddenSelectOptions();
+
+                    // Update display text if there's a current value
+                    if (currentAwardedTender) {
+                        selectOption(currentAwardedTender, currentAwardedTender);
+                    } else {
+                        const selectedTextElement = document.getElementById('customDropdownDisplay')?.querySelector('.selected-text');
+                        if (selectedTextElement) {
+                            selectedTextElement.textContent = '~Select company to award tender to~';
+                        }
+                    }
                 }
+            } catch (error) {
+                console.error('Error loading applicant companies:', error);
             }
+        }
 
-            function updateHiddenSelectOptions() {
-                const hiddenSelect = document.getElementById('AwardedTenderDropdown');
-                const currentValue = hiddenSelect.value;
 
-                // Clear existing options except the default
-                hiddenSelect.innerHTML = '<option value="" disabled>~Select company to award tender to~</option>';
+           // Update the updateHiddenSelectOptions function
+        function updateHiddenSelectOptions() {
+            const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+            const currentValue = hiddenSelect.value;
 
-                allCompanyOptions.forEach(option => {
-                    const optionElement = document.createElement('option');
-                    optionElement.value = option.companyName;
-                    optionElement.textContent = option.companyName;
-                    if (option.companyName === currentValue) {
-                        optionElement.selected = true;
-                    }
-                    hiddenSelect.appendChild(optionElement);
-                });
-            }
+            // Clear existing options except the default
+            hiddenSelect.innerHTML = '<option value="" disabled>~Select company to award tender to~</option>';
+
+            allCompanyOptions.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.companyName;
+                optionElement.textContent = option.companyName;
+
+                // Only disable deleted accounts in the select if popup has been shown
+                if (option.isAccountDeleted && hasShownDeletedAccountPopup) {
+                    optionElement.disabled = true;
+                    optionElement.textContent = `${option.companyName} (Account Deleted)`;
+                }
+
+                if (option.companyName === currentValue && !(option.isAccountDeleted && hasShownDeletedAccountPopup)) {
+                    optionElement.selected = true;
+                }
+
+                hiddenSelect.appendChild(optionElement);
+            });
+        }
 
             // Update the visibility function
             function updateAwardedTenderVisibility() {
@@ -988,30 +1033,50 @@
                     formData.append('UploadedFiles', file, file.name);
                 });
 
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    }
-                })
-                    .then(async response => {
-                        const contentType = response.headers.get("content-type");
-                        if (contentType && contentType.includes("application/json")) {
-                            const data = await response.json();
+               fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(async response => {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
 
-                            if (data.deletedAccount) {
-                                // Show the modal popup with company name
-                                document.getElementById('deletedCompanyName').textContent = data.companyName || '';
-                                var modal = new bootstrap.Modal(document.getElementById('deletedAccountModal'));
-                                modal.show();
+                if (data.deletedAccount) {
+                    // Set the flag to true when deleted account popup is shown
+                    hasShownDeletedAccountPopup = true;
 
-                                // Remove loading state
-                                saveBtn.classList.remove('loading');
-                                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                                saveBtn.disabled = false;
-                                return; // stop further processing
-                            }
+                    // Show the modal popup with company name
+                    document.getElementById('deletedCompanyName').textContent = data.companyName || '';
+                    var modal = new bootstrap.Modal(document.getElementById('deletedAccountModal'));
+                    modal.show();
+
+                    // When the modal is closed, refresh the dropdown to show greyed out accounts
+                    modal._element.addEventListener('hidden.bs.modal', function() {
+                        // Clear the current selection since it was a deleted account
+                        const hiddenSelect = document.getElementById('AwardedTenderDropdown');
+                        const displayElement = document.getElementById('customDropdownDisplay');
+                        const selectedTextElement = displayElement.querySelector('.selected-text');
+
+                        hiddenSelect.value = '';
+                        selectedTextElement.textContent = '~Select company to award tender to~';
+
+                        // Re-render options with deleted accounts now greyed out
+                        updateHiddenSelectOptions();
+                        if (isDropdownOpen) {
+                            renderDropdownOptions(allCompanyOptions);
+                        }
+                    });
+
+                    // Remove loading state
+                    saveBtn.classList.remove('loading');
+                    saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                    saveBtn.disabled = false;
+                    return; // stop further processing
+                }
 
                             if (data.success && data.awarded) {
                                 // Show awarded tender modal
@@ -1021,23 +1086,22 @@
                                 document.getElementById('awardedModalCloseBtn').onclick = function () {
                                     window.location.href = data.redirectUrl || '/TenderAdmin/Index';
                                 };
-                            } else if (data.success) {
-                                // Show general success modal
-                                const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value;
-                                document.getElementById('successMessage').textContent =
-                                    `Tender ${tenderNumber} was successfully updated.`;
+                                    } else if (data.success) {
+            // Set the tender number as green heading (above tick)
+            const tenderNumber = data.tenderNumber || document.querySelector('input[name="TenderNumber"]').value;
+            document.getElementById('successModalTenderNumber').textContent = tenderNumber || '';
 
-                                // Show success modal
-                                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                                successModal.show();
+            // Show success modal
+            var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
 
-                                // On OK button click, redirect
-                                document.getElementById('successOkBtn').onclick = function () {
-                                    window.location.href = data.redirectUrl || '/TenderAdmin/Index';
-                                };
-                            } else {
-                                alert("Failed to save changes: " + (data.message || "Unknown error"));
-                            }
+            // On OK button click, redirect
+            document.getElementById('successOkBtn').onclick = function () {
+                window.location.href = data.redirectUrl || '/TenderAdmin/Index';
+            };
+        } else {
+            alert("Failed to save changes: " + (data.message || "Unknown error"));
+        }
                         } else if (response.redirected) {
                             window.location.href = response.url;
                         } else {
@@ -1047,17 +1111,18 @@
                             });
                         }
                     })
-                    .catch(error => {
-                        console.error(error);
-                        alert("An error occurred while saving changes.");
-                    })
-                    .finally(() => {
-                        // Remove loading state after response (success or error)
-                        saveBtn.classList.remove('loading');
-                        saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
-                        saveBtn.disabled = false;
-                    });
-            };
+                          .catch(error => {
+                console.error(error);
+                alert("An error occurred while saving changes.");
+            })
+            .finally(() => {
+                // Remove loading state after response (success or error)
+                saveBtn.classList.remove('loading');
+                saveBtn.innerHTML = 'Save Changes <span class="arrow-icon"></span>';
+                saveBtn.disabled = false;
+            });
+        };
+
 
             // Show initial tab and toggle no-doc message on load
             showTab(currentTab);
@@ -1066,6 +1131,43 @@
     </script>
 }
 <style>
+
+    /* Styles for deleted account dropdown options - only applied after popup shown */
+    .dropdown-option.deleted-account {
+        opacity: 0.5 !important;
+        color: #999 !important;
+        cursor: not-allowed !important;
+        text-decoration: line-through !important;
+        background-color: #f8f9fa !important;
+        position: relative;
+    }
+
+        .dropdown-option.deleted-account:hover {
+            background-color: #f8f9fa !important;
+            color: #999 !important;
+        }
+
+    .dropdown-option.disabled {
+        pointer-events: none;
+    }
+
+    /* Add an icon or visual indicator for deleted accounts */
+    .dropdown-option.deleted-account::before {
+        content: "⚠️ ";
+        margin-right: 5px;
+    }
+
+    .dropdown-option.deleted-account::after {
+        content: " (Account Deleted)";
+        font-size: 0.8em;
+        color: #dc3545;
+        font-style: italic;
+    }
+
+    /* Smooth transition for when accounts become greyed out */
+    .dropdown-option {
+        transition: all 0.3s ease;
+    }
 
     /* Custom Dropdown Styles */
     .custom-dropdown-container {

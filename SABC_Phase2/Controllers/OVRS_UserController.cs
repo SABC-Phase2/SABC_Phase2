@@ -286,127 +286,135 @@ namespace SABC_Phase2.Controllers
         [HttpPost]
         public async Task<IActionResult> SubmitTenderApplication(int TenderId, int LegacyUserId, List<IFormFile> UploadedFiles, Guid? DraftId)
         {
-            // Find the OVRS_User by LegacyUserId
-            var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId);
-            var tender = _context.Tenders.Find(TenderId);
-
-            if (tender == null)
+            try
             {
-                ModelState.AddModelError("", "Invalid Tender ID.");
-                var vm = BuildTenderApplicationViewModel(TenderId, user?.Id);
-                return View("Tender_Application", vm);
-            }
-            if (user == null)
-            {
-                ModelState.AddModelError("", "Invalid Employee ID (not found in Users table).");
-                var vm = BuildTenderApplicationViewModel(TenderId, null);
-                return View("Tender_Application", vm);
-            }
+                // Find the OVRS_User by LegacyUserId
+                var user = _context.Users.FirstOrDefault(u => u.LegacyUserId == LegacyUserId);
+                var tender = _context.Tenders.Find(TenderId);
 
-            // Create and persist the tender application.
-            var saLocalNow = _saTimeService.GetCurrentSouthAfricanTime();
-            var application = new TenderApplications
-            {
-                TenderId = TenderId,
-                OVRS_UserId = user.Id,
-                DateApplied = saLocalNow.ToDateTimeUnspecified(),
-                DraftId = DraftId
-            };
-
-            _context.Applied_For_Tenders.Add(application);
-            await _context.SaveChangesAsync();
-
-            // Get company name for SharePoint folder structure
-            var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId);
-            var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
-
-            // Sanitize all SharePoint folder/file names!
-            var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tender.TenderNumber);
-            var safeCompanyName = SanitizeHelper.ToSharePointSafeFolderName(companyName);
-
-            // Use SharePointService for file uploads
-            var sharePointService = new SharePointService(_configuration);
-
-            // Handle uploaded files
-            if (UploadedFiles != null && UploadedFiles.Any())
-            {
-                foreach (var file in UploadedFiles)
+                if (tender == null)
                 {
-                    if (file != null && file.Length > 0)
-                    {
-                        using var stream = file.OpenReadStream();
-
-                        // Sanitize file name before upload
-                        var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(file.FileName);
-
-                        var sharePointUrl = await sharePointService
-                            .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, safeFileName);
-
-                        var doc = new ApplicationDocument
-                        {
-                            FileName = file.FileName, // Store original name for user display
-                            SharePointPath = sharePointUrl,
-                            TenderApplicationId = application.Id
-                        };
-
-                        _context.ApplicationDocuments.Add(doc);
-                    }
+                    return Json(new { success = false, message = "Invalid Tender ID." });
                 }
+
+                if (user == null)
+                {
+                    return Json(new { success = false, message = "Invalid Employee ID (not found in Users table)." });
+                }
+
+                // Create and persist the tender application.
+                var saLocalNow = _saTimeService.GetCurrentSouthAfricanTime();
+                var application = new TenderApplications
+                {
+                    TenderId = TenderId,
+                    OVRS_UserId = user.Id,
+                    DateApplied = saLocalNow.ToDateTimeUnspecified(),
+                    DraftId = DraftId
+                };
+
+                _context.Applied_For_Tenders.Add(application);
                 await _context.SaveChangesAsync();
-            }
 
-            // ===== Copy draft documents to main application documents, if DraftId is present =====
-            if (DraftId.HasValue)
-            {
-                var draft = _context.TenderApplicationDrafts
-                    .Include(d => d.Documents)
-                    .FirstOrDefault(d => d.DraftId == DraftId.Value);
+                // Get company name for SharePoint folder structure
+                var supplier = _legacyContext.TblSuppliers.FirstOrDefault(s => s.UserId == LegacyUserId);
+                var companyName = supplier?.TradingName ?? $"User_{LegacyUserId}";
 
-                if (draft != null && draft.Documents != null && draft.Documents.Any())
+                // Sanitize all SharePoint folder/file names!
+                var safeTenderNumber = SanitizeHelper.ToSharePointSafeFolderName(tender.TenderNumber);
+                var safeCompanyName = SanitizeHelper.ToSharePointSafeFolderName(companyName);
+
+                // Use SharePointService for file uploads
+                var sharePointService = new SharePointService(_configuration);
+
+                // Handle uploaded files
+                if (UploadedFiles != null && UploadedFiles.Any())
                 {
-                    foreach (var draftDoc in draft.Documents)
+                    foreach (var file in UploadedFiles)
                     {
-                        var appDoc = new ApplicationDocument
+                        if (file != null && file.Length > 0)
                         {
-                            FileName = draftDoc.FileName,
-                            SharePointPath = draftDoc.SharePointPath,
-                            TenderApplicationId = application.Id
-                        };
-                        _context.ApplicationDocuments.Add(appDoc);
+                            using var stream = file.OpenReadStream();
+                            var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(file.FileName);
+
+                            var sharePointUrl = await sharePointService
+                                .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, safeFileName);
+
+                            var doc = new ApplicationDocument
+                            {
+                                FileName = file.FileName,
+                                SharePointPath = sharePointUrl,
+                                TenderApplicationId = application.Id
+                            };
+
+                            _context.ApplicationDocuments.Add(doc);
+                        }
                     }
                     await _context.SaveChangesAsync();
-
-                    // Remove the draft and its docs as before
-                    _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
-                    _context.TenderApplicationDrafts.Remove(draft);
-                    await _context.SaveChangesAsync();
                 }
+
+                // Handle draft documents
+                if (DraftId.HasValue)
+                {
+                    var draft = _context.TenderApplicationDrafts
+                        .Include(d => d.Documents)
+                        .FirstOrDefault(d => d.DraftId == DraftId.Value);
+
+                    if (draft != null && draft.Documents != null && draft.Documents.Any())
+                    {
+                        foreach (var draftDoc in draft.Documents)
+                        {
+                            var appDoc = new ApplicationDocument
+                            {
+                                FileName = draftDoc.FileName,
+                                SharePointPath = draftDoc.SharePointPath,
+                                TenderApplicationId = application.Id
+                            };
+                            _context.ApplicationDocuments.Add(appDoc);
+                        }
+                        await _context.SaveChangesAsync();
+
+                        // Remove the draft and its docs
+                        _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
+                        _context.TenderApplicationDrafts.Remove(draft);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                // Send email confirmation
+                var legacyUserId = user.LegacyUserId;
+                var etenderUser = _legacyContext.TblUsers.FirstOrDefault(u => u.UserId == legacyUserId);
+
+                if (etenderUser != null && !string.IsNullOrEmpty(etenderUser.Email))
+                {
+                    var userName = $"{etenderUser.FirstName} {etenderUser.LastName}";
+                    var tenderNumber = tender?.TenderNumber ?? "";
+                    var tenderName = tender?.Title ?? "";
+                    var timeSubmitted = application.DateApplied ?? DateTime.UtcNow;
+
+                    await _emailService.SendTenderSubmissionConfirmationAsync(
+                        etenderUser.Email,
+                        userName,
+                        tenderNumber,
+                        tenderName,
+                        timeSubmitted
+                    );
+                }
+
+                // ✅ Return JSON response instead of redirect
+                return Json(new
+                {
+                    success = true,
+                    message = "Application submitted successfully!",
+                    tenderNumber = tender.TenderNumber,
+                    redirectUrl = Url.Action("OVRS_Documents", "OVRS_User")
+                });
             }
-
-            // 1. Get logged-in user from SABC Phase2 db (already have 'user')
-            // 2. Cross-reference to get email from etender-sabc-test db
-            var legacyUserId = user.LegacyUserId;
-            var etenderUser = _legacyContext.TblUsers.FirstOrDefault(u => u.UserId == legacyUserId);
-
-            if (etenderUser != null && !string.IsNullOrEmpty(etenderUser.Email))
+            catch (Exception ex)
             {
-                var userName = $"{etenderUser.FirstName} {etenderUser.LastName}";
-                var tenderNumber = tender?.TenderNumber ?? "";
-                var tenderName = tender?.Title ?? "";
-                var timeSubmitted = application.DateApplied ?? DateTime.UtcNow;
-
-                await _emailService.SendTenderSubmissionConfirmationAsync(
-                    etenderUser.Email,
-                    userName,
-                    tenderNumber,
-                    tenderName,
-                    timeSubmitted
-                );
+                // Log the exception if you have logging
+                return Json(new { success = false, message = "An error occurred while submitting your application." });
             }
-            // After handling the draft deletion (if necessary), redirect the user to the OVRS_Documents page
-            return RedirectToAction("OVRS_Documents");
         }
-
         /// <summary>
         /// Shows documents to OVRS users (could be their own docs, or company-wide).
         /// </summary>
@@ -514,12 +522,7 @@ namespace SABC_Phase2.Controllers
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft(
-     Guid? DraftId,
-     int? LegacyUserId,
-     int? TenderId,
-     List<IFormFile> UploadedFiles,
-     [FromForm] List<int> DocumentsToDelete)
+        public async Task<IActionResult> SaveTenderApplicationDraft(Guid? DraftId,int? LegacyUserId,int? TenderId,List<IFormFile> UploadedFiles,[FromForm] List<int> DocumentsToDelete)
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -650,6 +653,7 @@ namespace SABC_Phase2.Controllers
             {
                 success = true,
                 draftId = draft.DraftId,
+                tenderNumber = tender?.TenderNumber, // <-- add this
                 message = "Draft saved",
                 redirectUrl = Url.Action("OVRS_Documents")
             });
@@ -764,11 +768,7 @@ namespace SABC_Phase2.Controllers
 
         // Add this POST action to your OVRS_UserController
         [HttpPost]
-        public async Task<IActionResult> UpdateTenderSubmission(
-            int TenderId, int? DraftId, int? LegacyUserId,
-            [FromForm] IFormFileCollection UploadedFiles,
-            [FromForm] List<int> DocumentsToDelete
-        )
+        public async Task<IActionResult> UpdateTenderSubmission(int TenderId, int? DraftId, int? LegacyUserId,[FromForm] IFormFileCollection UploadedFiles,[FromForm] List<int> DocumentsToDelete)
         {
             var tenderApplication = await _context.Applied_For_Tenders
                 .Include(t => t.Documents)
