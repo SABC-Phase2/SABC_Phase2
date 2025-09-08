@@ -329,6 +329,11 @@
 
 @section Scripts {
     <script>
+
+            // Pass current SA date and time to JavaScript
+        window.currentSaDate = '@ViewBag.CurrentSaDate';
+        window.currentSaDateTime = '@ViewBag.CurrentSaDateTime';
+
                document.addEventListener('DOMContentLoaded', function () {
                          let docIdToDelete = null;
         document.querySelectorAll('.delete-upload-btn').forEach(function(btn) {
@@ -434,24 +439,39 @@
 
             // Initialize Flatpickr calendar (always visible)
             const initCalendar = function() {
-                const calendar = flatpickr("#calendarContainer", {
-                    inline: true,
-                    dateFormat: "Y-m-d",
-                    onChange: function(selectedDates, dateStr, instance) {
-                        document.getElementById('ScheduledDate').value = dateStr;
-                        // Update the selected date display
-                        const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
-                        document.getElementById('selectedDateDisplay').textContent = formattedDate;
-                    }
-                });
+            // Parse the current SA date
+            const currentSaDate = new Date(window.currentSaDate + 'T00:00:00');
 
-                // Set today's date as default
-                calendar.setDate(new Date());
-                document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
-                // Format and display the default date
-                const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
-                document.getElementById('selectedDateDisplay').textContent = formattedDate;
-            };
+            const calendar = flatpickr("#calendarContainer", {
+                inline: true,
+                dateFormat: "Y-m-d",
+                minDate: currentSaDate, // Prevent selecting dates before today (SA time)
+                onChange: function(selectedDates, dateStr, instance) {
+                    // Additional validation to ensure selected date is not in the past
+                    const selectedDate = new Date(dateStr + 'T00:00:00');
+                    if (selectedDate < currentSaDate) {
+                        alert('You cannot schedule a tender for a date in the past.');
+                        // Reset to minimum date
+                        instance.setDate(currentSaDate);
+                        return;
+                    }
+
+                    document.getElementById('ScheduledDate').value = dateStr;
+                    // Update the selected date display
+                    const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
+                    document.getElementById('selectedDateDisplay').textContent = formattedDate;
+                }
+            });
+
+            // Set current SA date as default (or next day if current time is late)
+            const defaultDate = currentSaDate;
+            calendar.setDate(defaultDate);
+            document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
+
+            // Format and display the default date
+            const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
+            document.getElementById('selectedDateDisplay').textContent = formattedDate;
+        };
 
                // --- FIXED TIME INPUT LOGIC START ---
         const initTimeInput = function() {
@@ -560,23 +580,54 @@
                     }
                 });
             }
+        function updateHiddenTimeValue() {
+            let hours = hoursInput.value.padStart(2, '0') || '00';
+            let minutes = minutesInput.value.padStart(2, '0') || '00';
+            let seconds = '00';
 
-            function updateHiddenTimeValue() {
-                let hours = hoursInput.value.padStart(2, '0') || '00';
-                let minutes = minutesInput.value.padStart(2, '0') || '00';
-                let seconds = '00';
-
-                // Convert to 24-hour format
-                let hours24 = parseInt(hours, 10);
-                if (isAM) {
-                    if (hours24 === 12) hours24 = 0;
-                } else {
-                    if (hours24 !== 12) hours24 += 12;
-                }
-
-                const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
-                timeHiddenInput.value = formattedTime;
+            // Convert to 24-hour format
+            let hours24 = parseInt(hours, 10);
+            if (isAM) {
+                if (hours24 === 12) hours24 = 0;
+            } else {
+                if (hours24 !== 12) hours24 += 12;
             }
+
+            const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
+            timeHiddenInput.value = formattedTime;
+
+            // Validate if selected date is today (SA time)
+            validateScheduledDateTime();
+        }
+
+                function validateScheduledDateTime() {
+            const selectedDate = document.getElementById('ScheduledDate').value;
+            const selectedTime = document.getElementById('ScheduledTime').value;
+
+            if (!selectedDate || !selectedTime) return;
+
+            // Parse current SA date and time
+            const currentSaDateTime = new Date(window.currentSaDateTime);
+            const selectedDateTime = new Date(selectedDate + 'T' + selectedTime);
+
+            // Check if selected date is today
+            const currentSaDateOnly = new Date(window.currentSaDate + 'T00:00:00');
+            const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
+
+            if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
+                // Same day - check if time is in the future
+                if (selectedDateTime <= currentSaDateTime) {
+                    // Clear the time inputs and show warning
+                    hoursInput.value = '';
+                    minutesInput.value = '';
+                    timeHiddenInput.value = '';
+                    alert('You cannot schedule a tender for a time that has already passed. Please select a future time.');
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
             validateHourInput();
             validateMinuteInput();
@@ -879,19 +930,31 @@
                 }
 
                 // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
-                if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                    let scheduledDate = document.getElementById('ScheduledDate').value;
-                    let scheduledTime = document.getElementById('ScheduledTime').value;
+                      // Add this validation in your form submission where you check for schedule validation
+        if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+            let scheduledDate = document.getElementById('ScheduledDate').value;
+            let scheduledTime = document.getElementById('ScheduledTime').value;
 
-                    if (!scheduledDate.trim()) {
-                        errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
-                        errorFields.push('ScheduledDate'); errorTabs.push('submit');
-                    }
-                    if (!scheduledTime.trim()) {
-                        errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
-                        errorFields.push('ScheduledTime'); errorTabs.push('submit');
-                    }
+            if (!scheduledDate.trim()) {
+                errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
+                errorFields.push('ScheduledDate'); errorTabs.push('submit');
+            }
+            if (!scheduledTime.trim()) {
+                errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
+                errorFields.push('ScheduledTime'); errorTabs.push('submit');
+            }
+
+            // Validate against SA time
+            if (scheduledDate && scheduledTime) {
+                const currentSaDateTime = new Date(window.currentSaDateTime);
+                const selectedDateTime = new Date(scheduledDate + 'T' + scheduledTime);
+
+                if (selectedDateTime <= currentSaDateTime) {
+                    errors.push({field: 'ScheduledDate', message: 'Cannot schedule for a past date/time (South African time)', tab: 'submit'});
+                    errorFields.push('ScheduledDate'); errorTabs.push('submit');
                 }
+            }
+        }
 
                 // Show all errors next to their fields
                 if (errors.length > 0) {

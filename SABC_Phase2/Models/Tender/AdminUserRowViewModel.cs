@@ -1,0 +1,13 @@
+﻿namespace SABC_Phase2.Models.Tender
+{
+    public class AdminUserRowViewModel
+    {
+        public int Id { get; set; }
+        public string Email { get; set; }
+        public string FullName { get; set; }
+        public string Role { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string CompanyName { get; set; } // New property for OVRS users
+        public string Status { get; set; } = "Active"; // New property for status
+    }
+}

@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SABC_Phase2.Data;
 using SABC_Phase2.Models;
+using SABC_Phase2.Models.Administrator;
 using SABC_Phase2.Models.Tender;
 using SABC_Phase2.Services;
+using System.Globalization;
 using System.Security.Claims;
 
 
@@ -58,7 +60,10 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-
+            // Get current SA time for the view
+            var currentSaTime = _saTimeService.GetCurrentSouthAfricanTime();
+            ViewBag.CurrentSaDate = currentSaTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            ViewBag.CurrentSaDateTime = currentSaTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
             return View(new TenderViewModel());
 
         }
@@ -265,68 +270,112 @@ namespace SABC_Phase2.Controllers
             });
         }
 
-        // Updated Index action to support tender status filtering
         public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
+
         {
+
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
             // Map status to DB value
+
             string statusDbValue = MapStatus(status);
+
             if (!string.IsNullOrEmpty(statusDbValue))
+
                 query = query.Where(t => t.Status.ToLower() == statusDbValue);
 
             // Type filter
+
             if (!string.IsNullOrEmpty(type))
+
             {
+
                 string typeFilter = type.Trim().ToLower();
+
                 query = query.Where(t => t.TenderType.ToLower() == typeFilter);
+
             }
 
             // Search filter
+
             if (!string.IsNullOrEmpty(search))
+
             {
+
                 string searchLower = search.ToLower();
+
                 query = query.Where(t =>
+
                     (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
+
                     (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+
                     (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+
                     (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(searchLower))
+
                 );
+
             }
 
             var totalItems = await query.CountAsync();
+
             var tenders = await query
+
                 .OrderByDescending(t => t.DatePublished)
+
                 .Skip((page - 1) * pageSize)
+
                 .Take(pageSize)
+
                 .ToListAsync();
 
             // --- Update: Use SharePointPath, no BlobService ---
+
             foreach (var tender in tenders)
+
             {
+
                 foreach (var doc in tender.Documents)
+
                 {
+
                     // Ensure FileName and SharePointPath are correct for view
+
                     // No BlobService, just keep the SharePointPath
+
                     // Example: doc.FileName and doc.SharePointPath are already set
+
                     // If you want to show a clickable link in your view, use doc.SharePointPath
+
                     // No need to modify doc here
+
                 }
+
             }
 
             ViewBag.CurrentPage = page;
+
             ViewBag.PageSize = pageSize;
+
             ViewBag.TotalItems = totalItems;
+
             ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
             ViewBag.Status = status;
+
             ViewBag.Type = type;
+
             ViewBag.Search = search;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+
                 return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
 
             return View(tenders);
+
         }
+
 
         private string MapStatus(string status)
         {
@@ -562,50 +611,83 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
+
         public async Task<IActionResult> DraftIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
+
         {
+
             var query = _context.TenderAdminsDraft
+
                 .Include(d => d.Documents)
+
                 .OrderByDescending(d => d.CreatedDate)
+
                 .AsQueryable();
 
             // Tender Type filter
+
             if (!string.IsNullOrEmpty(type))
+
             {
+
                 string typeFilter = type.Trim().ToLower();
+
                 query = query.Where(d => d.TenderType != null && d.TenderType.ToLower() == typeFilter);
+
             }
 
             // Search filter
+
             if (!string.IsNullOrEmpty(search))
+
             {
+
                 string searchLower = search.ToLower();
+
                 query = query.Where(d =>
+
+                    (d.TenderNumber != null && d.TenderNumber.ToLower().Contains(searchLower)) || // Added
+
                     (d.Title != null && d.Title.ToLower().Contains(searchLower)) ||
+
                     (d.TenderType != null && d.TenderType.ToLower().Contains(searchLower)) ||
+
                     (d.CreatedDate.ToString().ToLower().Contains(searchLower))
+
                 );
+
             }
 
             var totalItems = await query.CountAsync();
+
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
             var drafts = await query
+
                 .Skip((page - 1) * pageSize)
+
                 .Take(pageSize)
+
                 .ToListAsync();
 
             ViewBag.CurrentPage = page;
+
             ViewBag.PageSize = pageSize;
+
             ViewBag.TotalItems = totalItems;
+
             ViewBag.TotalPages = totalPages;
+
             ViewBag.Search = search;
+
             ViewBag.Type = type;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+
                 return PartialView("Tender_Admin_DraftsTablePartial", drafts);
 
             return View(drafts);
+
         }
 
         [HttpGet]
@@ -1231,47 +1313,79 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
+
         public async Task<IActionResult> ScheduledIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
+
         {
+
             var query = _context.ScheduledTenders.Include(t => t.Documents).AsQueryable();
 
             // Filter by tender type
+
             if (!string.IsNullOrEmpty(type))
+
             {
+
                 string typeFilter = type.Trim().ToLower();
+
                 query = query.Where(t => t.TenderType.ToLower() == typeFilter);
+
             }
 
             // Search by keyword
+
             if (!string.IsNullOrEmpty(search))
+
             {
+
                 string searchLower = search.ToLower();
+
                 query = query.Where(t =>
+
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) || // <-- Added
+
                     (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+
                     (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+
                     (t.TenderType != null && t.TenderType.ToLower().Contains(searchLower)) ||
+
                     (t.ScheduledPublishDateTime != null && t.ScheduledPublishDateTime.ToString().ToLower().Contains(searchLower))
+
                 );
+
             }
 
             var totalItems = await query.CountAsync();
+
             var scheduledTenders = await query
+
                 .OrderByDescending(t => t.ScheduledPublishDateTime)
+
                 .Skip((page - 1) * pageSize)
+
                 .Take(pageSize)
+
                 .ToListAsync();
 
             ViewBag.CurrentPage = page;
+
             ViewBag.PageSize = pageSize;
+
             ViewBag.TotalItems = totalItems;
+
             ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
             ViewBag.Search = search;
+
             ViewBag.Type = type;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+
                 return PartialView("Tender_Admin_ScheduledTendersTablePartial", scheduledTenders);
 
             return View(scheduledTenders);
+
         }
 
         [HttpGet]
@@ -1414,6 +1528,7 @@ namespace SABC_Phase2.Controllers
 
             return View(closedTenders);
         }
+
 
         [HttpGet]
         public IActionResult tender_Report(int id)
@@ -1743,12 +1858,51 @@ namespace SABC_Phase2.Controllers
             }
         }
 
-
         [HttpGet]
-        public async Task<IActionResult> Users_Management()
+        public async Task<IActionResult> Users_Management(string search = "", string roleFilter = "all", string statusFilter = "all")
         {
-            return View();
+            IQueryable<Administrator> query = _context.Administrators;
+
+            if (roleFilter == "Administrator")
+            {
+                query = query.Where(a => a.Role == "Administrator" || a.Role == "Super_Admin");
+            }
+            else if (roleFilter == "OVRS_User")
+            {
+                query = query.Where(a => a.Role == "OVRS_User");
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(a =>
+                    a.Email.Contains(search) ||
+                    a.FirstName.Contains(search) ||
+                    a.LastName.Contains(search)
+                );
+            }
+
+            var users = await query
+                .OrderBy(a => a.Id)
+                .Select(a => new AdminUserRowViewModel
+                {
+                    Id = a.Id,
+                    Email = a.Email,
+                    FullName = $"{a.FirstName} {a.LastName}",
+                    Role = a.Role,
+                    CreatedAt = a.CreatedAt
+                })
+                .ToListAsync();
+
+            // 👇 detect if it's an AJAX request
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_UsersTablePartial", users);
+            }
+
+            return View(users);
         }
+
+
 
     }
 

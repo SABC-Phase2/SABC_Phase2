@@ -1,5 +1,300 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model List<SABC_Phase2.Models.Tender.AdminUserRowViewModel>
 @{
+    ViewData["BannerText"] = "User Management";
+    string search = Context.Request.Query["search"];
+    string roleFilter = Context.Request.Query["roleFilter"];
+    string statusFilter = Context.Request.Query["statusFilter"];
 }
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+<div class="breadcrumb-custom">
+    <span class="breadcrumb-active">Home</span>
+    <span class="breadcrumb-arrow">&#x2794;</span>
+    <span>User Management</span>
+</div>
+
+<div class="user-action-bar">
+    <form method="get" id="userFilterForm" style="display: flex; align-items: center; gap: 16px;">
+        <span class="search-wrapper" style="position: relative; display: flex; align-items: center;">
+            <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
+            <input type="text" name="search" class="search-input"
+                   value="@search"
+                   placeholder="Search users"
+                   autocomplete="off"
+                   style="padding-left: 38px;" />
+        </span>
+        <select name="roleFilter" class="filter-dropdown">
+            <option value="Administrator" selected="@(roleFilter == "Administrator" ? "selected" : null)">Administrator</option>
+            <option value="OVRS_User" selected="@(roleFilter == "OVRS_User" ? "selected" : null)">OVRS_User</option>
+        </select>
+        <button type="submit" class="refresh-btn"
+                title="Clear search and filters"
+                style="margin-left: 0;">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="big-delete-btn" title="Delete Selected Users">
+            <i class="fas fa-trash-alt"></i> Delete
+        </button>
+    </form>
+</div>
+
+<div class="table-container">
+    <div class="user-table-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;"></div>
+        <div class="table-scroll-container">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td>@user.Id</td>
+                            <td>@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>@user.Role</td>
+                            <td>@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <button class="delete-user-btn" data-user-id="@user.Id" title="Delete User">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Same JS as before for AJAX/refresh and delete
+        function debounce(fn, delay) {
+            let timer = null;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+        function submitUserForm(keepPage = false) {
+            const form = document.getElementById('userFilterForm');
+            if(!keepPage) {
+                let pageInput = document.createElement('input');
+                pageInput.type = "hidden";
+                pageInput.name = "page";
+                pageInput.value = "1";
+                form.appendChild(pageInput);
+            }
+            const data = new URLSearchParams(new FormData(form)).toString();
+                   fetch('@Url.Action("Users_Management")' + '?' + data, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+
+            .then(resp => resp.text())
+            .then(html => {
+                document.querySelector('.table-container').innerHTML = html;
+                hookDeleteBtns();
+            });
+        }
+        const debouncedUserSubmit = debounce(() => submitUserForm(false), 300);
+
+        function hookDeleteBtns() {
+            document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    const userId = btn.getAttribute('data-user-id');
+                    if(confirm('Are you sure you want to delete this user?')) {
+                        fetch('@Url.Action("DeleteUser")', {
+                            method: 'POST',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            body: JSON.stringify({ id: userId })
+                        }).then(resp => resp.json())
+                        .then(data => {
+                            if(data.success) {
+                                btn.closest('tr').remove();
+                            } else {
+                                alert('Delete failed: ' + (data.message || 'Unknown error'));
+                            }
+                        });
+                    }
+                };
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelector('.search-input').addEventListener('input', debouncedUserSubmit);
+            document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
+                dd.addEventListener('change', () => submitUserForm(false));
+            });
+            document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                submitUserForm(true);
+            });
+            hookDeleteBtns();
+        });
+    </script>
+}
+
+<style>
+
+    .big-delete-btn {
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 14px 32px;
+        font-size: 1.15rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        margin-left: auto;
+    }
+
+        .big-delete-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
+    .table-container {
+        margin-top: 35px;
+        margin-bottom: 120px;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 8px;
+        overflow-x: auto;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-table-card {
+        padding: 0;
+    }
+
+    .user-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .user-table thead th {
+            background-color: #f5c012;
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 0;
+        }
+
+        .user-table td {
+            padding: 14px 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .user-table tbody tr {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+            .user-table tbody tr:hover {
+                background-color: #f1f1f1;
+            }
+
+    .user-status.status-active {
+        color: #00a651;
+        font-weight: 600;
+    }
+
+    .user-status.status-inactive {
+        color: #e74c3c;
+        font-weight: 600;
+    }
+
+    .delete-user-btn {
+        background: #e74c3c;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 18px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.18s;
+    }
+
+        .delete-user-btn:hover {
+            background: #c0392b;
+            color: #fff;
+        }
+
+    .search-wrapper {
+        position: relative;
+        width: 250px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 12px 12px 38px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+    }
+
+        .search-input::placeholder {
+            color: #ccc;
+        }
+
+    .filter-dropdown {
+        padding: 12px 36px 12px 12px;
+        border: none;
+        border-radius: 4px;
+        background-color: #333;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+        min-width: 140px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF8,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ccc'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 10px;
+    }
+
+    .refresh-btn {
+        background-color: #333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 14px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
