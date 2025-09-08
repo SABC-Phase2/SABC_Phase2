@@ -326,7 +326,7 @@ namespace SABC_Phase2.Controllers
                 // Use SharePointService for file uploads
                 var sharePointService = new SharePointService(_configuration);
 
-                // Handle uploaded files
+                // Handle uploaded files - these go directly to "Application Documents" folder
                 if (UploadedFiles != null && UploadedFiles.Any())
                 {
                     foreach (var file in UploadedFiles)
@@ -334,10 +334,11 @@ namespace SABC_Phase2.Controllers
                         if (file != null && file.Length > 0)
                         {
                             using var stream = file.OpenReadStream();
-                            var safeFileName = SanitizeHelper.ToSharePointSafeFolderName(file.FileName);
+                            var safeFileName = SanitizeHelper.ToSharePointSafeFileName(file.FileName);
 
+                            // 🔄 This method already creates "Application Documents" folder structure
                             var sharePointUrl = await sharePointService
-                                .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, safeFileName);
+                                .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, file.FileName);
 
                             var doc = new ApplicationDocument
                             {
@@ -352,7 +353,7 @@ namespace SABC_Phase2.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // Handle draft documents
+                // 🔄 CHANGED: Handle draft documents - MOVE them from "Draft Docs" to "Application Documents"
                 if (DraftId.HasValue)
                 {
                     var draft = _context.TenderApplicationDrafts
@@ -363,17 +364,48 @@ namespace SABC_Phase2.Controllers
                     {
                         foreach (var draftDoc in draft.Documents)
                         {
-                            var appDoc = new ApplicationDocument
+                            try
                             {
-                                FileName = draftDoc.FileName,
-                                SharePointPath = draftDoc.SharePointPath,
-                                TenderApplicationId = application.Id
-                            };
-                            _context.ApplicationDocuments.Add(appDoc);
+                                // 🔄 NEW: Move document from "Draft Docs" to "Application Documents" folder
+                                var newSharePointUrl = await sharePointService
+                                    .MoveDraftDocumentToApplicationAsync(draftDoc.SharePointPath, tender.TenderNumber, companyName);
+
+                                var appDoc = new ApplicationDocument
+                                {
+                                    FileName = draftDoc.FileName,
+                                    SharePointPath = newSharePointUrl, // Use the new URL in "Application Documents" folder
+                                    TenderApplicationId = application.Id
+                                };
+                                _context.ApplicationDocuments.Add(appDoc);
+                            }
+                            catch (Exception ex)
+                            {
+                                // If moving fails, fall back to using the original path
+                                Console.WriteLine($"Error moving draft document to application folder: {ex.Message}");
+
+                                var appDoc = new ApplicationDocument
+                                {
+                                    FileName = draftDoc.FileName,
+                                    SharePointPath = draftDoc.SharePointPath, // Keep original path as fallback
+                                    TenderApplicationId = application.Id
+                                };
+                                _context.ApplicationDocuments.Add(appDoc);
+                            }
                         }
                         await _context.SaveChangesAsync();
 
-                        // Remove the draft and its docs
+                        // 🔄 NEW: Clean up empty "Draft Docs" folder after moving all documents
+                        try
+                        {
+                            await sharePointService.DeleteDraftDocsFolderIfEmptyAsync(tender.TenderNumber, companyName);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error but don't fail the submission
+                            Console.WriteLine($"Error cleaning up Draft Docs folder: {ex.Message}");
+                        }
+
+                        // Remove the draft and its docs from database
                         _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
                         _context.TenderApplicationDrafts.Remove(draft);
                         await _context.SaveChangesAsync();
@@ -412,9 +444,11 @@ namespace SABC_Phase2.Controllers
             catch (Exception ex)
             {
                 // Log the exception if you have logging
+                Console.WriteLine($"Error submitting tender application: {ex.Message}");
                 return Json(new { success = false, message = "An error occurred while submitting your application." });
             }
         }
+
         /// <summary>
         /// Shows documents to OVRS users (could be their own docs, or company-wide).
         /// </summary>
@@ -522,7 +556,7 @@ namespace SABC_Phase2.Controllers
         /// This allows users to save work-in-progress and resume later.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SaveTenderApplicationDraft(Guid? DraftId,int? LegacyUserId,int? TenderId,List<IFormFile> UploadedFiles,[FromForm] List<int> DocumentsToDelete)
+        public async Task<IActionResult> SaveTenderApplicationDraft(Guid? DraftId, int? LegacyUserId, int? TenderId, List<IFormFile> UploadedFiles, [FromForm] List<int> DocumentsToDelete)
         {
             // 1. Lookup the correct OVRS_UserId (Users.Id) from the Users table using LegacyUserId
             int? ovrsUserId = null;
@@ -605,6 +639,7 @@ namespace SABC_Phase2.Controllers
                     catch (Exception ex)
                     {
                         // Optionally log error, but proceed to remove from DB
+                        Console.WriteLine($"Error deleting draft document from SharePoint: {ex.Message}");
                     }
                     _context.TenderApplicationDraftDocuments.Remove(doc);
                 }
@@ -623,8 +658,10 @@ namespace SABC_Phase2.Controllers
                             continue;
 
                         using var stream = file.OpenReadStream();
+
+                        // 🔄 CHANGED: Use new method for draft documents - uploads to "Draft Docs" folder
                         var sharePointUrl = await sharePointService
-                            .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, file.FileName);
+                            .UploadDraftApplicationDocumentAsync(tenderNumber, companyName, stream, file.FileName);
 
                         var doc = new TenderApplicationDraftDocument
                         {
@@ -653,12 +690,15 @@ namespace SABC_Phase2.Controllers
             {
                 success = true,
                 draftId = draft.DraftId,
-                tenderNumber = tender?.TenderNumber, // <-- add this
+                tenderNumber = tender?.TenderNumber,
                 message = "Draft saved",
                 redirectUrl = Url.Action("OVRS_Documents")
             });
         }
-        // GET: /OVRS_User/ViewDocument/{id}
+
+
+
+
         // Redirects the user to the SharePoint document URL for viewing the PDF in SharePoint
         public async Task<IActionResult> ViewDocument(int id)
         {

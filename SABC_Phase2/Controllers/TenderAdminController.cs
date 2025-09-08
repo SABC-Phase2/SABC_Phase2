@@ -672,15 +672,33 @@ namespace SABC_Phase2.Controllers
                 SharePointPath = doc.SharePointPath
             }).ToList();
 
-            // Load awarded documents if any
+            // FIXED: Load awarded documents for this tender regardless of current AwardedTender status
+            // This will find awarded documents that were previously uploaded for this tender
             List<TenderDocumentViewModel> awardedDocumentList = new();
+
+            // First, try to get awarded docs from current AwardedTender if it exists
             if (tender.AwardedTender != null)
             {
-                var awardedDocs = await _context.TenderDocuments
+                var currentAwardedDocs = await _context.TenderDocuments
                     .Where(doc => doc.AwardedTenderId == tender.AwardedTender.Id)
                     .ToListAsync();
 
-                awardedDocumentList = awardedDocs.Select(doc => new TenderDocumentViewModel
+                awardedDocumentList = currentAwardedDocs.Select(doc => new TenderDocumentViewModel
+                {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    SharePointPath = doc.SharePointPath
+                }).ToList();
+            }
+            else
+            {
+                // IMPORTANT FIX: If no current AwardedTender, look for any awarded documents 
+                // that were previously associated with this tender
+                var previousAwardedDocs = await _context.TenderDocuments
+                    .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null)
+                    .ToListAsync();
+
+                awardedDocumentList = previousAwardedDocs.Select(doc => new TenderDocumentViewModel
                 {
                     Id = doc.Id,
                     FileName = doc.FileName,
@@ -764,11 +782,12 @@ namespace SABC_Phase2.Controllers
                 Description = tender.Description,
                 AwardedTender = tender.AwardedTender?.AwardedCompanyName,
                 ExistingDocuments = mainDocumentList,
-                AwardedDocuments = awardedDocumentList,
+                AwardedDocuments = awardedDocumentList, // This will now include previously uploaded awarded docs
                 ApplicantCompanies = applicantCompanies
             };
 
             Console.WriteLine($"DEBUG: DTO ApplicantCompanies count: {dto.ApplicantCompanies.Count}");
+            Console.WriteLine($"DEBUG: DTO AwardedDocuments count: {dto.AwardedDocuments.Count}");
 
             return View("Edit", dto);
         }
@@ -928,40 +947,90 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- AWARDED DOCUMENT VALIDATION ---
+            // --- FIXED: AWARDED DOCUMENT VALIDATION ---
             if (dto.Status == "Awarded Tender")
             {
-                // Get IDs of awarded docs marked for deletion
-                var awardedDocsToDelete = dto.DocumentsToDelete ?? new List<int>();
-                // Count awarded docs not marked for deletion
-                int remainingAwardedDocs = tender.AwardedTender?.Documents
+                // IMPORTANT FIX: Use the correct property for awarded document deletions
+                var awardedDocsToDelete = dto.AwardedDocumentsToDelete ?? new List<int>();
+
+                // Count awarded docs not marked for deletion from current AwardedTender
+                int remainingAwardedDocsFromCurrent = tender.AwardedTender?.Documents
                     .Where(d => !awardedDocsToDelete.Contains(d.Id))
                     .Count() ?? 0;
+
+                // ADDITIONAL FIX: Also check for previously uploaded awarded documents for this tender
+                // (in case AwardedTender was set to null when status changed away from "Awarded Tender")
+                int remainingPreviousAwardedDocs = 0;
+                if (tender.AwardedTender == null)
+                {
+                    var previousAwardedDocs = await _context.TenderDocuments
+                        .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && !awardedDocsToDelete.Contains(doc.Id))
+                        .CountAsync();
+                    remainingPreviousAwardedDocs = previousAwardedDocs;
+                }
+
+                int totalExistingAwardedDocs = remainingAwardedDocsFromCurrent + remainingPreviousAwardedDocs;
+
                 // Count new uploads
                 int newAwardedUploads = dto.UploadedFiles?.Count ?? 0;
 
-                if ((remainingAwardedDocs + newAwardedUploads) == 0)
+                if ((totalExistingAwardedDocs + newAwardedUploads) == 0)
                 {
                     ModelState.AddModelError("", "You must upload at least one awarded tender document.");
-                    // Re-populate AwardedDocuments for the view
-                    dto.AwardedDocuments = tender.AwardedTender?.Documents
-                        .Where(d => !awardedDocsToDelete.Contains(d.Id))
-                        .Select(d => new TenderDocumentViewModel
+
+                    // Re-populate AwardedDocuments for the view including previously uploaded docs
+                    var allAwardedDocs = new List<TenderDocumentViewModel>();
+
+                    if (tender.AwardedTender?.Documents != null)
+                    {
+                        allAwardedDocs.AddRange(tender.AwardedTender.Documents
+                            .Where(d => !awardedDocsToDelete.Contains(d.Id))
+                            .Select(d => new TenderDocumentViewModel
+                            {
+                                Id = d.Id,
+                                FileName = d.FileName,
+                                SharePointPath = d.SharePointPath
+                            }));
+                    }
+                    else
+                    {
+                        // Add previously uploaded awarded docs
+                        var previousDocs = await _context.TenderDocuments
+                            .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && !awardedDocsToDelete.Contains(doc.Id))
+                            .ToListAsync();
+
+                        allAwardedDocs.AddRange(previousDocs.Select(d => new TenderDocumentViewModel
                         {
                             Id = d.Id,
                             FileName = d.FileName,
                             SharePointPath = d.SharePointPath
-                        }).ToList() ?? new List<TenderDocumentViewModel>();
+                        }));
+                    }
+
+                    dto.AwardedDocuments = allAwardedDocs;
                     return View("Edit", dto);
                 }
             }
 
             var sharePointService = new SharePointService(_configuration);
 
-            // Handle awarded document deletions
-            if (dto.AwardedDocumentsToDelete != null && dto.AwardedDocumentsToDelete.Any() && tender.AwardedTender != null)
+            // FIXED: Handle awarded document deletions properly
+            if (dto.AwardedDocumentsToDelete != null && dto.AwardedDocumentsToDelete.Any())
             {
-                var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.AwardedDocumentsToDelete.Contains(d.Id)).ToList();
+                // Get documents to delete - check both current AwardedTender and previous awarded docs
+                var docsToRemove = new List<TenderDocument>();
+
+                if (tender.AwardedTender != null)
+                {
+                    docsToRemove.AddRange(tender.AwardedTender.Documents.Where(d => dto.AwardedDocumentsToDelete.Contains(d.Id)));
+                }
+
+                // Also check for previously uploaded awarded documents
+                var previousAwardedDocs = await _context.TenderDocuments
+                    .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && dto.AwardedDocumentsToDelete.Contains(doc.Id))
+                    .ToListAsync();
+                docsToRemove.AddRange(previousAwardedDocs);
+
                 foreach (var doc in docsToRemove)
                 {
                     await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
@@ -1018,6 +1087,19 @@ namespace SABC_Phase2.Controllers
                             }
                         }
                     }
+
+                    // ADDITIONAL FIX: Also update paths for previously uploaded awarded documents
+                    var previousAwardedDocs = await _context.TenderDocuments
+                        .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null)
+                        .ToListAsync();
+
+                    foreach (var doc in previousAwardedDocs)
+                    {
+                        if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
+                        {
+                            doc.SharePointPath = doc.SharePointPath.Replace(oldTenderNumber, newTenderNumber);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1027,30 +1109,7 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- Document deletions as before ---
-            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
-            {
-                if (dto.Status == "Awarded Tender" && tender.AwardedTender != null)
-                {
-                    var docsToRemove = tender.AwardedTender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
-                    foreach (var doc in docsToRemove)
-                    {
-                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
-                        _context.TenderDocuments.Remove(doc);
-                    }
-                }
-                else
-                {
-                    var docsToRemove = tender.Documents.Where(d => dto.DocumentsToDelete.Contains(d.Id)).ToList();
-                    foreach (var doc in docsToRemove)
-                    {
-                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
-                        _context.TenderDocuments.Remove(doc);
-                    }
-                }
-            }
-
-            // --- Document uploads as before ---
+            // --- Document uploads ---
             if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
             {
                 if (dto.Status == "Awarded Tender")
@@ -1121,11 +1180,12 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- AwardedTender logic as before ---
+            // --- FIXED: AwardedTender logic ---
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
                 if (tender.AwardedTender == null)
                 {
+                    // IMPORTANT FIX: When creating new AwardedTender, reassociate any previously uploaded awarded documents
                     var awardedTender = new AwardedTender
                     {
                         AwardedCompanyName = dto.AwardedTender,
@@ -1134,6 +1194,16 @@ namespace SABC_Phase2.Controllers
                     _context.AwardedTenders.Add(awardedTender);
                     await _context.SaveChangesAsync();
                     tender.AwardedTenderId = awardedTender.Id;
+
+                    // Reassociate previously uploaded awarded documents to this new AwardedTender
+                    var previousAwardedDocs = await _context.TenderDocuments
+                        .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && doc.AwardedTenderId != awardedTender.Id)
+                        .ToListAsync();
+
+                    foreach (var doc in previousAwardedDocs)
+                    {
+                        doc.AwardedTenderId = awardedTender.Id;
+                    }
                 }
                 else
                 {
