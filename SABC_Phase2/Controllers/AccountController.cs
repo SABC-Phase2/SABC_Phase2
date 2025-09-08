@@ -89,19 +89,22 @@ namespace SABC_Phase2.Controllers
 
                     // Build claims for administrator identity (used throughout the system for authorization)
                     var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
-                        new Claim(ClaimTypes.Role, "Administrator"),
-                        new Claim("AdminId", adminId.ToString()),
-                        new Claim("AdminEmail", email)
-                    };
+    {
+        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
+        new Claim(ClaimTypes.Role, adminRole), // ✅ Use DB role directly
+        new Claim("AdminId", adminId.ToString()),
+        new Claim("AdminEmail", email)
+    };
+
                     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var principal = new ClaimsPrincipal(identity);
+
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-                    // Redirect to admin dashboard
+                    // Redirect both roles to TenderAdmin dashboard
                     return RedirectToAction("Index", "TenderAdmin");
                 }
+
                 else
                 {
                     // Admin email found, but password was incorrect

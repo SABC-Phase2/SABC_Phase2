@@ -1743,6 +1743,13 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> Users_Management()
+        {
+            return View();
+        }
+
     }
 
     public class DeleteDraftDocumentRequest

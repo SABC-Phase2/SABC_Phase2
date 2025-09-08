@@ -60,73 +60,101 @@
 
 
     <div class="menu">
-        @if (User.Identity.IsAuthenticated && User.IsInRole("Administrator"))
+        @if (User.Identity.IsAuthenticated && (User.IsInRole("Administrator") || User.IsInRole("Super_Admin")))
         {
-            @* ADMINISTRATOR MENU *@
+            @* ADMINISTRATOR / SUPER_ADMIN MENU *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
                 <i class="fas fa-users fa-2x"></i>
-                <a asp-controller="TenderAdmin" asp-action="Index" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
+                <a asp-controller="TenderAdmin" asp-action="Index"
+                   class="label main-link"
+                   style="color:inherit; text-decoration:none; flex: 1;">
                     Tenders Panel
                 </a>
                 <span class="chevron-toggle">
                     <i class="fas fa-chevron-down submenu-icon" style="margin-left:auto;"></i>
                 </span>
             </div>
+
             <div class="submenu visible">
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="open" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="open"
+                       class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Open Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="closed" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="closed"
+                       class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Closed Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="cancelled" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="cancelled"
+                       class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Cancelled Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
                     <i class="fas fa-circle-dot green"></i>
-                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="awarded" class="label"
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="awarded"
+                       class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Awarded Tenders
                     </a>
                 </div>
             </div>
+
             <div class="menu-section">
                 <i class="fas fa-file-alt fa-2x"></i>
-                <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Scheduled Tenders
                 </a>
             </div>
+
             <div class="menu-section">
                 <i class="fas fa-times fa-2x"></i>
-                <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Drafts
                 </a>
             </div>
+
             <div class="menu-section">
                 <i class="fas fa-download fa-2x"></i>
-                <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Reports
                 </a>
             </div>
+
+            @* ✅ Only Super_Admin sees this *@
+            @if (User.IsInRole("Super_Admin"))
+            {
+                <div class="menu-section">
+                    <i class="fas fa-user-shield fa-2x"></i>
+                    <a asp-controller="TenderAdmin" asp-action="Users_Management" class="label"
+                       style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                        Users
+                    </a>
+                </div>
+            }
+
             <div class="menu-section">
                 <i class="fas fa-question fa-2x"></i>
-                <a asp-controller="Home" asp-action="Help" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                <a asp-controller="Home" asp-action="Help" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Help
                 </a>
             </div>
         }
+
         else if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
         {
             @* OVRS_USER MENU *@
