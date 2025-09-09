@@ -1866,9 +1866,9 @@ namespace SABC_Phase2.Controllers
 
             if (isOvrsUser)
             {
-                // PHASE 2: Get OVRS users (don't filter by status — get all)
+                // PHASE 2: Get OVRS users (ONLY ACTIVE USERS - AccountStatus == 1)
                 var ovrsPhase2Users = await _context.Users
-                    .Where(u => u.Role == "OVRS_User" && u.LegacyUserId != null)
+                    .Where(u => u.Role == "OVRS_User" && u.LegacyUserId != null && u.AccountStatus == 1)
                     .ToListAsync();
 
                 var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
@@ -1887,7 +1887,7 @@ namespace SABC_Phase2.Controllers
                                  Email = legacy.Email ?? "",
                                  FullName = $"{legacy.FirstName} {legacy.LastName}",
                                  Role = "OVRS_User",
-                                 Status = phase2.AccountStatus == 1 ? "Active" : "Inactive",   // <-- DYNAMIC STATUS
+                                 Status = "Active",   // <-- Since we only get active users, always "Active"
                                  CompanyName = supplier?.TradingName ?? ""
                              };
 
@@ -1948,7 +1948,7 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
-
+        //DELETE MULTIPLE OVRS USERS
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BulkDeleteUsers([FromBody] List<int> selectedUserIds)
@@ -1979,6 +1979,31 @@ namespace SABC_Phase2.Controllers
                 await _context.SaveChangesAsync();
 
                 return Json(new { success = true, message = $"{users.Count} user(s) deleted." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // Delete Indivisual OVRS USERS
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser([FromBody] int userId)
+        {
+            if (userId == 0)
+                return Json(new { success = false, message = "Invalid user." });
+
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.Role == "OVRS_User");
+                if (user == null)
+                    return Json(new { success = false, message = "User not found." });
+
+                user.AccountStatus = 0;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "User deleted." });
             }
             catch (Exception ex)
             {

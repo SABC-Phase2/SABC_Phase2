@@ -126,18 +126,15 @@
                 body: JSON.stringify(selected)
             })
             .then(resp => resp.json())
-            .then(data => {
-                if (data.success) {
-                    // Remove deleted rows from the table
-                    selected.forEach(id => {
-                        const row = document.querySelector(`input[value="${id}"]`)?.closest('tr');
-                        if (row) row.remove();
-                    });
-                    alert(data.message);
-                } else {
-                    alert("Delete failed: " + (data.message || "Unknown error"));
-                }
-            });
+              .then(data => {
+            if (data.success) {
+                alert(data.message);
+                // Refresh the table via AJAX to sync front and backend
+                submitUserForm(true);
+            } else {
+                alert("Delete failed: " + (data.message || "Unknown error"));
+            }
+        });
         });
 
 
@@ -178,7 +175,7 @@
                 btn.onclick = function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const userId = btn.getAttribute('data-user-id');
+                    const userId = parseInt(btn.getAttribute('data-user-id'));
                     if(confirm('Are you sure you want to delete this user?')) {
                         fetch('@Url.Action("DeleteUser")', {
                             method: 'POST',
@@ -186,11 +183,14 @@
                                 "Content-Type": "application/json",
                                 "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
                             },
-                            body: JSON.stringify({ id: userId })
-                        }).then(resp => resp.json())
+                            body: JSON.stringify(userId)
+                        })
+                        .then(resp => resp.json())
                         .then(data => {
                             if(data.success) {
-                                btn.closest('tr').remove();
+                                alert(data.message);
+                                // Refresh the table via AJAX
+                                submitUserForm(true);
                             } else {
                                 alert('Delete failed: ' + (data.message || 'Unknown error'));
                             }
