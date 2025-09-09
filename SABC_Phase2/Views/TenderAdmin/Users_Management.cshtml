@@ -34,9 +34,10 @@
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
         </button>
-        <button class="big-delete-btn" title="Delete Selected Users">
+        <button type="button" class="big-delete-btn" title="Delete Selected Users">
             <i class="fas fa-trash-alt"></i> Delete
         </button>
+
     </form>
 </div>
 
@@ -99,6 +100,47 @@
 
 @section Scripts {
     <script>
+
+              document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
+            e.preventDefault();
+
+            // Collect all checked user IDs
+            const selected = Array.from(document.querySelectorAll('input[name="selectedUserIds"]:checked'))
+                .map(cb => parseInt(cb.value));
+
+            if (selected.length === 0) {
+                alert("Please select at least one user to delete.");
+                return;
+            }
+
+            if (!confirm("Are you sure you want to delete the selected users?")) {
+                return;
+            }
+
+            fetch('@Url.Action("BulkDeleteUsers")', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                },
+                body: JSON.stringify(selected)
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove deleted rows from the table
+                    selected.forEach(id => {
+                        const row = document.querySelector(`input[value="${id}"]`)?.closest('tr');
+                        if (row) row.remove();
+                    });
+                    alert(data.message);
+                } else {
+                    alert("Delete failed: " + (data.message || "Unknown error"));
+                }
+            });
+        });
+
+
         // Same JS as before for AJAX/refresh and delete
         function debounce(fn, delay) {
             let timer = null;

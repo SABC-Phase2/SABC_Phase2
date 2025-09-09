@@ -1949,6 +1949,42 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDeleteUsers([FromBody] List<int> selectedUserIds)
+        {
+            if (selectedUserIds == null || !selectedUserIds.Any())
+            {
+                return Json(new { success = false, message = "No users selected." });
+            }
+
+            try
+            {
+                // Fetch OVRS users in Phase 2 by Id
+                var users = await _context.Users
+                    .Where(u => selectedUserIds.Contains(u.Id) && u.Role == "OVRS_User")
+                    .ToListAsync();
+
+                if (!users.Any())
+                {
+                    return Json(new { success = false, message = "No matching users found." });
+                }
+
+                // Update AccountStatus = 0
+                foreach (var user in users)
+                {
+                    user.AccountStatus = 0;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"{users.Count} user(s) deleted." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
 
 
     }
