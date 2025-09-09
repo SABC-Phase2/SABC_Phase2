@@ -1,0 +1,39 @@
+﻿@model List<SABC_Phase2.Models.Tender.OvrsUserViewModel>
+@{
+    ViewData["Title"] = "Test User";
+}
+
+<h2>Test User</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Full Name</th>
+            <th>Company Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Count > 0)
+        {
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.FullName</td>
+                    <td>@item.CompanyName</td>
+                    <td>@item.Email</td>
+                    <td>@item.Role</td>
+                    <td>@item.Status</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5">No OVRS Users found.</td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -18,10 +18,6 @@ namespace SABC_Phase2.Data
             modelBuilder.Entity<TblUsers>().ToTable("tbl_users");
             modelBuilder.Entity<TblSuppliers>().ToTable("tbl_suppliers");
 
-            // Add any specific keys or relationships if not following EF Core conventions
-            // Example:
-            // modelBuilder.Entity<TblUsers>().HasKey(u => u.user_id);
-            // modelBuilder.Entity<TblSuppliers>().HasKey(s => s.supplierID);
         }
     }
 }

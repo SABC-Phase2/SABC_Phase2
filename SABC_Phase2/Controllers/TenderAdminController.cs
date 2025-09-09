@@ -1903,7 +1903,39 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> Test_User()
+        {
+            // 1. Get OVRS Users from Phase 2
+            var ovrsPhase2Users = await _context.Users
+                .Where(u => u.Role == "OVRS_User" && u.AccountStatus == 1 && u.LegacyUserId != null)
+                .ToListAsync();
 
+            var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
+
+            // 2. Get all legacy users and suppliers from Phase 1 and filter in memory
+            var legacyUsers = await _legacyContext.TblUsers.ToListAsync();
+            var legacyUsersFiltered = legacyUsers.Where(u => legacyIds.Contains(u.UserId)).ToList();
+
+            var suppliers = await _legacyContext.TblSuppliers.ToListAsync();
+            var suppliersFiltered = suppliers.Where(s => legacyIds.Contains(s.UserId)).ToList();
+
+            // 3. Join data and project to view model
+            var result = from phase2 in ovrsPhase2Users
+                         join legacy in legacyUsersFiltered on phase2.LegacyUserId equals legacy.UserId
+                         join supplier in suppliersFiltered on legacy.UserId equals supplier.UserId into supplierJoin
+                         from supplier in supplierJoin.DefaultIfEmpty()
+                         select new OvrsUserViewModel
+                         {
+                             FullName = (legacy.FirstName ?? "") + " " + (legacy.LastName ?? ""),
+                             Email = legacy.Email ?? "",
+                             CompanyName = supplier?.TradingName ?? "", // Use trading name if available, else blank
+                             Role = "OVRS_User",
+                             Status = "Active"
+                         };
+
+            return View(result.ToList());
+        }
     }
 
     public class DeleteDraftDocumentRequest

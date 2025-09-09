@@ -29,5 +29,6 @@ namespace SABC_Phase2.Models.Phase1_LegacyDB
         // Supplier type code: 1 = Local, 2 = Foreign
         [Column("local/foreigner")]
         public int LocalForeigner { get; set; }
+
     }
 }

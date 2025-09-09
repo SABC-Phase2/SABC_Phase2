@@ -26,7 +26,7 @@
         </span>
         <select name="roleFilter" class="filter-dropdown">
             <option value="Administrator" selected="@(roleFilter == "Administrator" ? "selected" : null)">Administrator</option>
-            <option value="OVRS_User" selected="@(roleFilter == "OVRS_User" ? "selected" : null)">OVRS_User</option>
+            <option value="OVRS_User" selected="@(roleFilter == "OVRS_User" ? "selected" : null)">OVRS User</option>
         </select>
         <button type="submit" class="refresh-btn"
                 title="Clear search and filters"
@@ -50,6 +50,7 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Role</th>
+                        <th>Status</th>
                         <th>Created</th>
                         <th>Action</th>
                     </tr>
@@ -62,6 +63,7 @@
                             <td>@user.FullName</td>
                             <td>@user.Email</td>
                             <td>@user.Role</td>
+                            <td>@user.Status</td>
                             <td>@user.CreatedAt.ToString("yyyy-MM-dd")</td>
                             <td>
                                 <button class="delete-user-btn" data-user-id="@user.Id" title="Delete User">
@@ -96,10 +98,9 @@
                 form.appendChild(pageInput);
             }
             const data = new URLSearchParams(new FormData(form)).toString();
-                   fetch('@Url.Action("Users_Management")' + '?' + data, {
-            headers: { "X-Requested-With": "XMLHttpRequest" }
-        })
-
+            fetch('@Url.Action("Users_Management")' + '?' + data, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
             .then(resp => resp.text())
             .then(html => {
                 document.querySelector('.table-container').innerHTML = html;
