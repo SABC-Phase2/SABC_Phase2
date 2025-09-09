@@ -8,16 +8,16 @@
         <table class="user-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">THUMBNAILS</th>
-                    <th>Name</th>
-                    <th>Email</th>
+                    <th style="width: 40px;">Selected</th>
+                    <th>FULL NAME</th>
                     @if (isOvrsUser)
                     {
-                        <th>Company</th>
+                        <th>COMPANY NAME</th>
                     }
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>EMAIL</th>
+                    <th>ROLE</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
                 </tr>
             </thead>
             <tbody>
@@ -25,20 +25,30 @@
                 {
                     <tr>
                         <td>
-                            <img src="~/lib/Images/cropped_logoblack.png" class="tender-thumbnail" alt="SABC Logo" ; />
+                            <input type="checkbox" name="selectedUserIds" value="@user.Id" />
                         </td>
                         <td>@user.FullName</td>
-                        <td>@user.Email</td>
                         @if (isOvrsUser)
                         {
                             <td>@user.CompanyName</td>
                         }
+                        <td>@user.Email</td>
                         <td>@user.Role</td>
                         <td>@user.Status</td>
                         <td>
-                            <button class="delete-user-btn" data-user-id="@user.Id" title="Delete User">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            <div class="action-menu-container">
+                                <button class="action-menu-btn" data-user-id="@user.Id" title="More actions">
+                                    <i class="fas fa-ellipsis-h" style="color: #222;"></i>
+                                </button>
+                                <div class="action-dropdown">
+                                    <button class="action-dropdown-item view-user-btn" data-user-id="@user.Id">
+                                        <i class="fas fa-eye"></i> View User
+                                    </button>
+                                    <button class="action-dropdown-item delete-user-btn delete-option" data-user-id="@user.Id">
+                                        <i class="fas fa-trash-alt"></i> Delete User
+                                    </button>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 }
