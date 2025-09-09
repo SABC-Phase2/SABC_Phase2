@@ -1428,7 +1428,6 @@ namespace SABC_Phase2.Controllers
         {
             if (!ModelState.IsValid)
             {
-                // Return validation errors as JSON for fetch
                 return Json(new { success = false, message = "Invalid data submitted" });
             }
 
@@ -1439,7 +1438,7 @@ namespace SABC_Phase2.Controllers
             if (scheduledTender == null)
                 return Json(new { success = false, message = "Tender not found" });
 
-            // --- update entity like you already do ---
+            // --- UPDATE ENTITY ---
             scheduledTender.TenderType = dto.TenderType;
             scheduledTender.TenderNumber = dto.TenderNumber;
             scheduledTender.ClosingDate = dto.ClosingDate.Value;
@@ -1462,15 +1461,66 @@ namespace SABC_Phase2.Controllers
                 scheduledTender.ScheduledPublishDateTime = scheduledUtcInstant.ToDateTimeUtc();
             }
 
-            // documents deletion/upload logic...
-            // (unchanged, just like you wrote)
+            // --- DOCUMENT DELETION LOGIC ---
+            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
+            {
+                var documentsToDelete = scheduledTender.Documents
+                    .Where(d => dto.DocumentsToDelete.Contains(d.Id))
+                    .ToList();
+
+                var sharePointService = new SharePointService(_configuration);
+
+                foreach (var doc in documentsToDelete)
+                {
+                    try
+                    {
+                        // Delete from SharePoint first
+                        await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting document from SharePoint: {ex.Message}");
+                        // Continue with database deletion even if SharePoint deletion fails
+                    }
+
+                    // Remove from database
+                    scheduledTender.Documents.Remove(doc);
+                    _context.ScheduledTendersDocuments.Remove(doc);
+                }
+            }
+
+            // --- NEW DOCUMENT UPLOAD LOGIC ---
+            var sharePointServiceForUpload = new SharePointService(_configuration);
+            var safeTenderFolder = SanitizeHelper.ToSharePointSafeFolderName(scheduledTender.TenderNumber);
+
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                foreach (var file in dto.UploadedFiles)
+                {
+                    if (file.Length > 0)
+                    {
+                        using var stream = file.OpenReadStream();
+                        var sharePointUrl = await sharePointServiceForUpload.UploadDocumentAsync(
+                            safeTenderFolder,
+                            stream,
+                            file.FileName);
+
+                        scheduledTender.Documents.Add(new ScheduledTenderDocument
+                        {
+                            FileName = file.FileName,
+                            SharePointPath = sharePointUrl,
+                            ScheduledTenderId = scheduledTender.Id
+                        });
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
 
-            // ✅ Return JSON for fetch
             return Json(new
             {
                 success = true,
+                tenderNumber = scheduledTender.TenderNumber,
                 redirectUrl = Url.Action("ScheduledIndex", "TenderAdmin")
             });
         }
