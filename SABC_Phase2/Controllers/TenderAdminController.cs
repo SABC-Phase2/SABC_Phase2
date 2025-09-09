@@ -1861,37 +1861,83 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public async Task<IActionResult> Users_Management(string search = "", string roleFilter = "all", string statusFilter = "all")
         {
-            IQueryable<Administrator> query = _context.Administrators;
+            List<AdminUserRowViewModel> users;
+            bool isOvrsUser = roleFilter == "OVRS_User";
 
-            if (roleFilter == "Administrator")
+            if (isOvrsUser)
             {
-                query = query.Where(a => a.Role == "Administrator" || a.Role == "Super_Admin");
-            }
-            else if (roleFilter == "OVRS_User")
-            {
-                query = query.Where(a => a.Role == "OVRS_User");
-            }
+                // PHASE 2: Get OVRS users (don't filter by status — get all)
+                var ovrsPhase2Users = await _context.Users
+                    .Where(u => u.Role == "OVRS_User" && u.LegacyUserId != null)
+                    .ToListAsync();
 
-            if (!string.IsNullOrEmpty(search))
-            {
-                query = query.Where(a =>
-                    a.Email.Contains(search) ||
-                    a.FirstName.Contains(search) ||
-                    a.LastName.Contains(search)
-                );
-            }
+                var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
 
-            var users = await query
-                .OrderBy(a => a.Id)
-                .Select(a => new AdminUserRowViewModel
+                // PHASE 1: Get legacy users and suppliers
+                var legacyUsers = await _legacyContext.TblUsers.ToListAsync();
+                var suppliers = await _legacyContext.TblSuppliers.ToListAsync();
+
+                var result = from phase2 in ovrsPhase2Users
+                             join legacy in legacyUsers on phase2.LegacyUserId equals legacy.UserId
+                             join supplier in suppliers on legacy.UserId equals supplier.UserId into supplierJoin
+                             from supplier in supplierJoin.DefaultIfEmpty()
+                             select new AdminUserRowViewModel
+                             {
+                                 Id = phase2.Id,
+                                 Email = legacy.Email ?? "",
+                                 FullName = $"{legacy.FirstName} {legacy.LastName}",
+                                 Role = "OVRS_User",
+                                 Status = phase2.AccountStatus == 1 ? "Active" : "Inactive",   // <-- DYNAMIC STATUS
+                                 CompanyName = supplier?.TradingName ?? ""
+                             };
+
+                // Apply search filter (optional)
+                if (!string.IsNullOrEmpty(search))
                 {
-                    Id = a.Id,
-                    Email = a.Email,
-                    FullName = $"{a.FirstName} {a.LastName}",
-                    Role = a.Role,
-                    CreatedAt = a.CreatedAt
-                })
-                .ToListAsync();
+                    result = result.Where(a =>
+                        (a.Email != null && a.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        (a.FullName != null && a.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        (a.CompanyName != null && a.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    );
+                }
+
+                users = result.OrderBy(a => a.FullName).ToList();
+            }
+            else
+            {
+                // Default: Administrators/Super_Admins
+                IQueryable<Administrator> query = _context.Administrators;
+
+                if (roleFilter == "Administrator")
+                {
+                    query = query.Where(a => a.Role == "Administrator" || a.Role == "Super_Admin");
+                }
+
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(a =>
+                        a.Email.Contains(search) ||
+                        a.FirstName.Contains(search) ||
+                        a.LastName.Contains(search)
+                    );
+                }
+
+                users = await query
+                    .OrderBy(a => a.Id)
+                    .Select(a => new AdminUserRowViewModel
+                    {
+                        Id = a.Id,
+                        Email = a.Email,
+                        FullName = $"{a.FirstName} {a.LastName}",
+                        Role = a.Role,
+                        Status = "Active", // <-- Always set "Active" for admins too
+                        CompanyName = "" // Not relevant for admins
+                    })
+                    .ToListAsync();
+            }
+
+            // Set ViewBag flag so the view knows which columns to show
+            ViewBag.IsOVRSUser = isOvrsUser;
 
             // 👇 detect if it's an AJAX request
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -1902,40 +1948,6 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
-
-        [HttpGet]
-        public async Task<IActionResult> Test_User()
-        {
-            // 1. Get OVRS Users from Phase 2
-            var ovrsPhase2Users = await _context.Users
-                .Where(u => u.Role == "OVRS_User" && u.AccountStatus == 1 && u.LegacyUserId != null)
-                .ToListAsync();
-
-            var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
-
-            // 2. Get all legacy users and suppliers from Phase 1 and filter in memory
-            var legacyUsers = await _legacyContext.TblUsers.ToListAsync();
-            var legacyUsersFiltered = legacyUsers.Where(u => legacyIds.Contains(u.UserId)).ToList();
-
-            var suppliers = await _legacyContext.TblSuppliers.ToListAsync();
-            var suppliersFiltered = suppliers.Where(s => legacyIds.Contains(s.UserId)).ToList();
-
-            // 3. Join data and project to view model
-            var result = from phase2 in ovrsPhase2Users
-                         join legacy in legacyUsersFiltered on phase2.LegacyUserId equals legacy.UserId
-                         join supplier in suppliersFiltered on legacy.UserId equals supplier.UserId into supplierJoin
-                         from supplier in supplierJoin.DefaultIfEmpty()
-                         select new OvrsUserViewModel
-                         {
-                             FullName = (legacy.FirstName ?? "") + " " + (legacy.LastName ?? ""),
-                             Email = legacy.Email ?? "",
-                             CompanyName = supplier?.TradingName ?? "", // Use trading name if available, else blank
-                             Role = "OVRS_User",
-                             Status = "Active"
-                         };
-
-            return View(result.ToList());
-        }
     }
 
     public class DeleteDraftDocumentRequest

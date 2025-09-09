@@ -6,7 +6,7 @@
         public string Email { get; set; }
         public string FullName { get; set; }
         public string Role { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public string Status { get; set; } = "Active"; // New property for status
+        public string Status { get; set; } = "Active";
+        public string CompanyName { get; set; } // <-- Add this line
     }
 }

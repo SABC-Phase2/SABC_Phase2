@@ -1,16 +1,22 @@
 ﻿@model List<SABC_Phase2.Models.Tender.AdminUserRowViewModel>
+@{
+    bool isOvrsUser = ViewBag.IsOVRSUser == true;
+}
 
 <div class="user-table-card">
     <div class="table-scroll-container">
         <table class="user-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
+                    <th style="width: 40px;">THUMBNAILS</th>
                     <th>Name</th>
                     <th>Email</th>
+                    @if (isOvrsUser)
+                    {
+                        <th>Company</th>
+                    }
                     <th>Role</th>
                     <th>Status</th>
-                    <th>Created</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -18,12 +24,17 @@
                 @foreach (var user in Model)
                 {
                     <tr>
-                        <td>@user.Id</td>
+                        <td>
+                            <img src="~/lib/Images/cropped_logoblack.png" class="tender-thumbnail" alt="SABC Logo" ; />
+                        </td>
                         <td>@user.FullName</td>
                         <td>@user.Email</td>
+                        @if (isOvrsUser)
+                        {
+                            <td>@user.CompanyName</td>
+                        }
                         <td>@user.Role</td>
                         <td>@user.Status</td>
-                        <td>@user.CreatedAt.ToString("yyyy-MM-dd")</td>
                         <td>
                             <button class="delete-user-btn" data-user-id="@user.Id" title="Delete User">
                                 <i class="fas fa-trash-alt"></i>
