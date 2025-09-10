@@ -806,9 +806,9 @@ namespace SABC_Phase2.Controllers
         }
 
 
-        // Add this POST action to your OVRS_UserController
+        // Update the UpdateTenderSubmission method
         [HttpPost]
-        public async Task<IActionResult> UpdateTenderSubmission(int TenderId, int? DraftId, int? LegacyUserId,[FromForm] IFormFileCollection UploadedFiles,[FromForm] List<int> DocumentsToDelete)
+        public async Task<IActionResult> UpdateTenderSubmission(int TenderId, int? DraftId, int? LegacyUserId, [FromForm] IFormFileCollection UploadedFiles, [FromForm] string DocumentsToDelete)
         {
             var tenderApplication = await _context.Applied_For_Tenders
                 .Include(t => t.Documents)
@@ -826,11 +826,25 @@ namespace SABC_Phase2.Controllers
 
             var sharePointService = new SharePointService(_configuration);
 
-            // Deletion logic
-            if (DocumentsToDelete != null && DocumentsToDelete.Any())
+            // Parse DocumentsToDelete from comma-separated string
+            List<int> documentsToDeleteList = new List<int>();
+            if (!string.IsNullOrEmpty(DocumentsToDelete))
+            {
+                var docIdsToDelete = DocumentsToDelete.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var docIdStr in docIdsToDelete)
+                {
+                    if (int.TryParse(docIdStr.Trim(), out int docId))
+                    {
+                        documentsToDeleteList.Add(docId);
+                    }
+                }
+            }
+
+            // Deletion logic - now happens during form submission
+            if (documentsToDeleteList.Any())
             {
                 var docsToRemove = tenderApplication.Documents
-                    .Where(d => DocumentsToDelete.Contains(d.Id)).ToList();
+                    .Where(d => documentsToDeleteList.Contains(d.Id)).ToList();
 
                 foreach (var doc in docsToRemove)
                 {
@@ -838,15 +852,16 @@ namespace SABC_Phase2.Controllers
                     {
                         await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Log error if needed
+                        // Log error if needed but continue with database deletion
+                        // You might want to log this: _logger.LogError(ex, "Failed to delete document from SharePoint: {SharePointPath}", doc.SharePointPath);
                     }
                     _context.ApplicationDocuments.Remove(doc);
                 }
             }
 
-            // Upload logic
+            // Upload logic for new files
             foreach (var formFile in UploadedFiles)
             {
                 if (formFile != null && formFile.Length > 0)
@@ -854,24 +869,40 @@ namespace SABC_Phase2.Controllers
                     if (!formFile.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    using var stream = formFile.OpenReadStream();
-                    var sharePointUrl = await sharePointService
-                        .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, formFile.FileName);
-
-                    var doc = new SABC_Phase2.Models.OVRS.ApplicationDocument
+                    try
                     {
-                        FileName = formFile.FileName,
-                        SharePointPath = sharePointUrl,
-                        TenderApplicationId = tenderApplication.Id
-                    };
+                        using var stream = formFile.OpenReadStream();
+                        var sharePointUrl = await sharePointService
+                            .UploadUserApplicationDocumentAsync(tenderNumber, companyName, stream, formFile.FileName);
 
-                    _context.ApplicationDocuments.Add(doc);
+                        var doc = new SABC_Phase2.Models.OVRS.ApplicationDocument
+                        {
+                            FileName = formFile.FileName,
+                            SharePointPath = sharePointUrl,
+                            TenderApplicationId = tenderApplication.Id
+                        };
+
+                        _context.ApplicationDocuments.Add(doc);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error and continue with other uploads
+                        // _logger.LogError(ex, "Failed to upload document: {FileName}", formFile.FileName);
+                        return Json(new { success = false, message = $"Failed to upload {formFile.FileName}. Please try again." });
+                    }
                 }
             }
 
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("OVRS_Submissions_Drafts", "OVRS_User");
+            try
+            {
+                await _context.SaveChangesAsync();
+                return RedirectToAction("OVRS_Submissions_Drafts", "OVRS_User");
+            }
+            catch (Exception ex)
+            {
+                // _logger.LogError(ex, "Failed to save changes to database");
+                return Json(new { success = false, message = "Failed to save changes. Please try again." });
+            }
         }
 
         public async Task<IActionResult> AllTenders(int page = 1, int pageSize = 7, string search = "", string filter = "all")

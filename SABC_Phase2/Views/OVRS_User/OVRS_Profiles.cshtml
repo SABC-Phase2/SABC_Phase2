@@ -188,7 +188,7 @@
 <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header bg-dark-green text-white">
                 <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -210,9 +210,9 @@
                         <input type="text" class="form-control" id="confirmPhrase" name="ConfirmPhrase" required />
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" id="confirmDeleteBtn" class="btn btn-danger" disabled>Yes, Delete</button>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-dark-green" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="confirmDeleteBtn" class="btn btn-dark-red" disabled>Yes, Delete</button>
                 </div>
             </form>
         </div>
@@ -760,6 +760,34 @@
 </script>
 
 <style>
+    .bg-dark-green {
+    background-color: #004d00 !important;
+}
+
+    .btn-dark-green {
+        background-color: #004d00 !important; /* dark green */
+        color: #fff !important;
+        border: none;
+        min-width: 120px; /* ensures consistent button size */
+    }
+
+        .btn-dark-green:hover {
+            background-color: #006600 !important; /* lighter green on hover */
+        }
+
+    .btn-dark-red {
+        background-color: #8B0000 !important; /* dark red */
+        color: #fff !important;
+        border: none;
+        min-width: 120px; /* same width as green */
+    }
+
+        .btn-dark-red:hover {
+            background-color: #a30000 !important; /* lighter dark red */
+        }
+
+
+
     .disabled-flag {
         filter: grayscale(100%) opacity(0.6);
     }

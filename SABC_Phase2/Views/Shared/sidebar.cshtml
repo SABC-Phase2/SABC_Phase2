@@ -1,6 +1,4 @@
 ﻿@* Sidebar Razor View for OVRS_User and Administrator roles *@
-
-
 @{
     var supplierType = User.Identity.IsAuthenticated ? User.FindFirst("SupplierType")?.Value : null;
 }
@@ -60,7 +58,7 @@
 
 
     <div class="menu">
-        @if (User.Identity.IsAuthenticated && (User.IsInRole("Administrator") || User.IsInRole("Super_Admin")))
+        @if (User.Identity.IsAuthenticated && (User.IsInRole("Administrator") || User.IsInRole("IT_Admin")))
         {
             @* ADMINISTRATOR / SUPER_ADMIN MENU *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
@@ -135,7 +133,7 @@
             </div>
 
             @* ✅ Only Super_Admin sees this *@
-            @if (User.IsInRole("Super_Admin"))
+            @if (User.IsInRole("IT_Admin"))
             {
                 <div class="menu-section">
                     <i class="fas fa-user-shield fa-2x"></i>
