@@ -1960,7 +1960,7 @@ namespace SABC_Phase2.Controllers
 
                 if (roleFilter == "Administrator")
                 {
-                    query = query.Where(a => a.Role == "Administrator" || a.Role == "Super_Admin");
+                    query = query.Where(a => a.Role == "Administrator" || a.Role == "IT_Admin");
                 }
 
                 if (!string.IsNullOrEmpty(search))
