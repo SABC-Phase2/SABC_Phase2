@@ -324,22 +324,42 @@
 
 <!-- Modal: Awarded Company Account Deleted -->
 <div class="modal fade" id="deletedAccountModal" tabindex="-1" aria-labelledby="deletedAccountModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deletedAccountModalLabel">Company Account Deleted</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:12px; text-align:center; padding:20px;">
+
+            <!-- Logo at Top Center -->
+            <div class="modal-header border-0 d-block text-center" style="padding-bottom:0;">
+                <!-- use the correct path/casing for your project -->
+                <img src="/lib/images/X-Box.png" alt="Error Logo" style="width:60px; height:60px; margin-bottom:10px;">
             </div>
+
+            <!-- Error Title -->
             <div class="modal-body">
-                The selected company <strong id="deletedCompanyName"></strong> has had their account deleted.<br />
-                Please select another company to award this tender to.
+                <h5 style="color:#dc3545; font-weight:bold; margin-bottom:15px;">
+                    Error
+                </h5>
+
+                <!-- INSERTED element the script expects -->
+                <p id="deletedCompanyRest" style="color:#6c757d; font-size:15px; margin:0 10px;">
+                    The company selected <strong id="deletedCompanyName"></strong> is no longer part of the SABC platform,
+                    please award the tender to another company.
+                </p>
+
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+
+            <!-- OK Button -->
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn"
+                        style="background-color:#28a745; color:#fff; border-radius:6px; padding:8px 20px;"
+                        data-bs-dismiss="modal">
+                    OK
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+
 
 @section Scripts {
     <script>

@@ -18,7 +18,7 @@
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="row">
         <div class="col-12">
-            <a href="@Url.Action("Index", "Home")" style="color:#17994d; text-decoration:none;">Home</a>
+            <a href="@Url.Action("Index", "Home")" style="color:#888; text-decoration:none;">Home</a>
             <span style="color:#888;"> &gt; </span>
             <a href="#" style="color:#17994d; text-decoration:none;">My Documents</a>
         </div>
@@ -385,27 +385,28 @@
 <!-- Closed Tender Modal -->
 <div class="modal fade" id="closedTenderModal" tabindex="-1" aria-labelledby="closedTenderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <!-- Error Logo at the Top -->
-            <div class="d-flex justify-content-center mt-4 flex-column align-items-center">
-                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:48px; height:48px;" />
-                <!-- Error message in red under X box -->
-                <span id="closedTenderErrorMsg" class="mt-2" style="color: #dc3545; font-weight: 500; display: block;">
-                    Error
-                </span>
-                <!-- Grey text under error message -->
-                <span class="text-muted" style="font-size: 0.95rem; margin-top: 3px;">
-                    Please note the tender has been closed
-                </span>
+        <div class="modal-content closed-tender-modal">
+
+            <!-- Error Image -->
+            <div class="modal-header border-0 d-flex justify-content-center flex-column align-items-center">
+                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:70px; height:70px; margin-bottom:10px;" />
+                <h4 class="error-title">Error</h4>
+                <p class="error-subtitle">Please note the tender has been closed</p>
             </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3" id="closedTenderInfo"><!-- Tender details will be populated here --></p>
+
+            <!-- Tender Info (Dynamic via JS) -->
+            <div class="modal-body text-center">
+                <p class="tender-info" id="closedTenderInfo">
+                    <!-- JS will populate tender details here -->
+                </p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+
+            <!-- Footer Buttons -->
+            <div class="modal-footer border-0 d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
                     Cancel
                 </button>
-                <button type="button" class="btn btn-danger" id="deleteClosedDraftBtn">
+                <button type="button" class="btn btn-delete" id="deleteClosedDraftBtn">
                     Delete Draft
                 </button>
             </div>
@@ -416,27 +417,28 @@
 <!-- Cancelled Tender Modal -->
 <div class="modal fade" id="cancelledTenderModal" tabindex="-1" aria-labelledby="cancelledTenderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <!-- Error Logo at the Top -->
-            <div class="d-flex justify-content-center mt-4 flex-column align-items-center">
-                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:48px; height:48px;" />
-                <!-- Error message in red under X box -->
-                <span id="closedTenderErrorMsg" class="mt-2" style="color: #dc3545; font-weight: 500; display: block;">
-                    Error
-                </span>
-                <!-- Grey text under error message -->
-                <span class="text-muted" style="font-size: 0.95rem; margin-top: 3px;">
-                    Please note the tender has been cancelled
-                </span>
+        <div class="modal-content closed-tender-modal">
+
+            <!-- Error Image -->
+            <div class="modal-header border-0 d-flex justify-content-center flex-column align-items-center">
+                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:70px; height:70px; margin-bottom:10px;" />
+                <h4 class="error-title">Error</h4>
+                <p class="error-subtitle">Please note the tender has been cancelled</p>
             </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3" id="cancelledTenderModalInfo"><!-- Tender details will be populated here --></p>
+
+            <!-- Tender Info (Dynamic via JS) -->
+            <div class="modal-body text-center">
+                <p class="tender-info" id="cancelledTenderModalInfo">
+                    <!-- JS will populate tender details here -->
+                </p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+
+            <!-- Footer Buttons -->
+            <div class="modal-footer border-0 d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
                     Cancel
                 </button>
-                <button type="button" class="btn btn-danger" id="deleteCancelledDraftBtn">
+                <button type="button" class="btn btn-delete" id="deleteCancelledDraftBtn">
                     Delete Draft
                 </button>
             </div>
@@ -447,28 +449,28 @@
 <!-- Awarded Tender Modal -->
 <div class="modal fade" id="awardedTenderModal" tabindex="-1" aria-labelledby="awardedTenderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <!-- Error Logo at the Top -->
-            <div class="d-flex justify-content-center mt-4 flex-column align-items-center">
-                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:48px; height:48px;" />
-                <!-- Error message in blue under X box -->
-                <!-- Error message in red under X box -->
-                <span id="closedTenderErrorMsg" class="mt-2" style="color: #dc3545; font-weight: 500; display: block;">
-                    Error
-                </span>
-                <!-- Grey text under error message -->
-                <span class="text-muted" style="font-size: 0.95rem; margin-top: 3px;">
-                    Please note the tender has been awarded
-                </span>
+        <div class="modal-content closed-tender-modal">
+
+            <!-- Error Image -->
+            <div class="modal-header border-0 d-flex justify-content-center flex-column align-items-center">
+                <img src="~/lib/Images/X-Box.png" alt="Error" style="width:70px; height:70px; margin-bottom:10px;" />
+                <h4 class="error-title">Error</h4>
+                <p class="error-subtitle">Please note the tender has been awarded</p>
             </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3" id="awardedTenderModalInfo"><!-- Tender details will be populated here --></p>
+
+            <!-- Tender Info (Dynamic via JS) -->
+            <div class="modal-body text-center">
+                <p class="tender-info" id="awardedTenderModalInfo">
+                    <!-- JS will populate tender details here -->
+                </p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+
+            <!-- Footer Buttons -->
+            <div class="modal-footer border-0 d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
                     Cancel
                 </button>
-                <button type="button" class="btn btn-danger" id="deleteAwardedDraftBtn">
+                <button type="button" class="btn btn-delete" id="deleteAwardedDraftBtn">
                     Delete Draft
                 </button>
             </div>
@@ -965,6 +967,80 @@
 
 
 <style>
+    /* Modal wrapper */
+    .closed-tender-modal {
+        border-radius: 12px;
+        overflow: hidden;
+        text-align: center;
+        padding: 20px;
+    }
+
+    /* Error icon */
+    .error-icon {
+        font-size: 70px;
+        color: #dc3545;
+        margin-bottom: 10px;
+    }
+
+        .error-icon i {
+            font-size: 70px;
+        }
+
+    /* Titles */
+    .error-title {
+        color: #dc3545;
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .error-subtitle {
+        color: #000; /* black */
+        font-size: 1.05rem;
+        font-weight: 500; /* slightly bold */
+        margin-top: 5px;
+    }
+
+    /* Tender Info */
+    .tender-info {
+        color: #333;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    /* Buttons */
+    .btn {
+        min-width: 130px;
+        font-weight: 500;
+        border-radius: 6px;
+        padding: 10px 16px;
+        border: none;
+        color: white;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+        cursor: pointer;
+    }
+
+    /* Cancel */
+    .btn-cancel {
+        background: #198754;
+    }
+
+        .btn-cancel:hover {
+            background: #157347;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+        }
+
+    /* Delete */
+    .btn-delete {
+        background: #dc3545;
+    }
+
+        .btn-delete:hover {
+            background: #c82333;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+        }
+
     .drafts-toggle {
         cursor: pointer;
     }
@@ -978,16 +1054,13 @@
     }
 
     @@keyframes spin {
-        0%
+        0% {
+            transform: rotate(0deg);
+        }
 
-    {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-
+        100% {
+            transform: rotate(360deg);
+        }
     }
 
     .draft-delete-btn-list {
