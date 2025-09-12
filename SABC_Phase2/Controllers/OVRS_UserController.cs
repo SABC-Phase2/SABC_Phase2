@@ -302,6 +302,31 @@ namespace SABC_Phase2.Controllers
                     return Json(new { success = false, message = "Invalid Employee ID (not found in Users table)." });
                 }
 
+                // Check if user has already submitted this tender
+                var existingApplication = _context.Applied_For_Tenders
+                    .FirstOrDefault(a => a.OVRS_UserId == user.Id && a.TenderId == TenderId);
+
+                if (existingApplication != null)
+                {
+                    return Json(new { success = false, message = "You have already submitted an application for this tender." });
+                }
+
+                // If no DraftId provided, check if there's an existing draft for this tender and user
+                TenderApplicationDraft draft = null;
+                if (DraftId.HasValue)
+                {
+                    draft = _context.TenderApplicationDrafts
+                        .Include(d => d.Documents)
+                        .FirstOrDefault(d => d.DraftId == DraftId.Value && d.OVRS_UserId == user.Id);
+                }
+                else
+                {
+                    // Look for any existing draft for this tender and user
+                    draft = _context.TenderApplicationDrafts
+                        .Include(d => d.Documents)
+                        .FirstOrDefault(d => d.TenderId == TenderId && d.OVRS_UserId == user.Id);
+                }
+
                 // Create and persist the tender application.
                 var saLocalNow = _saTimeService.GetCurrentSouthAfricanTime();
                 var application = new TenderApplications
@@ -309,7 +334,7 @@ namespace SABC_Phase2.Controllers
                     TenderId = TenderId,
                     OVRS_UserId = user.Id,
                     DateApplied = saLocalNow.ToDateTimeUnspecified(),
-                    DraftId = DraftId
+                    DraftId = draft?.DraftId // Use the draft ID if we found one
                 };
 
                 _context.Applied_For_Tenders.Add(application);
@@ -336,7 +361,7 @@ namespace SABC_Phase2.Controllers
                             using var stream = file.OpenReadStream();
                             var safeFileName = SanitizeHelper.ToSharePointSafeFileName(file.FileName);
 
-                            // 🔄 This method already creates "Application Documents" folder structure
+                            // This method already creates "Application Documents" folder structure
                             var sharePointUrl = await sharePointService
                                 .UploadUserApplicationDocumentAsync(safeTenderNumber, safeCompanyName, stream, file.FileName);
 
@@ -353,86 +378,115 @@ namespace SABC_Phase2.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // 🔄 CHANGED: Handle draft documents - MOVE them from "Draft Docs" to "Application Documents"
-                if (DraftId.HasValue)
+                // Handle draft (with or without documents)
+                if (draft != null)
                 {
-                    var draft = _context.TenderApplicationDrafts
-                        .Include(d => d.Documents)
-                        .FirstOrDefault(d => d.DraftId == DraftId.Value);
-
-                    if (draft != null && draft.Documents != null && draft.Documents.Any())
+                    try
                     {
-                        foreach (var draftDoc in draft.Documents)
+                        // Handle draft documents if they exist - MOVE them from "Draft Docs" to "Application Documents"
+                        if (draft.Documents != null && draft.Documents.Any())
                         {
+                            // Create a list to hold documents to remove (to avoid modifying collection while iterating)
+                            var documentsToRemove = new List<TenderApplicationDraftDocument>();
+
+                            foreach (var draftDoc in draft.Documents.ToList()) // ToList() creates a copy
+                            {
+                                try
+                                {
+                                    // Move document from "Draft Docs" to "Application Documents" folder
+                                    var newSharePointUrl = await sharePointService
+                                        .MoveDraftDocumentToApplicationAsync(draftDoc.SharePointPath, tender.TenderNumber, companyName);
+
+                                    var appDoc = new ApplicationDocument
+                                    {
+                                        FileName = draftDoc.FileName,
+                                        SharePointPath = newSharePointUrl,
+                                        TenderApplicationId = application.Id
+                                    };
+                                    _context.ApplicationDocuments.Add(appDoc);
+                                    documentsToRemove.Add(draftDoc);
+                                }
+                                catch (Exception docEx)
+                                {
+                                    // If moving fails, fall back to using the original path
+                                    Console.WriteLine($"Error moving draft document to application folder: {docEx.Message}");
+
+                                    var appDoc = new ApplicationDocument
+                                    {
+                                        FileName = draftDoc.FileName,
+                                        SharePointPath = draftDoc.SharePointPath,
+                                        TenderApplicationId = application.Id
+                                    };
+                                    _context.ApplicationDocuments.Add(appDoc);
+                                    documentsToRemove.Add(draftDoc);
+                                }
+                            }
+
+                            // Save the new application documents
+                            await _context.SaveChangesAsync();
+
+                            // Remove draft documents from database
+                            if (documentsToRemove.Any())
+                            {
+                                _context.TenderApplicationDraftDocuments.RemoveRange(documentsToRemove);
+                            }
+
+                            // Clean up empty "Draft Docs" folder after moving all documents
                             try
                             {
-                                // 🔄 NEW: Move document from "Draft Docs" to "Application Documents" folder
-                                var newSharePointUrl = await sharePointService
-                                    .MoveDraftDocumentToApplicationAsync(draftDoc.SharePointPath, tender.TenderNumber, companyName);
-
-                                var appDoc = new ApplicationDocument
-                                {
-                                    FileName = draftDoc.FileName,
-                                    SharePointPath = newSharePointUrl, // Use the new URL in "Application Documents" folder
-                                    TenderApplicationId = application.Id
-                                };
-                                _context.ApplicationDocuments.Add(appDoc);
+                                await sharePointService.DeleteDraftDocsFolderIfEmptyAsync(tender.TenderNumber, companyName);
                             }
-                            catch (Exception ex)
+                            catch (Exception cleanupEx)
                             {
-                                // If moving fails, fall back to using the original path
-                                Console.WriteLine($"Error moving draft document to application folder: {ex.Message}");
-
-                                var appDoc = new ApplicationDocument
-                                {
-                                    FileName = draftDoc.FileName,
-                                    SharePointPath = draftDoc.SharePointPath, // Keep original path as fallback
-                                    TenderApplicationId = application.Id
-                                };
-                                _context.ApplicationDocuments.Add(appDoc);
+                                // Log error but don't fail the submission
+                                Console.WriteLine($"Error cleaning up Draft Docs folder: {cleanupEx.Message}");
                             }
                         }
-                        await _context.SaveChangesAsync();
 
-                        // 🔄 NEW: Clean up empty "Draft Docs" folder after moving all documents
-                        try
-                        {
-                            await sharePointService.DeleteDraftDocsFolderIfEmptyAsync(tender.TenderNumber, companyName);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log error but don't fail the submission
-                            Console.WriteLine($"Error cleaning up Draft Docs folder: {ex.Message}");
-                        }
-
-                        // Remove the draft and its docs from database
-                        _context.TenderApplicationDraftDocuments.RemoveRange(draft.Documents);
+                        // Remove the draft from database
                         _context.TenderApplicationDrafts.Remove(draft);
                         await _context.SaveChangesAsync();
+                    }
+                    catch (Exception draftEx)
+                    {
+                        // Log the specific draft handling error
+                        Console.WriteLine($"Error handling draft during submission: {draftEx.Message}");
+                        Console.WriteLine($"Draft handling stack trace: {draftEx.StackTrace}");
+
+                        // Even if draft handling fails, continue with email sending
+                        // The application was already created successfully
                     }
                 }
 
                 // Send email confirmation
-                var legacyUserId = user.LegacyUserId;
-                var etenderUser = _legacyContext.TblUsers.FirstOrDefault(u => u.UserId == legacyUserId);
-
-                if (etenderUser != null && !string.IsNullOrEmpty(etenderUser.Email))
+                try
                 {
-                    var userName = $"{etenderUser.FirstName} {etenderUser.LastName}";
-                    var tenderNumber = tender?.TenderNumber ?? "";
-                    var tenderName = tender?.Title ?? "";
-                    var timeSubmitted = application.DateApplied ?? DateTime.UtcNow;
+                    var legacyUserId = user.LegacyUserId;
+                    var etenderUser = _legacyContext.TblUsers.FirstOrDefault(u => u.UserId == legacyUserId);
 
-                    await _emailService.SendTenderSubmissionConfirmationAsync(
-                        etenderUser.Email,
-                        userName,
-                        tenderNumber,
-                        tenderName,
-                        timeSubmitted
-                    );
+                    if (etenderUser != null && !string.IsNullOrEmpty(etenderUser.Email))
+                    {
+                        var userName = $"{etenderUser.FirstName} {etenderUser.LastName}";
+                        var tenderNumber = tender?.TenderNumber ?? "";
+                        var tenderName = tender?.Title ?? "";
+                        var timeSubmitted = application.DateApplied ?? DateTime.UtcNow;
+
+                        await _emailService.SendTenderSubmissionConfirmationAsync(
+                            etenderUser.Email,
+                            userName,
+                            tenderNumber,
+                            tenderName,
+                            timeSubmitted
+                        );
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log email error but don't fail the submission
+                    Console.WriteLine($"Error sending confirmation email: {emailEx.Message}");
                 }
 
-                // ✅ Return JSON response instead of redirect
+                // Return success response
                 return Json(new
                 {
                     success = true,
@@ -443,12 +497,17 @@ namespace SABC_Phase2.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception if you have logging
+                // Log the detailed exception information
                 Console.WriteLine($"Error submitting tender application: {ex.Message}");
-                return Json(new { success = false, message = "An error occurred while submitting your application." });
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+
+                return Json(new { success = false, message = $"An error occurred while submitting your application: {ex.Message}" });
             }
         }
-
         /// <summary>
         /// Shows documents to OVRS users (could be their own docs, or company-wide).
         /// </summary>

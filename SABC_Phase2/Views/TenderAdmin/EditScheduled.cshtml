@@ -69,7 +69,7 @@
 
                 <div class="form-group">
                     <label asp-for="ClosingDate">Closing Date <span class="text-danger">*</span></label>
-                    <input asp-for="ClosingDate" type="date" class="form-control" />
+                    <input asp-for="ClosingDate" type="date" class="form-control" min="@ViewBag.MinDate" />
                     <span asp-validation-for="ClosingDate" class="text-danger"></span>
                 </div>
 
@@ -133,7 +133,12 @@
                                            id="ScheduledDate"
                                            name="ScheduledDate"
                                            class="form-control"
-                                           value="@(Model.ScheduledDate.HasValue? Model.ScheduledDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                           min="@ViewBag.MinDate"
+                                           max="@ViewBag.MaxDate"
+                                           value="@(Model.ScheduledDate.HasValue
+                                                             ? Model.ScheduledDate.Value.ToString("yyyy-MM-dd")
+                                                             : "")" />
+
                                 </div>
                                 <div class="form-group">
                                     <label for="ScheduledTime">Scheduled Time</label>
@@ -202,7 +207,6 @@
 
 
 <!-- Delete Confirmation Modal -->
-<!-- Delete Confirmation Modal -->
 <div id="deleteDocModal" class="modal fade" tabindex="-1" aria-labelledby="deleteDocModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content delete-modal-content">
@@ -258,12 +262,9 @@
     <script>
                 document.addEventListener('DOMContentLoaded', function () {
 
-
-
                       // ---------- Document Delete Modal Logic ----------
                     let docToDeleteEntry = null;
                     let docToDeleteCheckbox = null;
-
                     // Attach event listeners to all existing document delete buttons (multi-step)
                     document.querySelectorAll('.uploaded-file-entry.existing-doc .remove-upload-btn').forEach(function(btn) {
                         btn.addEventListener('click', function() {
@@ -275,9 +276,8 @@
                             modal.show();
                         });
                     });
-
-                    // Confirm delete
-                          // Confirm delete
+                    
+                // Confirm delete
                 document.getElementById('confirmDeleteDocBtn').addEventListener('click', function() {
                     if (docToDeleteCheckbox) {
                         docToDeleteCheckbox.checked = true;
@@ -689,6 +689,9 @@
 
                     // Initialize tab display
                     showTab(currentTab);
+
+
+
                 });
     </script>
 }

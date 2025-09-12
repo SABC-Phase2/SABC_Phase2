@@ -190,19 +190,32 @@
 <div id="draftBlockedModal" class="modal fade" tabindex="-1" aria-labelledby="draftBlockedModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="draftBlockedModalLabel" style="width:100%;text-align:center; color:#e11d48;">
-                    Draft Not Allowed
-                </h5>
-            </div>
+            <!-- No header title, consistent with Empty Draft Modal -->
+            <div class="modal-header d-block border-0" style="padding-bottom: 0;"></div>
+
             <div class="modal-body">
-                <i class="fas fa-exclamation-circle" style="font-size:3.5rem; color:#e11d48; margin-bottom:16px;"></i>
-                <p style="font-size:1.15rem; font-weight:500; color:#e11d48; margin-top:12px;">
+                <!-- X icon image, same style as emptyDraftModal -->
+                <img src="~/lib/Images/X-Box.png" alt="Error"
+                     style="width: 80px; height: 80px; margin: 0 auto 20px auto; display: block;" />
+
+                <!-- Larger heading text -->
+                <p style="font-size:1.6rem; font-weight:700; color:#e11d48; margin-bottom: 16px;">
+                    Submission Error
+                </p>
+
+                <!-- Explanatory text -->
+                <p style="font-size:1.15rem; margin-bottom: 0;">
                     You cannot create a draft for this tender because you have already created a submission for it.
                 </p>
             </div>
+
             <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="draftBlockedModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Close</button>
+                <!-- Larger close button -->
+                <button type="button" id="draftBlockedModalCloseBtn"
+                        class="btn btn-success"
+                        style="min-width:110px; font-size:1.05rem; padding:8px 16px;">
+                    Close
+                </button>
             </div>
         </div>
     </div>
@@ -234,9 +247,12 @@
 
 
 @section Scripts {
+
     <script>
         const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
         let storedFiles = [];
+        let isSubmitting = false;
+        let isSavingDraft = false;
 
         const fileInput = document.getElementById("UploadedFiles");
         const uploadedFilesContainer = document.getElementById("uploadedFilesContainer");
@@ -247,6 +263,36 @@
             if (bytes < 1024) return `${bytes} B`;
             else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
             else return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function updateButtonStates() {
+            const draftBtn = document.getElementById("draftBtn");
+            const submitBtn = document.getElementById("submitBtn");
+
+            if (isSubmitting) {
+                submitBtn.disabled = true;
+                draftBtn.disabled = true;
+                draftBtn.style.opacity = "0.7";
+                draftBtn.style.cursor = "not-allowed";
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                draftBtn.innerHTML = '<i class="fas fa-save"></i> <span class="btn-text">Save as draft</span><span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>';
+            } else if (isSavingDraft) {
+                draftBtn.disabled = true;
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = "0.7";
+                submitBtn.style.cursor = "not-allowed";
+                draftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+            } else {
+                draftBtn.disabled = false;
+                submitBtn.disabled = false;
+                draftBtn.style.opacity = "";
+                submitBtn.style.opacity = "";
+                draftBtn.style.cursor = "";
+                submitBtn.style.cursor = "";
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                draftBtn.innerHTML = '<i class="fas fa-save"></i> <span class="btn-text">Save as draft</span><span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>';
+            }
         }
 
         // ------------------- File Selection -------------------
@@ -270,8 +316,7 @@
             renderUploadedFiles();
             fileInput.value = "";
 
-              document.getElementById('documentRequiredError').style.display = 'none';
-
+            document.getElementById('documentRequiredError').style.display = 'none';
         });
 
         // ------------------- Render Uploaded Files -------------------
@@ -334,26 +379,30 @@
         }
 
         // ------------------- Form Submission -------------------
-              // ✅ Updated Form submission handler
         submitBtn.addEventListener("click", function (e) {
+            // Prevent action if already saving draft
+            if (isSavingDraft) {
+                return;
+            }
+
+            // Set submitting state
+            isSubmitting = true;
+            updateButtonStates();
+
             // Hide the inline error every time they try to submit
             document.getElementById('documentRequiredError').style.display = 'none';
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
 
             const hasNewFiles = storedFiles.length > 0;
             const hasExistingDocs = document.querySelectorAll('.existing-doc').length > 0;
             if (!hasNewFiles && !hasExistingDocs) {
                 // Show the inline error (no modal)
                 document.getElementById('documentRequiredError').style.display = 'block';
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                isSubmitting = false;
+                updateButtonStates();
                 // Optionally scroll to error
                 document.getElementById('documentRequiredError').scrollIntoView({behavior: "smooth"});
                 return;
             }
-
 
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => formData.append("UploadedFiles", fileInfo.file));
@@ -377,8 +426,6 @@
                         showApplicationSuccessModal(data.tenderNumber, data.redirectUrl);
                     } else {
                         alert(data.message || "Submission failed.");
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
                     }
                 }
                 // Handle redirect responses (fallback)
@@ -389,16 +436,19 @@
                 else {
                     response.text().then(html => {
                         document.body.innerHTML = html;
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
                     });
                 }
+
+                // Reset state
+                isSubmitting = false;
+                updateButtonStates();
             })
             .catch(error => {
                 console.error('Submission error:', error);
                 alert("Error submitting application.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                // Reset state
+                isSubmitting = false;
+                updateButtonStates();
             });
         });
 
@@ -433,7 +483,7 @@
         }
 
         // ------------------- FIX: Draft Saved Modal Opens Drafts Section -------------------
-         function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
+        function showOvrDraftSavedModal(tenderNumber, draftResponsesUrl) {
             // Set tender number in green heading
             document.getElementById('ovrsDraftModalTenderNumber').textContent = tenderNumber || '';
             // Set Draft Response link (blue)
@@ -465,14 +515,14 @@
             };
         }
 
-        // ------------------- Save Draft -------------------
-                function saveAsDraft(isAuto = false) {
-            const draftBtn = document.getElementById("draftBtn");
-            if (!isAuto) {
-                draftBtn.disabled = true;
-                draftBtn.querySelector('.btn-text').classList.add('d-none');
-                draftBtn.querySelector('.spinner-border').classList.remove('d-none');
+        function saveAsDraft(isAuto = false) {
+            // Prevent action if already submitting
+            if (isSubmitting && !isAuto) {
+                return;
             }
+
+            isSavingDraft = true;
+            updateButtonStates();
 
             const formData = new FormData(form);
             storedFiles.forEach(fileInfo => formData.append("UploadedFiles", fileInfo.file));
@@ -485,16 +535,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (!isAuto) {
-                    draftBtn.disabled = false;
-                    draftBtn.querySelector('.btn-text').classList.remove('d-none');
-                    draftBtn.querySelector('.spinner-border').classList.add('d-none');
-                }
-                  if (data.success) {
-        if (!isAuto) {
-            const tenderNumber = data.tenderNumber || form.querySelector("input[name='TenderNumber']")?.value || "";
-            showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
-        }
+                if (data.success) {
+                    if (!isAuto) {
+                        const tenderNumber = data.tenderNumber || form.querySelector("input[name='TenderNumber']")?.value || "";
+                        showOvrDraftSavedModal(tenderNumber, "/OVRS_User/OVRS_Submissions_Drafts?section=drafts&view=list");
+                    }
                     if (data.draftId) {
                         if (!draftIdField) {
                             const input = document.createElement("input");
@@ -516,15 +561,20 @@
                 } else if (!isAuto) {
                     alert(data.message || "Failed to save draft.");
                 }
+
+                // Reset state
+                isSavingDraft = false;
+                updateButtonStates();
             })
             .catch(error => {
                 if (!isAuto) {
-                    draftBtn.disabled = false;
-                    draftBtn.querySelector('.btn-text').classList.remove('d-none');
-                    draftBtn.querySelector('.spinner-border').classList.add('d-none');
                     alert("Error saving draft.");
                 }
                 console.error(error);
+
+                // Reset state
+                isSavingDraft = false;
+                updateButtonStates();
             });
         }
 
@@ -535,15 +585,6 @@
                 saveAsDraft(true);
             }
         });
-
-        // ------------------- Save Draft Button -------------------
-        const saveDraftBtn = document.getElementById("saveDraftBtn");
-        if (saveDraftBtn) {
-            saveDraftBtn.addEventListener('click', function(e){
-                e.preventDefault();
-                saveAsDraft(false);
-            });
-        }
 
         // ------------------- Delete Existing Draft Document -------------------
         $(document).on('click', '.btn-delete-draft-doc', function (e) {
@@ -602,6 +643,7 @@
             }
         });
     </script>
+
 }
 
 
@@ -901,4 +943,42 @@
             background: linear-gradient(to bottom, #94a3b8 90%, #64748b 100%) !important;
             box-shadow: 0 4px 0 0 #475569, 0 8px 16px -4px rgba(100, 116, 139, 0.25) !important;
         }
+
+    /* Style for disabled state */
+    .draft-btn:disabled, .submit-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+        .draft-btn:disabled:hover, .submit-btn:disabled:hover {
+            box-shadow: 0 4px 0 0 #cbd5e1, 0 8px 16px -4px rgba(148, 163, 184, 0.25) !important;
+        }
+
+        .submit-btn:disabled:hover {
+            box-shadow: 0 4px 0 0 #14532d, 0 8px 16px -4px rgba(22, 101, 52, 0.25) !important;
+        }
+
+    /* Consistent modal size for all popups */
+    .modal-dialog {
+        max-width: 400px;
+        min-width: 320px;
+        width: 90%;
+        margin: auto;
+    }
+
+    .modal-content {
+        padding: 24px 18px;
+        box-sizing: border-box;
+        word-break: break-word;
+        border-radius: 12px;
+    }
+
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        white-space: normal;
+        word-break: break-word;
+        font-size: 1.1rem;
+    }
 </style>

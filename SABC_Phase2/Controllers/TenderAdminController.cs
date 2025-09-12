@@ -60,12 +60,11 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-            // Get current SA time for the view
             var currentSaTime = _saTimeService.GetCurrentSouthAfricanTime();
             ViewBag.CurrentSaDate = currentSaTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            ViewBag.CurrentSaTime = currentSaTime.ToString("HH:mm:ss", CultureInfo.InvariantCulture); // Add this
             ViewBag.CurrentSaDateTime = currentSaTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
             return View(new TenderViewModel());
-
         }
 
         [Authorize(Roles = "Administrator")]
@@ -1391,7 +1390,6 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public async Task<IActionResult> EditScheduled(int id)
         {
-            // Retrieve the scheduled tender from the database, including its associated documents,
             var scheduledTender = await _context.ScheduledTenders
                 .Include(t => t.Documents)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -1399,7 +1397,6 @@ namespace SABC_Phase2.Controllers
             if (scheduledTender == null)
                 return NotFound();
 
-            // Create a DTO and map documents using SharePointPath
             var dto = new TenderEditDto
             {
                 Id = scheduledTender.Id,
@@ -1415,9 +1412,19 @@ namespace SABC_Phase2.Controllers
                 {
                     Id = doc.Id,
                     FileName = doc.FileName,
-                    SharePointPath = doc.SharePointPath // <-- Use SharePointPath, not FilePath
+                    SharePointPath = doc.SharePointPath
                 }).ToList() ?? new List<TenderDocumentViewModel>()
             };
+
+            // ✅ Get South African "today"
+            var saNow = _saTimeService.GetCurrentSouthAfricanTime();
+            ViewBag.MinDate = saNow.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+            // ✅ Closing date as max
+            if (scheduledTender.ClosingDate != default)
+            {
+                ViewBag.MaxDate = scheduledTender.ClosingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            }
 
             return View("EditScheduled", dto);
         }
