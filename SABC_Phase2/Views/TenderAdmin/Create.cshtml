@@ -532,7 +532,7 @@
                 return val;
             }
 
-        function validateHourInput() {
+             function validateHourInput() {
             hoursInput.addEventListener('input', function(e) {
                 let val = this.value.replace(/\D/g, '');
                 if (val.length > 2) val = val.slice(0, 2);
@@ -541,7 +541,21 @@
                 if (val === '00') val = '';
                 // No leading zero for display
                 this.value = val ? String(parseInt(val, 10)) : '';
+                updateHiddenTimeValue(); // This will now only validate when complete
+            });
+
+            // Validate on blur (when user finishes with the field)
+            hoursInput.addEventListener('blur', function() {
+                // Remove leading zero if present and value is 1-9
+                if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
+                    this.value = this.value.substring(1);
+                }
                 updateHiddenTimeValue();
+
+                // Only validate if both fields have values
+                if (this.value && minutesInput.value) {
+                    validateScheduledDateTime();
+                }
             });
 
             hoursInput.addEventListener('keydown', function(e) {
@@ -558,47 +572,45 @@
                     updateHiddenTimeValue();
                 }
             });
-
-            hoursInput.addEventListener('blur', function() {
-                // Remove leading zero if present and value is 1-9
-                if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
-                    this.value = this.value.substring(1);
-                }
-                updateHiddenTimeValue();
-            });
         }
 
-            function validateMinuteInput() {
-                minutesInput.addEventListener('input', function(e) {
-                    let val = this.value.replace(/\D/g, '');
-                    if (val.length > 2) val = val.slice(0, 2);
-                    if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
-                    this.value = val;
-                    updateHiddenTimeValue();
-                });
+        function validateMinuteInput() {
+            minutesInput.addEventListener('input', function(e) {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
+                this.value = val;
+                updateHiddenTimeValue(); // This will now only validate when complete
+            });
 
-                minutesInput.addEventListener('keydown', function(e) {
-                    let val = parseInt(this.value || '0', 10) || 0;
-                    if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        val = val >= 59 ? 0 : val + 1;
-                        this.value = String(val).padStart(2, '0');
-                        updateHiddenTimeValue();
-                    } else if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        val = val <= 0 ? 59 : val - 1;
-                        this.value = String(val).padStart(2, '0');
-                        updateHiddenTimeValue();
-                    }
-                });
+            // Validate on blur (when user finishes with the field)
+            minutesInput.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = this.value.padStart(2, '0');
+                }
+                updateHiddenTimeValue();
 
-                minutesInput.addEventListener('blur', function() {
-                    if (this.value) {
-                        this.value = this.value.padStart(2, '0');
-                    }
+                // Only validate if both fields have values
+                if (hoursInput.value && this.value) {
+                    validateScheduledDateTime();
+                }
+            });
+
+            minutesInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '0', 10) || 0;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 59 ? 0 : val + 1;
+                    this.value = String(val).padStart(2, '0');
                     updateHiddenTimeValue();
-                });
-            }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 0 ? 59 : val - 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                }
+            });
+        }
 
             // AM/PM toggle
             if (amBtn) {
@@ -621,7 +633,7 @@
                     }
                 });
             }
-        function updateHiddenTimeValue() {
+            function updateHiddenTimeValue() {
             let hours = hoursInput.value.padStart(2, '0') || '00';
             let minutes = minutesInput.value.padStart(2, '0') || '00';
             let seconds = '00';
@@ -637,15 +649,27 @@
             const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
             timeHiddenInput.value = formattedTime;
 
-            // Validate if selected date is today (SA time)
-            validateScheduledDateTime();
+            // Only validate if both hours and minutes have meaningful values
+            if (hoursInput.value && hoursInput.value.length > 0 &&
+                minutesInput.value && minutesInput.value.length >= 2) {
+                validateScheduledDateTime();
+            }
         }
 
-                function validateScheduledDateTime() {
+                    function validateScheduledDateTime() {
             const selectedDate = document.getElementById('ScheduledDate').value;
             const selectedTime = document.getElementById('ScheduledTime').value;
 
-            if (!selectedDate || !selectedTime) return;
+            if (!selectedDate || !selectedTime) return true;
+
+            // Only validate if we have complete time input (both hours and minutes)
+            const hoursValue = hoursInput.value;
+            const minutesValue = minutesInput.value;
+
+            if (!hoursValue || hoursValue.length === 0 ||
+                !minutesValue || minutesValue.length < 2) {
+                return true; // Don't validate incomplete input
+            }
 
             // Parse current SA date and time
             const currentSaDateTime = new Date(window.currentSaDateTime);
@@ -656,8 +680,10 @@
             const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
 
             if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
-                // Same day - check if time is in the future
-                if (selectedDateTime <= currentSaDateTime) {
+                // Same day - check if time is in the future (add 1 minute buffer)
+                const bufferTime = new Date(currentSaDateTime.getTime() + (1 * 60 * 1000)); // 1 minute buffer
+
+                if (selectedDateTime <= bufferTime) {
                     // Clear the time inputs and show warning
                     hoursInput.value = '';
                     minutesInput.value = '';
