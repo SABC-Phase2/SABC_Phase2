@@ -9,5 +9,8 @@
         public string LastName { get; set; }
         public DateTime CreatedAt { get; set; }
         public string Role { get; set; } = "Administrator";
+
+        // ✅ New column: 1 = Active, 0 = Deleted
+        public int AccountStatus { get; set; }
     }
 }

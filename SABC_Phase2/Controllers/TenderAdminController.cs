@@ -1923,9 +1923,9 @@ namespace SABC_Phase2.Controllers
 
             if (isOvrsUser)
             {
-                // PHASE 2: Get OVRS users (ONLY ACTIVE USERS - AccountStatus == 1)
+                // PHASE 2: Get *ALL* OVRS users (active or inactive)
                 var ovrsPhase2Users = await _context.Users
-                    .Where(u => u.Role == "OVRS_User" && u.LegacyUserId != null && u.AccountStatus == 1)
+                    .Where(u => u.Role == "OVRS_User" && u.LegacyUserId != null)
                     .ToListAsync();
 
                 var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
@@ -1944,7 +1944,8 @@ namespace SABC_Phase2.Controllers
                                  Email = legacy.Email ?? "",
                                  FullName = $"{legacy.FirstName} {legacy.LastName}",
                                  Role = "OVRS_User",
-                                 Status = "Active",   // <-- Since we only get active users, always "Active"
+                                 // Show "Active"/"Inactive" based on AccountStatus
+                                 Status = phase2.AccountStatus == 1 ? "Active" : "Inactive",
                                  CompanyName = supplier?.TradingName ?? ""
                              };
 
@@ -1958,11 +1959,16 @@ namespace SABC_Phase2.Controllers
                     );
                 }
 
+                // Optional: filter by status dropdown if you implement one
+                if (statusFilter == "Active")
+                    result = result.Where(a => a.Status == "Active");
+                else if (statusFilter == "Inactive")
+                    result = result.Where(a => a.Status == "Inactive");
+
                 users = result.OrderBy(a => a.FullName).ToList();
             }
             else
             {
-                // Default: Administrators/Super_Admins
                 IQueryable<Administrator> query = _context.Administrators;
 
                 if (roleFilter == "Administrator")
@@ -1987,16 +1993,14 @@ namespace SABC_Phase2.Controllers
                         Email = a.Email,
                         FullName = $"{a.FirstName} {a.LastName}",
                         Role = a.Role,
-                        Status = "Active", // <-- Always set "Active" for admins too
+                        Status = a.AccountStatus == 1 ? "Active" : "Inactive",
                         CompanyName = "" // Not relevant for admins
                     })
                     .ToListAsync();
             }
 
-            // Set ViewBag flag so the view knows which columns to show
             ViewBag.IsOVRSUser = isOvrsUser;
 
-            // 👇 detect if it's an AJAX request
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
                 return PartialView("_UsersTablePartial", users);
@@ -2005,7 +2009,7 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
-        //DELETE MULTIPLE OVRS USERS
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BulkDeleteUsers([FromBody] List<int> selectedUserIds)
@@ -2017,32 +2021,42 @@ namespace SABC_Phase2.Controllers
 
             try
             {
-                // Fetch OVRS users in Phase 2 by Id
-                var users = await _context.Users
+                int totalAffected = 0;
+
+                // Handle OVRS Users
+                var ovrsUsers = await _context.Users
                     .Where(u => selectedUserIds.Contains(u.Id) && u.Role == "OVRS_User")
                     .ToListAsync();
-
-                if (!users.Any())
-                {
-                    return Json(new { success = false, message = "No matching users found." });
-                }
-
-                // Update AccountStatus = 0
-                foreach (var user in users)
+                foreach (var user in ovrsUsers)
                 {
                     user.AccountStatus = 0;
                 }
+                totalAffected += ovrsUsers.Count;
 
-                await _context.SaveChangesAsync();
+                // Handle Administrators
+                var admins = await _context.Administrators
+                    .Where(a => selectedUserIds.Contains(a.Id))
+                    .ToListAsync();
+                foreach (var admin in admins)
+                {
+                    admin.AccountStatus = 0;
+                }
+                totalAffected += admins.Count;
 
-                return Json(new { success = true, message = $"{users.Count} user(s) deleted." });
+                // Save changes if any
+                if (totalAffected > 0)
+                    await _context.SaveChangesAsync();
+
+                if (totalAffected == 0)
+                    return Json(new { success = false, message = "No matching users found." });
+
+                return Json(new { success = true, message = $"{totalAffected} user(s) set to inactive." });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
         // Delete Indivisual OVRS USERS
         [HttpPost]
         [ValidateAntiForgeryToken]

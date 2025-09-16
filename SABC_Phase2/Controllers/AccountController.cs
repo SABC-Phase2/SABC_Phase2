@@ -45,69 +45,68 @@ namespace SABC_Phase2.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(string email, string password)
         {
-            // Retrieve connection strings for both the legacy DB (Phase 1) and the main Phase 2 DB
             var legacyConnString = _config.GetConnectionString("LegacyDb");
             var defaultConnString = _config.GetConnectionString("DefaultConn");
 
-            // ---------- 1. Attempt ADMINISTRATOR login first ----------
+            // 1. Attempt ADMINISTRATOR login first
             int? adminId = null;
+            int? adminAccountStatus = null;
             string adminFirstName = null, adminLastName = null, adminRole = null, adminPasswordHash = null;
 
-            // Query the Phase 2 Administrators table for a matching email
             using (var conn = new SqlConnection(defaultConnString))
             {
                 await conn.OpenAsync();
                 using (var cmd = new SqlCommand(
-                    "SELECT Id, Email, PasswordHash, FirstName, LastName, Role FROM dbo.Administrators WHERE Email = @Email", conn))
+                    "SELECT Id, Email, PasswordHash, FirstName, LastName, Role, AccountStatus FROM dbo.Administrators WHERE Email = @Email", conn))
                 {
                     cmd.Parameters.AddWithValue("@Email", email);
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
                         {
-                            // Populate admin details if found
                             adminId = Convert.ToInt32(reader["Id"]);
                             adminPasswordHash = reader["PasswordHash"]?.ToString();
                             adminFirstName = reader["FirstName"]?.ToString();
                             adminLastName = reader["LastName"]?.ToString();
                             adminRole = reader["Role"]?.ToString();
+                            adminAccountStatus = Convert.ToInt32(reader["AccountStatus"]);
                         }
                     }
                 }
             }
 
-            // If an admin account was found for the email, validate the password
             if (adminId.HasValue)
             {
-                // Hash the user-supplied password using the enterprise hashing standard (SHA256 hex, VB.NET compatible)
+                // 🚫 Block login if admin account is inactive
+                if (adminAccountStatus == 0)
+                {
+                    ViewBag.Error = "Your account has been deactivated. Please contact support.";
+                    return View("~/Views/Authentication/Login.cshtml");
+                }
+
                 string hashedInputPassword = PasswordHelper.EncryptPassword(password);
 
                 if (adminPasswordHash == hashedInputPassword)
                 {
-                    // Password validated: sign out any existing scheme and sign in as administrator
                     await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                    // Build claims for administrator identity (used throughout the system for authorization)
                     var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
-        new Claim(ClaimTypes.Role, adminRole), // ✅ Use DB role directly
-        new Claim("AdminId", adminId.ToString()),
-        new Claim("AdminEmail", email)
-    };
+                    {
+                        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
+                        new Claim(ClaimTypes.Role, adminRole),
+                        new Claim("AdminId", adminId.ToString()),
+                        new Claim("AdminEmail", email)
+                    };
 
                     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var principal = new ClaimsPrincipal(identity);
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-                    // Redirect both roles to TenderAdmin dashboard
                     return RedirectToAction("Index", "TenderAdmin");
                 }
-
                 else
                 {
-                    // Admin email found, but password was incorrect
                     ViewBag.Error = "Invalid email or password";
                     return View("~/Views/Authentication/Login.cshtml");
                 }

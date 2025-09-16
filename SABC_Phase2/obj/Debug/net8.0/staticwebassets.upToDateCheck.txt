@@ -48,7 +48,6 @@ wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
 wwwroot\lib\bootstrap\LICENSE
 wwwroot\lib\Images\banner.png
 wwwroot\lib\Images\bg.png
-wwwroot\lib\Images\caution.png
 wwwroot\lib\Images\cropped_logoblack.png
 wwwroot\lib\Images\draft-responses-icon.png
 wwwroot\lib\Images\logo.png
@@ -56,7 +55,6 @@ wwwroot\lib\Images\logoblack.png
 wwwroot\lib\Images\pdficon.png
 wwwroot\lib\Images\SABC Artwork 1.jpg
 wwwroot\lib\Images\sabc-logo.png
-wwwroot\lib\Images\SABC_Supplier_Registration_User Guide_v2.pdf
 wwwroot\lib\Images\submissions-icon.png
 wwwroot\lib\Images\Tick-Box.png
 wwwroot\lib\Images\X-Box.png
@@ -72,3 +70,5 @@ wwwroot\lib\jquery\dist\jquery.js
 wwwroot\lib\jquery\dist\jquery.min.js
 wwwroot\lib\jquery\dist\jquery.min.map
 wwwroot\lib\jquery\LICENSE.txt
+wwwroot\lib\Images\caution.png
+wwwroot\lib\Images\SABC_Supplier_Registration_User Guide_v2.pdf
