@@ -34,10 +34,16 @@
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
         </button>
-        <button type="button" class="big-delete-btn" title="Delete Selected Users">
-            <i class="fas fa-trash-alt"></i> Delete
-        </button>
 
+        <!-- Button group aligned right -->
+        <span style="display: flex; gap: 16px; margin-left: auto;">
+            <button type="button" class="big-newuser-btn" title="Add New User">
+                <i class="fas fa-user-plus"></i> New User
+            </button>
+            <button type="button" class="big-delete-btn" title="Delete Selected Users">
+                <i class="fas fa-trash-alt"></i> Delete
+            </button>
+        </span>
     </form>
 </div>
 
@@ -418,7 +424,7 @@
     }
 
     .big-delete-btn {
-        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        background: linear-gradient(to bottom, #e74c3c 90%, #c0392b 100%);
         color: #fff;
         border: none;
         border-radius: 6px;
@@ -430,14 +436,14 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        box-shadow: 0 4px 0 0 #c0392b, 0 8px 16px -4px rgba(231, 76, 60, 0.25);
         transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-        margin-left: auto;
+        /* margin-left: auto; */
     }
 
         .big-delete-btn:hover {
-            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
-            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            background: linear-gradient(to bottom, #c0392b 90%, #a93226 100%);
+            box-shadow: 0 2px 0 0 #a93226, 0 4px 8px -2px rgba(231, 76, 60, 0.18);
             transform: translateY(2px);
         }
 
@@ -522,6 +528,31 @@
             background: #c0392b;
             color: #fff;
         }
+
+    .big-newuser-btn {
+        background: linear-gradient(to bottom, #00a651 90%, #008c44 100%);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 14px 32px;
+        font-size: 1.15rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 0 0 #008c44, 0 8px 16px -4px rgba(0, 166, 81, 0.25);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        margin-left: 0;
+    }
+
+        .big-newuser-btn:hover {
+            background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0, 166, 81, 0.18);
+            transform: translateY(2px);
+        }
+
 
     .search-wrapper {
         position: relative;
