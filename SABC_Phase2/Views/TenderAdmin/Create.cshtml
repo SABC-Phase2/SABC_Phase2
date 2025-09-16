@@ -1,5 +1,7 @@
-﻿﻿@{
-ViewData["BannerText"] = "Tenders";
+﻿
+
+﻿@{
+    ViewData["BannerText"] = "Tenders";
 }
 
 @model SABC_Phase2.Models.Tender.TenderViewModel
@@ -346,80 +348,103 @@ ViewData["BannerText"] = "Tenders";
 @section Scripts {
     <script>
 
-                 // Updated Tender Form JS - with all event handler re-attachment after form HTML replacement
-
-        // Pass current SA date and time to JavaScript
+            // Pass current SA date and time to JavaScript
         window.currentSaDate = '@ViewBag.CurrentSaDate';
         window.currentSaDateTime = '@ViewBag.CurrentSaDateTime';
 
-        // -------------------- BEGIN HANDLER SETUP FUNCTION ----------------------
-        function initializeFormHandlers() {
-            // --- Allow selectedFiles to persist across replacements ---
-            if (!window.selectedFiles) window.selectedFiles = [];
-            let selectedFiles = window.selectedFiles;
+               document.addEventListener('DOMContentLoaded', function () {
+                         let docIdToDelete = null;
+                        document.querySelectorAll('.delete-upload-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                docIdToDelete = btn.getAttribute('data-doc-id');
+                var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+                modal.show();
 
+                const deleteBtn = document.getElementById('confirmDeleteDocBtn');
+                const btnText = deleteBtn.querySelector('.btn-text');
+                const spinner = deleteBtn.querySelector('.spinner-border');
 
-            // --- Delete Upload Button Modal Logic ---
-            document.querySelectorAll('.delete-upload-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    let docIdToDelete = btn.getAttribute('data-doc-id');
-                    var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
-                    modal.show();
-                    const deleteBtn = document.getElementById('confirmDeleteDocBtn');
-                    const btnText = deleteBtn.querySelector('.btn-text');
-                    const spinner = deleteBtn.querySelector('.spinner-border');
-                    deleteBtn.disabled = false;
-                    btnText.style.display = '';
-                    spinner.classList.add('d-none');
-                    deleteBtn.onclick = function() {
-                        if (!docIdToDelete) return;
-                        deleteBtn.disabled = true;
-                        btnText.style.display = 'none';
-                        spinner.classList.remove('d-none');
-                        fetch('/TenderAdmin/DeleteDraftDocument', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                            },
-                            body: JSON.stringify({ documentId: docIdToDelete })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.querySelector('[data-doc-id="' + docIdToDelete + '"]').remove();
-                            } else {
-                                alert('Failed to delete document: ' + data.message);
-                            }
-                            modal.hide();
-                            deleteBtn.disabled = false;
-                            btnText.style.display = '';
-                            spinner.classList.add('d-none');
-                        })
-                        .catch(() => {
-                            alert('Error deleting document.');
-                            modal.hide();
-                            deleteBtn.disabled = false;
-                            btnText.style.display = '';
-                            spinner.classList.add('d-none');
-                        });
-                    };
-                    document.getElementById('cancelDeleteDocBtn').onclick = function() {
+                // Reset button state when modal opens
+                deleteBtn.disabled = false;
+                btnText.style.display = '';
+                spinner.classList.add('d-none');
+
+                deleteBtn.onclick = function() {
+                    if (!docIdToDelete) return;
+                    deleteBtn.disabled = true;
+                    btnText.style.display = 'none';
+                    spinner.classList.remove('d-none');
+
+                    fetch('/TenderAdmin/DeleteDraftDocument', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ documentId: docIdToDelete })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.querySelector('[data-doc-id="' + docIdToDelete + '"]').remove();
+                        } else {
+                            alert('Failed to delete document: ' + data.message);
+                        }
+                        docIdToDelete = null;
                         modal.hide();
+                        // Reset button state
                         deleteBtn.disabled = false;
                         btnText.style.display = '';
                         spinner.classList.add('d-none');
-                    };
-                });
-            });
+                    })
+                    .catch(err => {
+                        alert('Error deleting document.');
+                        docIdToDelete = null;
+                        modal.hide();
+                        // Reset button state
+                        deleteBtn.disabled = false;
+                        btnText.style.display = '';
+                        spinner.classList.add('d-none');
+                    });
+                };
 
-            // --- Delete Existing Doc (inline danger link) ---
-            document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
+                document.getElementById('cancelDeleteDocBtn').onclick = function() {
+                    docIdToDelete = null;
+                    modal.hide();
+                    deleteBtn.disabled = false;
+                    btnText.style.display = '';
+                    spinner.classList.add('d-none');
+                };
+            });
+        });
+
+        const closingDateInput = document.querySelector('input[name="ClosingDate"]');
+        if (closingDateInput) {
+            // Set min attribute on load
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const minDate = `${yyyy}-${mm}-${dd}`;
+            closingDateInput.setAttribute('min', minDate);
+
+            // Validate on change
+            closingDateInput.addEventListener('change', function () {
+                if (this.value < minDate) {
+                    this.value = minDate;
+                    // Optionally show a validation error
+                    alert('Closing date cannot be before today.');
+                }
+            });
+        }
+
+                            document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     var container = btn.closest('[data-doc-id]');
                     var docId = container.getAttribute('data-doc-id');
                     if (!docId) return;
                     if (!confirm('Are you sure you want to delete this document?')) return;
+
                     fetch('/TenderAdmin/DeleteDraftDocument', {
                         method: 'POST',
                         headers: {
@@ -431,101 +456,322 @@ ViewData["BannerText"] = "Tenders";
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            container.remove();
+                            container.remove(); // Instantly remove from UI
                         } else {
                             alert('Failed to delete document: ' + data.message);
                         }
                     })
-                    .catch(() => alert('Error deleting document.'));
+                    .catch(err => alert('Error deleting document.'));
                 });
             });
 
-            // --- Closing Date Min Logic ---
-            const closingDateInput = document.querySelector('input[name="ClosingDate"]');
-            if (closingDateInput) {
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                const minDate = `${yyyy}-${mm}-${dd}`;
-                closingDateInput.setAttribute('min', minDate);
-                closingDateInput.addEventListener('change', function () {
-                    if (this.value < minDate) {
-                        this.value = minDate;
-                        alert('Closing date cannot be before today.');
-                    }
-                });
-            }
 
-            // --- Tab and Button Logic ---
+
+
+
+            // Tab logic...
             const tabs = ['details', 'documents', 'submit'];
-            let currentTab = window.currentTab || 'details';
+            let currentTab = 'details';
+
             const continueBtn = document.getElementById('continueBtn');
             const doneBtn = document.getElementById('doneBtn');
             let draftBtn = document.getElementById('draftBtn');
-            const submitTabs = ['publish', 'schedule', 'draft'];
-            let currentSubmitSubTab = window.currentSubmitSubTab || 'publish';
 
-            function capitalize(str) {
-                return str.charAt(0).toUpperCase() + str.slice(1);
+            const submitTabs = ['publish', 'schedule', 'draft'];
+            let currentSubmitSubTab = 'publish';
+
+            // Initialize Flatpickr calendar (always visible)
+            const initCalendar = function() {
+            // Parse the current SA date
+            const currentSaDate = new Date(window.currentSaDate + 'T00:00:00');
+
+            const calendar = flatpickr("#calendarContainer", {
+                inline: true,
+                dateFormat: "Y-m-d",
+                minDate: currentSaDate, // Prevent selecting dates before today (SA time)
+                onChange: function(selectedDates, dateStr, instance) {
+                    // Additional validation to ensure selected date is not in the past
+                    const selectedDate = new Date(dateStr + 'T00:00:00');
+                    if (selectedDate < currentSaDate) {
+                        alert('You cannot schedule a tender for a date in the past.');
+                        // Reset to minimum date
+                        instance.setDate(currentSaDate);
+                        return;
+                    }
+
+                    document.getElementById('ScheduledDate').value = dateStr;
+                    // Update the selected date display
+                    const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
+                    document.getElementById('selectedDateDisplay').textContent = formattedDate;
+                }
+            });
+
+            // Set current SA date as default (or next day if current time is late)
+            const defaultDate = currentSaDate;
+            calendar.setDate(defaultDate);
+            document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
+
+            // Format and display the default date
+            const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
+            document.getElementById('selectedDateDisplay').textContent = formattedDate;
+        };
+
+               // --- FIXED TIME INPUT LOGIC START ---
+        const initTimeInput = function() {
+            const hoursInput = document.getElementById('hours');
+            const minutesInput = document.getElementById('minutes');
+            const amBtn = document.querySelector('.am-btn');
+            const pmBtn = document.querySelector('.pm-btn');
+            const timeHiddenInput = document.getElementById('ScheduledTime');
+            let isAM = amBtn && amBtn.classList.contains('active') ? true : false;
+
+            // Set initial time value
+            updateHiddenTimeValue();
+
+            function displayHourValue(val) {
+                if (!val) return '';
+                val = String(parseInt(val, 10));
+                return val;
             }
-            function updateActionButtons(tabName) {
-                if (tabName === 'details' || tabName === 'documents') {
-                    if (continueBtn) continueBtn.style.display = 'inline-block';
-                    if (doneBtn) doneBtn.style.display = 'none';
-                    if (draftBtn) draftBtn.style.display = 'none';
-                } else if (tabName === 'submit') {
-                    if (continueBtn) continueBtn.style.display = 'none';
-                    if (doneBtn) doneBtn.style.display = 'inline-block';
-                    if (draftBtn) draftBtn.style.display = 'inline-block';
+
+             function validateHourInput() {
+            hoursInput.addEventListener('input', function(e) {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 1 && val === '0') val = '';
+                if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
+                if (val === '00') val = '';
+                // No leading zero for display
+                this.value = val ? String(parseInt(val, 10)) : '';
+                updateHiddenTimeValue(); // This will now only validate when complete
+            });
+
+            // Validate on blur (when user finishes with the field)
+            hoursInput.addEventListener('blur', function() {
+                // Remove leading zero if present and value is 1-9
+                if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
+                    this.value = this.value.substring(1);
+                }
+                updateHiddenTimeValue();
+
+                // Only validate if both fields have values
+                if (this.value && minutesInput.value) {
+                    validateScheduledDateTime();
+                }
+            });
+
+            hoursInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '1', 10) || 1;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 12 ? 1 : val + 1;
+                    this.value = String(val); // No leading zero for display
+                    updateHiddenTimeValue();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 1 ? 12 : val - 1;
+                    this.value = String(val); // No leading zero for display
+                    updateHiddenTimeValue();
+                }
+            });
+        }
+
+        function validateMinuteInput() {
+            minutesInput.addEventListener('input', function(e) {
+                let val = this.value.replace(/\D/g, '');
+                if (val.length > 2) val = val.slice(0, 2);
+                if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
+                this.value = val;
+                updateHiddenTimeValue(); // This will now only validate when complete
+            });
+
+            // Validate on blur (when user finishes with the field)
+            minutesInput.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = this.value.padStart(2, '0');
+                }
+                updateHiddenTimeValue();
+
+                // Only validate if both fields have values
+                if (hoursInput.value && this.value) {
+                    validateScheduledDateTime();
+                }
+            });
+
+            minutesInput.addEventListener('keydown', function(e) {
+                let val = parseInt(this.value || '0', 10) || 0;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    val = val >= 59 ? 0 : val + 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    val = val <= 0 ? 59 : val - 1;
+                    this.value = String(val).padStart(2, '0');
+                    updateHiddenTimeValue();
+                }
+            });
+        }
+
+            // AM/PM toggle
+            if (amBtn) {
+                amBtn.addEventListener('click', function() {
+                    if (!isAM) {
+                        isAM = true;
+                        amBtn.classList.add('active');
+                        pmBtn.classList.remove('active');
+                        updateHiddenTimeValue();
+                    }
+                });
+            }
+            if (pmBtn) {
+                pmBtn.addEventListener('click', function() {
+                    if (isAM) {
+                        isAM = false;
+                        pmBtn.classList.add('active');
+                        amBtn.classList.remove('active');
+                        updateHiddenTimeValue();
+                    }
+                });
+            }
+            function updateHiddenTimeValue() {
+            let hours = hoursInput.value.padStart(2, '0') || '00';
+            let minutes = minutesInput.value.padStart(2, '0') || '00';
+            let seconds = '00';
+
+            // Convert to 24-hour format
+            let hours24 = parseInt(hours, 10);
+            if (isAM) {
+                if (hours24 === 12) hours24 = 0;
+            } else {
+                if (hours24 !== 12) hours24 += 12;
+            }
+
+            const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
+            timeHiddenInput.value = formattedTime;
+
+            // Only validate if both hours and minutes have meaningful values
+            if (hoursInput.value && hoursInput.value.length > 0 &&
+                minutesInput.value && minutesInput.value.length >= 2) {
+                validateScheduledDateTime();
+            }
+        }
+
+                    function validateScheduledDateTime() {
+            const selectedDate = document.getElementById('ScheduledDate').value;
+            const selectedTime = document.getElementById('ScheduledTime').value;
+
+            if (!selectedDate || !selectedTime) return true;
+
+            // Only validate if we have complete time input (both hours and minutes)
+            const hoursValue = hoursInput.value;
+            const minutesValue = minutesInput.value;
+
+            if (!hoursValue || hoursValue.length === 0 ||
+                !minutesValue || minutesValue.length < 2) {
+                return true; // Don't validate incomplete input
+            }
+
+            // Parse current SA date and time
+            const currentSaDateTime = new Date(window.currentSaDateTime);
+            const selectedDateTime = new Date(selectedDate + 'T' + selectedTime);
+
+            // Check if selected date is today
+            const currentSaDateOnly = new Date(window.currentSaDate + 'T00:00:00');
+            const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
+
+            if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
+                // Same day - check if time is in the future (add 1 minute buffer)
+                const bufferTime = new Date(currentSaDateTime.getTime() + (1 * 60 * 1000)); // 1 minute buffer
+
+                if (selectedDateTime <= bufferTime) {
+                    // Clear the time inputs and show warning
+                    hoursInput.value = '';
+                    minutesInput.value = '';
+                    timeHiddenInput.value = '';
+                    alert('You cannot schedule a tender for a time that has already passed. Please select a future time.');
+                    return false;
                 }
             }
-            function showTab(tabName) {
+
+            return true;
+        }
+
+            validateHourInput();
+            validateMinuteInput();
+        };
+        // --- FIXED TIME INPUT LOGIC END ---
+
+            // Call calendar initialization when schedule tab is shown
+            const scheduleTabBtn = document.getElementById('submitTabSchedule');
+            if (scheduleTabBtn) {
+                scheduleTabBtn.addEventListener('click', function() {
+                    setTimeout(initCalendar, 100); // Small delay to ensure DOM is ready
+                    setTimeout(initTimeInput, 100); // Also initialize time input
+                });
+            }
+
+            window.showTab = function(tabName) {
                 document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
                 document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-                document.getElementById(tabName)?.classList.add('active');
-                document.getElementById('tab' + capitalize(tabName))?.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                document.getElementById('tab' + capitalize(tabName)).classList.add('active');
                 updateActionButtons(tabName);
                 currentTab = tabName;
-                window.currentTab = tabName;
+
+                // Reinitialize calendar if showing schedule tab
                 if (tabName === 'submit' && currentSubmitSubTab === 'schedule') {
                     setTimeout(initCalendar, 100);
                     setTimeout(initTimeInput, 100);
                 }
             }
-            window.showTab = showTab;
 
-              if (continueBtn) {
-            // Remove any previous handlers to avoid duplicates
-            continueBtn.onclick = null;
             continueBtn.addEventListener('click', function() {
                 let idx = tabs.indexOf(currentTab);
                 if (idx < tabs.length - 1) {
                     showTab(tabs[idx + 1]);
                 }
             });
-        }
+
             function attachDraftBtnLogic() {
                 draftBtn = document.getElementById('draftBtn');
                 if (draftBtn) {
-                    draftBtn.onclick = function() {
+                    draftBtn.addEventListener('click', function() {
                         showSubmitTab('draft');
-                    };
+                    });
                 }
             }
+
+            function updateActionButtons(tabName) {
+                if (tabName === 'details' || tabName === 'documents') {
+                    continueBtn.style.display = 'inline-block';
+                    doneBtn.style.display = 'none';
+                    if (draftBtn) draftBtn.style.display = 'none';
+                } else if (tabName === 'submit') {
+                    continueBtn.style.display = 'none';
+                    doneBtn.style.display = 'inline-block';
+                    if (draftBtn) draftBtn.style.display = 'inline-block';
+                }
+            }
+
+            function capitalize(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
             function showSubmitTab(subTabName) {
                 document.querySelectorAll('.submit-tab-content').forEach(stc => stc.classList.remove('active'));
                 document.querySelectorAll('.submit-tab').forEach(stb => stb.classList.remove('active'));
-                document.getElementById('submitTabContent' + capitalize(subTabName))?.classList.add('active');
-                document.getElementById('submitTab' + capitalize(subTabName))?.classList.add('active');
+                document.getElementById('submitTabContent' + capitalize(subTabName)).classList.add('active');
+                document.getElementById('submitTab' + capitalize(subTabName)).classList.add('active');
                 currentSubmitSubTab = subTabName;
-                window.currentSubmitSubTab = subTabName;
+
+                // Reinitialize calendar if showing schedule tab
                 if (subTabName === 'schedule') {
                     setTimeout(initCalendar, 100);
                     setTimeout(initTimeInput, 100);
                 }
             }
-            window.showSubmitTab = showSubmitTab;
 
             submitTabs.forEach(function(subTabName) {
                 const tabBtn = document.getElementById('submitTab' + capitalize(subTabName));
@@ -537,99 +783,117 @@ ViewData["BannerText"] = "Tenders";
             });
 
             showTab(currentTab);
-            if (document.getElementById('submitTabPublish')) showSubmitTab('publish');
+            if (document.getElementById('submitTabPublish')) {
+                showSubmitTab('publish');
+            }
             attachDraftBtnLogic();
 
-            // --- Calendar/Time Input Logic (call only if needed) ---
-            const scheduleTabBtn = document.getElementById('submitTabSchedule');
-            if (scheduleTabBtn) {
-                scheduleTabBtn.addEventListener('click', function() {
-                    setTimeout(initCalendar, 100);
-                    setTimeout(initTimeInput, 100);
-                });
-            }
+            // Initialize time input on page load if on schedule tab
             if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
                 setTimeout(initTimeInput, 100);
             }
 
-            // --- File Upload Logic ---
+                    function updateFilesDisplay() {
+            // Remove only the new uploaded file entries (not server-existing ones)
+            document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+
+            // Re-render all currently selected new files
+            selectedFiles.forEach(function(file, idx) {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
+                entryDiv.innerHTML = `
+                    <div>
+                        <strong>${file.name}</strong>
+                    </div>
+                    <div class="uploaded-file-actions d-flex gap-2">
+                        <button type="button" class="icon-btn view-upload-btn" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+
+                // View button logic
+                entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
+                    const fileURL = URL.createObjectURL(file);
+                    window.open(fileURL, '_blank');
+                });
+
+                // Remove button logic
+                entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                    selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                    updateFilesDisplay();
+                });
+
+                uploadedFilesContainer.appendChild(entryDiv);
+            });
+        }
+
+            // ---- PDF upload logic (multi-batch and removable) ----
             const fileInput = document.getElementById('UploadedFiles');
             const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
-            function updateFilesDisplay() {
-                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
-                selectedFiles.forEach(function(file) {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
-                    entryDiv.innerHTML = `
-                        <div>
-                            <strong>${file.name}</strong>
-                        </div>
-                        <div class="uploaded-file-actions d-flex gap-2">
-                            <button type="button" class="icon-btn view-upload-btn" title="View">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    `;
-                    entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
-                        const fileURL = URL.createObjectURL(file);
-                        window.open(fileURL, '_blank');
-                    });
-                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
-                        window.selectedFiles = selectedFiles;
-                        updateFilesDisplay();
-                    });
-                    uploadedFilesContainer.appendChild(entryDiv);
-                });
-            }
-            if (fileInput) {
-                fileInput.addEventListener('change', function () {
-                    const files = Array.from(fileInput.files);
-                    files.forEach(file => {
-                        if (file.type !== "application/pdf") {
-                            alert("Only PDF files are allowed.");
-                            return;
-                        }
-                        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
-                            selectedFiles.push(file);
-                        }
-                    });
-                    window.selectedFiles = selectedFiles;
-                    updateFilesDisplay();
-                    fileInput.value = "";
-                });
-            }
-            updateFilesDisplay();
+            let selectedFiles = [];
 
-            // --- Validation UI Helpers ---
+            fileInput.addEventListener('change', function () {
+                const files = Array.from(fileInput.files);
+
+                // Add new files to the selectedFiles array if not already present
+                files.forEach(file => {
+                    if (file.type !== "application/pdf") {
+                        alert("Only PDF files are allowed.");
+                        return;
+                    }
+                    // Check if already present (by name + size)
+                    if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                        selectedFiles.push(file);
+                    }
+                });
+
+                updateFilesDisplay();
+                // Reset file input so the same file can be added again if needed
+                fileInput.value = "";
+            });
+
+            // ---- Validation ----
             function showFieldError(fieldIdOrName, message, tabName) {
                 let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
                 if (field) {
                     let label = null;
-                    if (field.id) label = document.querySelector(`label[for='${field.id}']`);
+                    // Try to find the associated label
+                    if (field.id) {
+                        label = document.querySelector(`label[for='${field.id}']`);
+                    }
+                    // Fallback: use the closest .form-group and find label inside it
                     if (!label) {
                         let formGroup = field.closest('.form-group');
-                        if (formGroup) label = formGroup.querySelector('label');
+                        if (formGroup) {
+                            label = formGroup.querySelector('label');
+                        }
                     }
+                    // Remove any existing error span near this label
                     if (label) {
                         let oldError = label.parentNode.querySelector('.validation-custom-error');
                         if (oldError) oldError.remove();
+
                         let errorSpan = document.createElement('span');
                         errorSpan.className = 'validation-custom-error text-danger';
                         errorSpan.innerText = message;
                         errorSpan.style.fontWeight = 'bold';
+
                         if (tabName === 'documents') {
+                            // Insert after label
                             label.insertAdjacentElement('afterend', errorSpan);
                         } else {
+                            // Append next to label
                             errorSpan.classList.add('ms-2');
                             label.appendChild(errorSpan);
                         }
                     }
                     field.classList.add('field-error-highlight');
                 } else {
+                    // Fallback error on the whole tab section
                     let tabContent = document.getElementById(tabName);
                     if (tabContent) {
                         let oldError = tabContent.querySelector('.validation-custom-error');
@@ -644,17 +908,23 @@ ViewData["BannerText"] = "Tenders";
                     }
                 }
             }
+
             function clearAllCustomErrors() {
                 document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
                 document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
             }
+
             function clearFieldError(e) {
                 let field = e.target;
                 let label = null;
-                if (field.id) label = document.querySelector(`label[for='${field.id}']`);
+                if (field.id) {
+                    label = document.querySelector(`label[for='${field.id}']`);
+                }
                 if (!label) {
                     let formGroup = field.closest('.form-group');
-                    if (formGroup) label = formGroup.querySelector('label');
+                    if (formGroup) {
+                        label = formGroup.querySelector('label');
+                    }
                 }
                 if (label) {
                     let oldError = label.parentNode.querySelector('.validation-custom-error');
@@ -662,498 +932,411 @@ ViewData["BannerText"] = "Tenders";
                 }
                 field.classList.remove('field-error-highlight');
             }
+
             document.querySelectorAll('input, textarea').forEach(e => {
                 e.addEventListener('input', clearFieldError);
                 e.addEventListener('change', clearFieldError);
             });
 
-            // --- Main Form Submit Logic ---
-            if (doneBtn) {
-                doneBtn.onclick = function() {
-                    if (doneBtn.classList.contains('loading')) return;
-                    doneBtn.classList.add('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Submitting';
-                    doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                    doneBtn.querySelector('.spinner-border').classList.remove('d-none');
-                    doneBtn.disabled = true;
-                    clearAllCustomErrors();
-                    let errors = [];
-                    let errorFields = [];
-                    let errorTabs = [];
-                    // Only validate for publish and schedule, skip validation for draft
-                    if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
-                        let tenderType = document.querySelector('input[name="TenderType"]:checked');
-                        let tenderNumber = document.querySelector('input[name="TenderNumber"]');
-                        let closingDate = document.querySelector('input[name="ClosingDate"]');
-                        let closingTime = document.querySelector('input[name="ClosingTime"]');
-                        let title = document.querySelector('input[name="Title"]');
-                        let description = document.querySelector('textarea[name="Description"]');
-                        if (!tenderType) {
-                            errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
-                            errorFields.push('TenderType'); errorTabs.push('details');
-                        }
-                        if (!tenderNumber.value.trim()) {
-                            errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
-                            errorFields.push('TenderNumber'); errorTabs.push('details');
-                        }
-                        if (!closingDate.value.trim()) {
-                            errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
-                            errorFields.push('ClosingDate'); errorTabs.push('details');
-                        }
-                        if (!closingTime.value.trim()) {
-                            errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
-                            errorFields.push('ClosingTime'); errorTabs.push('details');
-                        }
-                        if (!title.value.trim()) {
-                            errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
-                            errorFields.push('Title'); errorTabs.push('details');
-                        }
-                        if (!description.value.trim()) {
-                            errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
-                            errorFields.push('Description'); errorTabs.push('details');
-                        }
-                        const existingDocs = document.querySelectorAll('.uploaded-file-entry.existing-doc');
-                        if (selectedFiles.length === 0 && existingDocs.length === 0) {
-                            errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
-                            errorFields.push('UploadedFiles'); errorTabs.push('documents');
-                        }
-                        if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                            let scheduledDate = document.getElementById('ScheduledDate').value;
-                            let scheduledTime = document.getElementById('ScheduledTime').value;
-                            if (!scheduledDate.trim()) {
-                                errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
-                                errorFields.push('ScheduledDate'); errorTabs.push('submit');
-                            }
-                            if (!scheduledTime.trim()) {
-                                errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
-                                errorFields.push('ScheduledTime'); errorTabs.push('submit');
-                            }
-                            if (scheduledDate && scheduledTime) {
-                                const currentSaDateTime = new Date(window.currentSaDateTime);
-                                const selectedDateTime = new Date(scheduledDate + 'T' + scheduledTime);
-                                if (selectedDateTime <= currentSaDateTime) {
-                                    errors.push({field: 'ScheduledDate', message: 'Cannot schedule for a past date/time (South African time)', tab: 'submit'});
-                                    errorFields.push('ScheduledDate'); errorTabs.push('submit');
-                                }
-                            }
-                        }
-                        if (errors.length > 0) {
-                            doneBtn.classList.remove('loading');
-                            doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                            doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                            doneBtn.disabled = false;
-                            errors.forEach(function(err) {
-                                showFieldError(err.field, err.message, err.tab);
-                            });
-                            showTab(errors[0].tab);
-                            let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                            if (firstField) {
-                                firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                                firstField.focus();
-                            }
-                            return;
-                        }
-                    }
-                    // Check for empty draft
-                    if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-                        const hasContent = [
-                            document.querySelector('input[name="TenderType"]:checked'),
-                            document.querySelector('input[name="TenderNumber"]')?.value.trim(),
-                            document.querySelector('input[name="ClosingDate"]')?.value.trim(),
-                            document.querySelector('input[name="ClosingTime"]')?.value.trim(),
-                            document.querySelector('input[name="Title"]')?.value.trim(),
-                            document.querySelector('textarea[name="Description"]')?.value.trim(),
-                            selectedFiles.length > 0
-                        ].some(value => value);
-                        if (!hasContent) {
-                            doneBtn.classList.remove('loading');
-                            doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = '';
-                            doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                            doneBtn.disabled = false;
-                            var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
-                            modal.show();
-                            document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
-                                modal.hide();
-                            }
-                            return;
-                        }
-                    }
-                    // --- SUBMIT FORM (AJAX) ---
-                    var form = document.querySelector('form[asp-action="Create"]');
-                    if (!form) form = document.querySelector('form[action*="Create"]');
-                    if (!form) {
-                        alert("Form not found!");
-                        doneBtn.classList.remove('loading');
-                        doneBtn.querySelector('.btn-text').textContent = 'Done';
-                        doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                        doneBtn.disabled = false;
-                        return;
-                    }
-                    var formData = new FormData(form);
-                    formData.delete('UploadedFiles');
-                    selectedFiles.forEach(function(file) {
-                        formData.append('UploadedFiles', file, file.name);
-                    });
-                    function handleHtmlValidationResponse(html) {
-                        let tempDiv = document.createElement("div");
-                        tempDiv.innerHTML = html;
-                        let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
-                        if (!newForm) newForm = tempDiv.querySelector("form");
-                        if (newForm) {
-                            document.querySelector('.tab-container').innerHTML = "";
-                            document.querySelector('.tab-container').appendChild(newForm);
-                            initializeFormHandlers();
-                            if (typeof showTab === "function") showTab('details');
-                            setTimeout(function() {
-                                let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
-                                if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
-                            }, 10);
-                        } else {
-                            alert("Validation error: Could not update form.");
-                        }
-                        doneBtn.classList.remove('loading');
-                        doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                        doneBtn.disabled = false;
-                    }
-                    // --- SCHEDULE LOGIC ---
-                    if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                        let scheduledDate = document.getElementById('ScheduledDate').value;
-                        let scheduledTime = document.getElementById('ScheduledTime').value;
-                        formData.append('IsScheduled', 'true');
-                        formData.append('ScheduledDate', scheduledDate);
-                        formData.append('ScheduledTime', scheduledTime);
-                        fetch(form.action, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(async response => {
-                            const contentType = response.headers.get("content-type");
-                            if (contentType && contentType.includes("application/json")) {
-                                const data = await response.json();
-                                doneBtn.classList.remove('loading');
-                                doneBtn.querySelector('.btn-text').textContent = 'Done';
-                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                                doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                                doneBtn.disabled = false;
-                                if (data.success) {
-                                    document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
-                                    var scheduledLink = document.getElementById('scheduledTendersLink');
-                                    if (scheduledLink && data.scheduledTendersUrl) {
-                                        scheduledLink.href = data.scheduledTendersUrl;
-                                    } else if (scheduledLink) {
-                                        scheduledLink.href = "/TenderAdmin/ScheduledIndex";
-                                    }
-                                    var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
-                                    modal.show();
-                                    document.getElementById('scheduledModalCloseBtn').onclick = function() {
-                                        window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
-                                    }
-                                } else {
-                                    alert(data.error || "Failed to schedule tender.");
-                                }
-                            } else {
-                                const html = await response.text();
-                                handleHtmlValidationResponse(html);
-                            }
-                        })
-                        .catch(() => {
-                            doneBtn.classList.remove('loading');
-                            doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                            doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                            doneBtn.disabled = false;
-                            alert("An error occurred while scheduling.");
-                        });
-                        return;
-                    }
-                    // --- PUBLISH LOGIC ---
-                    if (currentTab === 'submit' && currentSubmitSubTab === 'publish') {
-                        fetch(form.action, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(async response => {
-                            const contentType = response.headers.get("content-type");
-                            if (contentType && contentType.includes("application/json")) {
-                                const data = await response.json();
-                                doneBtn.classList.remove('loading');
-                                doneBtn.querySelector('.btn-text').textContent = 'Done';
-                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                                doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                                doneBtn.disabled = false;
-                                if (data.success) {
-                                    document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
-                                    var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
-                                    modal.show();
-                                    document.getElementById('modalCloseBtn').onclick = function() {
-                                        window.location.href = "/TenderAdmin/Index";
-                                    }
-                                } else {
-                                    alert(data.error || "Failed to publish tender.");
-                                }
-                            } else {
-                                const html = await response.text();
-                                handleHtmlValidationResponse(html);
-                            }
-                        })
-                        .catch(() => {
-                            doneBtn.classList.remove('loading');
-                            doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                            doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                            doneBtn.disabled = false;
-                            alert("An error occurred while publishing.");
-                        });
-                        return;
-                    }
-                    // --- DRAFT LOGIC ---
-                    if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-                        var draftUrl = '/TenderAdmin/SaveDraft';
-                        fetch(draftUrl, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(async response => {
-                            const contentType = response.headers.get("content-type");
-                            if (contentType && contentType.includes("application/json")) {
-                                const data = await response.json();
-                                doneBtn.classList.remove('loading');
-                                doneBtn.querySelector('.btn-text').textContent = 'Done';
-                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                                doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                                doneBtn.disabled = false;
-                                if (data.success) {
-                                    document.getElementById('draftModalTenderNumber').textContent = data.tenderNumber || '';
-                                    var draftLink = document.getElementById('draftResponsesLink');
-                                    if (draftLink && data.draftIndexUrl) {
-                                        draftLink.href = data.draftIndexUrl;
-                                    } else if (draftLink) {
-                                        draftLink.href = "/TenderAdmin/DraftIndex";
-                                    }
-                                    var modal = new bootstrap.Modal(document.getElementById('draftSavedModal'));
-                                    modal.show();
-                                    document.getElementById('draftModalCloseBtn').onclick = function() {
-                                        window.location.href = data.draftIndexUrl || "/TenderAdmin/DraftIndex";
-                                    }
-                                } else {
-                                    alert(data.message || "Failed to save draft.");
-                                }
-                            } else {
-                                const html = await response.text();
-                                let tempDiv = document.createElement("div");
-                                tempDiv.innerHTML = html;
-                                let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
-                                if (!newForm) newForm = tempDiv.querySelector("form");
-                                if (newForm) {
-                                    document.querySelector('.tab-container').innerHTML = "";
-                                    document.querySelector('.tab-container').appendChild(newForm);
-                                    initializeFormHandlers();
-                                } else {
-                                    document.querySelector('.tab-container').innerHTML = html;
-                                }
-                                if (typeof showTab === "function") showTab('details');
-                                setTimeout(function() {
-                                    let tenderNumberField = document.querySelector('input[name="TenderNumber"]');
-                                    if (tenderNumberField) {
-                                        tenderNumberField.scrollIntoView({ behavior: "smooth", block: "center" });
-                                        tenderNumberField.focus();
-                                    }
-                                }, 10);
-                                doneBtn.classList.remove('loading');
-                                doneBtn.querySelector('.btn-text').textContent = 'Done';
-                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                                doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                                doneBtn.disabled = false;
-                            }
-                        })
-                        .catch(error => {
-                            doneBtn.classList.remove('loading');
-                            doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-                            doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                            doneBtn.disabled = false;
-                            console.error('Draft save error:', error);
-                        });
-                        return;
-                    }
-                };
+        // ---- Form AJAX submit logic ----
+        doneBtn.addEventListener('click', function() {
+                if (doneBtn.classList.contains('loading')) {
+            return;
+        }
+
+        // In your submitForm() or doneBtn click handler:
+        doneBtn.classList.add('loading');
+        doneBtn.querySelector('.btn-text').textContent = 'Submitting';
+        doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.remove('d-none');
+        doneBtn.disabled = true;
+
+        clearAllCustomErrors();
+
+        // VALIDATION SECTION (unchanged)
+        let errors = [];
+        let errorFields = [];
+        let errorTabs = [];
+
+            // Only validate for publish and schedule, skip validation for draft
+            if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
+                let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                let closingDate = document.querySelector('input[name="ClosingDate"]');
+                let closingTime = document.querySelector('input[name="ClosingTime"]');
+                let title = document.querySelector('input[name="Title"]');
+                let description = document.querySelector('textarea[name="Description"]');
+
+                if (!tenderType) {
+                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                    errorFields.push('TenderType'); errorTabs.push('details');
+                }
+                if (!tenderNumber.value.trim()) {
+                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                    errorFields.push('TenderNumber'); errorTabs.push('details');
+                }
+                if (!closingDate.value.trim()) {
+                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                    errorFields.push('ClosingDate'); errorTabs.push('details');
+                }
+                if (!closingTime.value.trim()) {
+                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                    errorFields.push('ClosingTime'); errorTabs.push('details');
+                }
+                if (!title.value.trim()) {
+                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                    errorFields.push('Title'); errorTabs.push('details');
+                }
+                if (!description.value.trim()) {
+                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                    errorFields.push('Description'); errorTabs.push('details');
+                }
+                // Check for at least one PDF: either new uploads or existing server PDFs
+                const existingDocs = document.querySelectorAll('.uploaded-file-entry.existing-doc');
+                if (selectedFiles.length === 0 && existingDocs.length === 0) {
+                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
+                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                }
+
+                // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
+                      // Add this validation in your form submission where you check for schedule validation
+        if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+            let scheduledDate = document.getElementById('ScheduledDate').value;
+            let scheduledTime = document.getElementById('ScheduledTime').value;
+
+            if (!scheduledDate.trim()) {
+                errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
+                errorFields.push('ScheduledDate'); errorTabs.push('submit');
+            }
+            if (!scheduledTime.trim()) {
+                errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
+                errorFields.push('ScheduledTime'); errorTabs.push('submit');
             }
 
-            // --- Flatpickr Calendar and Time Input ---
-            window.initCalendar = function() {
-                const currentSaDate = new Date(window.currentSaDate + 'T00:00:00');
-                const calendar = flatpickr("#calendarContainer", {
-                    inline: true,
-                    dateFormat: "Y-m-d",
-                    minDate: currentSaDate,
-                    onChange: function(selectedDates, dateStr, instance) {
-                        const selectedDate = new Date(dateStr + 'T00:00:00');
-                        if (selectedDate < currentSaDate) {
-                            alert('You cannot schedule a tender for a date in the past.');
-                            instance.setDate(currentSaDate);
-                            return;
-                        }
-                        document.getElementById('ScheduledDate').value = dateStr;
-                        const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
-                        document.getElementById('selectedDateDisplay').textContent = formattedDate;
-                    }
-                });
-                const defaultDate = currentSaDate;
-                calendar.setDate(defaultDate);
-                document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
-                const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
-                document.getElementById('selectedDateDisplay').textContent = formattedDate;
-            };
-            window.initTimeInput = function() {
-                const hoursInput = document.getElementById('hours');
-                const minutesInput = document.getElementById('minutes');
-                const amBtn = document.querySelector('.am-btn');
-                const pmBtn = document.querySelector('.pm-btn');
-                const timeHiddenInput = document.getElementById('ScheduledTime');
-                let isAM = amBtn && amBtn.classList.contains('active') ? true : false;
+            // Validate against SA time
+            if (scheduledDate && scheduledTime) {
+                const currentSaDateTime = new Date(window.currentSaDateTime);
+                const selectedDateTime = new Date(scheduledDate + 'T' + scheduledTime);
 
-                function updateHiddenTimeValue() {
-                    let hours = hoursInput.value.padStart(2, '0') || '00';
-                    let minutes = minutesInput.value.padStart(2, '0') || '00';
-                    let seconds = '00';
-                    let hours24 = parseInt(hours, 10);
-                    if (isAM) {
-                        if (hours24 === 12) hours24 = 0;
-                    } else {
-                        if (hours24 !== 12) hours24 += 12;
-                    }
-                    const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
-                    timeHiddenInput.value = formattedTime;
-                    if (hoursInput.value && hoursInput.value.length > 0 &&
-                        minutesInput.value && minutesInput.value.length >= 2) {
-                        validateScheduledDateTime();
-                    }
+                if (selectedDateTime <= currentSaDateTime) {
+                    errors.push({field: 'ScheduledDate', message: 'Cannot schedule for a past date/time (South African time)', tab: 'submit'});
+                    errorFields.push('ScheduledDate'); errorTabs.push('submit');
                 }
-                function validateScheduledDateTime() {
-                    const selectedDate = document.getElementById('ScheduledDate').value;
-                    const selectedTime = document.getElementById('ScheduledTime').value;
-                    if (!selectedDate || !selectedTime) return true;
-                    const hoursValue = hoursInput.value;
-                    const minutesValue = minutesInput.value;
-                    if (!hoursValue || hoursValue.length === 0 ||
-                        !minutesValue || minutesValue.length < 2) {
-                        return true;
-                    }
-                    const currentSaDateTime = new Date(window.currentSaDateTime);
-                    const selectedDateTime = new Date(selectedDate + 'T' + selectedTime);
-                    const currentSaDateOnly = new Date(window.currentSaDate + 'T00:00:00');
-                    const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
-                    if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
-                        const bufferTime = new Date(currentSaDateTime.getTime() + (1 * 60 * 1000));
-                        if (selectedDateTime <= bufferTime) {
-                            hoursInput.value = '';
-                            minutesInput.value = '';
-                            timeHiddenInput.value = '';
-                            alert('You cannot schedule a tender for a time that has already passed. Please select a future time.');
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-                function validateHourInput() {
-                    hoursInput.addEventListener('input', function() {
-                        let val = this.value.replace(/\D/g, '');
-                        if (val.length > 2) val = val.slice(0, 2);
-                        if (val.length === 1 && val === '0') val = '';
-                        if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
-                        if (val === '00') val = '';
-                        this.value = val ? String(parseInt(val, 10)) : '';
-                        updateHiddenTimeValue();
-                    });
-                    hoursInput.addEventListener('blur', function() {
-                        if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
-                            this.value = this.value.substring(1);
-                        }
-                        updateHiddenTimeValue();
-                        if (this.value && minutesInput.value) {
-                            validateScheduledDateTime();
-                        }
-                    });
-                    hoursInput.addEventListener('keydown', function(e) {
-                        let val = parseInt(this.value || '1', 10) || 1;
-                        if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            val = val >= 12 ? 1 : val + 1;
-                            this.value = String(val);
-                            updateHiddenTimeValue();
-                        } else if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            val = val <= 1 ? 12 : val - 1;
-                            this.value = String(val);
-                            updateHiddenTimeValue();
-                        }
-                    });
-                }
-                function validateMinuteInput() {
-                    minutesInput.addEventListener('input', function() {
-                        let val = this.value.replace(/\D/g, '');
-                        if (val.length > 2) val = val.slice(0, 2);
-                        if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
-                        this.value = val;
-                        updateHiddenTimeValue();
-                    });
-                    minutesInput.addEventListener('blur', function() {
-                        if (this.value) {
-                            this.value = this.value.padStart(2, '0');
-                        }
-                        updateHiddenTimeValue();
-                        if (hoursInput.value && this.value) {
-                            validateScheduledDateTime();
-                        }
-                    });
-                    minutesInput.addEventListener('keydown', function(e) {
-                        let val = parseInt(this.value || '0', 10) || 0;
-                        if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            val = val >= 59 ? 0 : val + 1;
-                            this.value = String(val).padStart(2, '0');
-                            updateHiddenTimeValue();
-                        } else if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            val = val <= 0 ? 59 : val - 1;
-                            this.value = String(val).padStart(2, '0');
-                            updateHiddenTimeValue();
-                        }
-                    });
-                }
-                if (amBtn) {
-                    amBtn.addEventListener('click', function() {
-                        if (!isAM) {
-                            isAM = true;
-                            amBtn.classList.add('active');
-                            pmBtn.classList.remove('active');
-                            updateHiddenTimeValue();
-                        }
-                    });
-                }
-                if (pmBtn) {
-                    pmBtn.addEventListener('click', function() {
-                        if (isAM) {
-                            isAM = false;
-                            pmBtn.classList.add('active');
-                            amBtn.classList.remove('active');
-                            updateHiddenTimeValue();
-                        }
-                    });
-                }
-                validateHourInput();
-                validateMinuteInput();
-                updateHiddenTimeValue();
-            };
+            }
         }
-        // -------------------- END HANDLER SETUP FUNCTION ----------------------
 
-        // Initial page load
-        document.addEventListener('DOMContentLoaded', function () {
-            initializeFormHandlers();
+                // Show all errors next to their fields
+                if (errors.length > 0) {
+
+                    // Remove loading state if validation fails
+                   doneBtn.classList.remove('loading');
+
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    doneBtn.disabled = false;
+
+                            errors.forEach(function(err) {
+                        showFieldError(err.field, err.message, err.tab);
+                    });
+                    // Switch to first errored tab and focus field
+                    showTab(errors[0].tab);
+                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                    if (firstField) {
+                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                        firstField.focus();
+                    }
+                    return;
+                }
+            }
+
+            // Check for empty draft
+            if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+                const hasContent = [
+                    document.querySelector('input[name="TenderType"]:checked'),
+                    document.querySelector('input[name="TenderNumber"]')?.value.trim(),
+                    document.querySelector('input[name="ClosingDate"]')?.value.trim(),
+                    document.querySelector('input[name="ClosingTime"]')?.value.trim(),
+                    document.querySelector('input[name="Title"]')?.value.trim(),
+                    document.querySelector('textarea[name="Description"]')?.value.trim(),
+                    selectedFiles.length > 0
+                ].some(value => value);
+
+                if (!hasContent) {
+           // When loading is done (after response/error):
+
+        doneBtn.classList.remove('loading');
+
+        doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+        doneBtn.querySelector('.arrow-icon').style.display = '';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+        doneBtn.disabled = false;
+
+
+                            var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
+                    modal.show();
+                    document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
+                        modal.hide();
+                    }
+                    return;
+                }
+            }
+
+                    // No errors (or draft): submit form
+            var form = document.querySelector('form[asp-action="Create"]');
+            if (!form) form = document.querySelector('form[action*="Create"]');
+            if (!form) {
+                alert("Form not found!");
+                                // Remove loading state if form not found
+
+                doneBtn.classList.remove('loading');
+
+                doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                        doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                doneBtn.disabled = false;
+
+                        return;
+            }
+            var formData = new FormData(form);
+
+            // Remove any existing files from input (so we don't send duplicates)
+            formData.delete('UploadedFiles');
+            selectedFiles.forEach(function(file) {
+                formData.append('UploadedFiles', file, file.name);
+            });
+
+            // --- Inline Validation Re-render Helper ---
+            function handleHtmlValidationResponse(html) {
+                // Replace the entire form in .tab-container with the new form
+                // This ensures all validation spans (incl. server-side) are visible
+                let tempDiv = document.createElement("div");
+                tempDiv.innerHTML = html;
+                let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                if (!newForm) newForm = tempDiv.querySelector("form");
+                if (newForm) {
+                    document.querySelector('.tab-container').innerHTML = "";
+                    document.querySelector('.tab-container').appendChild(newForm);
+
+                    // Always switch back to details tab, since validation errors are most likely there
+                    if (typeof showTab === "function") showTab('details');
+                    // Optionally, autofocus the first field with error
+                    setTimeout(function() {
+                        let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
+                        if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 10);
+                } else {
+                    alert("Validation error: Could not update form.");
+                }
+                doneBtn.classList.remove('loading');
+                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                doneBtn.disabled = false;
+            }
+
+            // --- SCHEDULE LOGIC ---
+            if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                let scheduledDate = document.getElementById('ScheduledDate').value;
+                let scheduledTime = document.getElementById('ScheduledTime').value;
+                formData.append('IsScheduled', 'true');
+                formData.append('ScheduledDate', scheduledDate);
+                formData.append('ScheduledTime', scheduledTime);
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(async response => {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                    // Remove loading state after response
+
+                    doneBtn.classList.remove('loading');
+
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    doneBtn.disabled = false;
+
+
+                                if (data.success) {
+                            document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
+                            var scheduledLink = document.getElementById('scheduledTendersLink');
+                            if (scheduledLink && data.scheduledTendersUrl) {
+                                scheduledLink.href = data.scheduledTendersUrl;
+                            } else if (scheduledLink) {
+                                scheduledLink.href = "/TenderAdmin/ScheduledIndex";
+                            }
+                            var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
+                            modal.show();
+                            document.getElementById('scheduledModalCloseBtn').onclick = function() {
+                                window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
+                            }
+                        } else {
+                            alert(data.error || "Failed to schedule tender.");
+                        }
+                    } else {
+                        const html = await response.text();
+                        handleHtmlValidationResponse(html);
+                    }
+                })
+                .catch(error => {
+                                  // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+                    alert("An error occurred while scheduling.");
+                });
+                return;
+            }
+
+            // --- PUBLISH LOGIC ---
+            if (currentTab === 'submit' && currentSubmitSubTab === 'publish') {
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(async response => {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                                      // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+
+                        if (data.success) {
+                            document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
+                            var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
+                            modal.show();
+                            document.getElementById('modalCloseBtn').onclick = function() {
+                                window.location.href = "/TenderAdmin/Index";
+                            }
+                        } else {
+                            alert(data.error || "Failed to publish tender.");
+                        }
+                    } else {
+                        const html = await response.text();
+                        handleHtmlValidationResponse(html);
+                    }
+                })
+                .catch(error => {
+                                 // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+                    alert("An error occurred while publishing.");
+                });
+                return;
+            }
+
+        // --- DRAFT LOGIC ---
+        if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+            var draftUrl = '/TenderAdmin/SaveDraft';
+            fetch(draftUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
+                                  // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+
+                    if (data.success) {
+                        document.getElementById('draftModalTenderNumber').textContent = data.tenderNumber || '';
+                        var draftLink = document.getElementById('draftResponsesLink');
+                        if (draftLink && data.draftIndexUrl) {
+                            draftLink.href = data.draftIndexUrl;
+                        } else if (draftLink) {
+                            draftLink.href = "/TenderAdmin/DraftIndex";
+                        }
+                        var modal = new bootstrap.Modal(document.getElementById('draftSavedModal'));
+                        modal.show();
+                        document.getElementById('draftModalCloseBtn').onclick = function() {
+                            window.location.href = data.draftIndexUrl || "/TenderAdmin/DraftIndex";
+                        }
+                    } else {
+                        alert(data.message || "Failed to save draft.");
+                    }
+                } else {
+                    // Handle HTML validation response (tender number uniqueness errors)
+                    const html = await response.text();
+                    let tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = html;
+
+                    // Find the form in the returned HTML
+                    let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                    if (!newForm) newForm = tempDiv.querySelector("form");
+
+                    // Replace the .tab-container contents with the new form
+                    if (newForm) {
+                        document.querySelector('.tab-container').innerHTML = "";
+                        document.querySelector('.tab-container').appendChild(newForm);
+
+                        // Reinitialize any event handlers that were lost
+                        initializeFormHandlers();
+                    } else {
+                        document.querySelector('.tab-container').innerHTML = html;
+                    }
+
+                    // Always switch to details tab since tender number error is there
+                    if (typeof showTab === "function") showTab('details');
+
+                    // Focus the tender number field with error
+                    setTimeout(function() {
+                        let tenderNumberField = document.querySelector('input[name="TenderNumber"]');
+                        if (tenderNumberField) {
+                            tenderNumberField.scrollIntoView({ behavior: "smooth", block: "center" });
+                            tenderNumberField.focus();
+                        }
+                    }, 10);
+
+                                 // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+                }
+            })
+        .catch(error => {
+                          // Remove loading state after response
+                    doneBtn.classList.remove('loading');
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+        doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                    doneBtn.disabled = false;
+            console.error('Draft save error:', error);
+            // Optionally: show a non-intrusive toast instead of alert
+        });
+
+            return;
+        }
+        });
         });
     </script>
 }

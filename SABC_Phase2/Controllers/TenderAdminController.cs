@@ -1915,6 +1915,7 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+        // ----------------------------------------------------------------------------------------------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> Users_Management(string search = "", string roleFilter = "all", string statusFilter = "all")
         {
@@ -2010,11 +2011,17 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        public class BulkDeleteUserModel
+        {
+            public int Id { get; set; }
+            public string Type { get; set; } // "Administrator" or "OVRS_User"
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> BulkDeleteUsers([FromBody] List<int> selectedUserIds)
+        public async Task<IActionResult> BulkDeleteUsers([FromBody] List<BulkDeleteUserModel> selectedUsers)
         {
-            if (selectedUserIds == null || !selectedUserIds.Any())
+            if (selectedUsers == null || !selectedUsers.Any())
             {
                 return Json(new { success = false, message = "No users selected." });
             }
@@ -2024,26 +2031,33 @@ namespace SABC_Phase2.Controllers
                 int totalAffected = 0;
 
                 // Handle OVRS Users
-                var ovrsUsers = await _context.Users
-                    .Where(u => selectedUserIds.Contains(u.Id) && u.Role == "OVRS_User")
-                    .ToListAsync();
-                foreach (var user in ovrsUsers)
+                var ovrsIds = selectedUsers.Where(x => x.Type == "OVRS_User").Select(x => x.Id).ToList();
+                if (ovrsIds.Any())
                 {
-                    user.AccountStatus = 0;
+                    var ovrsUsers = await _context.Users
+                        .Where(u => ovrsIds.Contains(u.Id) && u.Role == "OVRS_User")
+                        .ToListAsync();
+                    foreach (var user in ovrsUsers)
+                    {
+                        user.AccountStatus = 0;
+                    }
+                    totalAffected += ovrsUsers.Count;
                 }
-                totalAffected += ovrsUsers.Count;
 
                 // Handle Administrators
-                var admins = await _context.Administrators
-                    .Where(a => selectedUserIds.Contains(a.Id))
-                    .ToListAsync();
-                foreach (var admin in admins)
+                var adminIds = selectedUsers.Where(x => x.Type == "Administrator" || x.Type == "IT_Admin").Select(x => x.Id).ToList();
+                if (adminIds.Any())
                 {
-                    admin.AccountStatus = 0;
+                    var admins = await _context.Administrators
+                        .Where(a => adminIds.Contains(a.Id))
+                        .ToListAsync();
+                    foreach (var admin in admins)
+                    {
+                        admin.AccountStatus = 0;
+                    }
+                    totalAffected += admins.Count;
                 }
-                totalAffected += admins.Count;
 
-                // Save changes if any
                 if (totalAffected > 0)
                     await _context.SaveChangesAsync();
 
@@ -2057,23 +2071,42 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-        // Delete Indivisual OVRS USERS
+
+        public class DeleteUserModel
+        {
+            public int Id { get; set; }
+            public string Type { get; set; } // "Administrator" or "OVRS_User"
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteUser([FromBody] int userId)
+        public async Task<IActionResult> DeleteUser([FromBody] DeleteUserModel model)
         {
-            if (userId == 0)
+            if (model == null || model.Id == 0 || string.IsNullOrEmpty(model.Type))
                 return Json(new { success = false, message = "Invalid user." });
 
             try
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.Role == "OVRS_User");
-                if (user == null)
-                    return Json(new { success = false, message = "User not found." });
+                if (model.Type == "OVRS_User")
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == model.Id && u.Role == "OVRS_User");
+                    if (user == null)
+                        return Json(new { success = false, message = "User not found." });
+                    user.AccountStatus = 0;
+                }
+                else if (model.Type == "Administrator" || model.Type == "IT_Admin")
+                {
+                    var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
+                    if (admin == null)
+                        return Json(new { success = false, message = "User not found." });
+                    admin.AccountStatus = 0;
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Unknown user type." });
+                }
 
-                user.AccountStatus = 0;
                 await _context.SaveChangesAsync();
-
                 return Json(new { success = true, message = "User deleted." });
             }
             catch (Exception ex)
@@ -2082,6 +2115,51 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+        public class ReactivateUserModel
+        {
+            public int Id { get; set; }
+            public string Type { get; set; } // "Administrator" or "OVRS_User"
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReactivateUser([FromBody] ReactivateUserModel model)
+        {
+            if (model == null || model.Id == 0 || string.IsNullOrEmpty(model.Type))
+                return Json(new { success = false, message = "Invalid user." });
+
+            try
+            {
+                if (model.Type == "OVRS_User")
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == model.Id && u.Role == "OVRS_User");
+                    if (user == null)
+                        return Json(new { success = false, message = "User not found." });
+                    user.AccountStatus = 1;
+                }
+                else if (model.Type == "Administrator" || model.Type == "IT_Admin")
+                {
+                    var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
+                    if (admin == null)
+                        return Json(new { success = false, message = "User not found." });
+                    admin.AccountStatus = 1;
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Unknown user type." });
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "User reactivated." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+
+        // ----------------------------------------------------------------------------------------------------------------------------------------------
 
     }
 
