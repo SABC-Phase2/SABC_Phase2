@@ -1170,12 +1170,30 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OVRS_Profiles(OVRS_UserProfileViewModel model)
         {
-            // 1. Validate Model
+            // Clear password-related model state if password change is not being attempted
+            bool changingPassword = !string.IsNullOrWhiteSpace(model.CurrentPassword)
+                || !string.IsNullOrWhiteSpace(model.NewPassword)
+                || !string.IsNullOrWhiteSpace(model.ConfirmPassword);
+
+            if (!changingPassword)
+            {
+                // Clear any password-related validation errors if user isn't trying to change password
+                ModelState.Remove("CurrentPassword");
+                ModelState.Remove("NewPassword");
+                ModelState.Remove("ConfirmPassword");
+
+                // Clear the password fields to ensure they don't hold values
+                model.CurrentPassword = null;
+                model.NewPassword = null;
+                model.ConfirmPassword = null;
+            }
+
+            // 1. Validate Model (after potentially clearing password validation)
             if (!ModelState.IsValid)
             {
                 // Repopulate country codes for redisplay
                 var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-                ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                 return View(model);
             }
 
@@ -1192,88 +1210,91 @@ namespace SABC_Phase2.Controllers
             }
             int legacyUserId = phase2User.LegacyUserId.Value;
 
-            // 3. Find legacy user
+            // 3. Find legacy user in phase 1
             var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == legacyUserId);
             if (legacyUser == null)
             {
                 ModelState.AddModelError("", "Legacy user not found.");
                 var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-                ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                 return View(model);
             }
 
-            // ---------- PASSWORD CHANGE LOGIC ----------
-            // Only process if any password fields are filled
-            if (!string.IsNullOrWhiteSpace(model.CurrentPassword) ||
-                !string.IsNullOrWhiteSpace(model.NewPassword) ||
-                !string.IsNullOrWhiteSpace(model.ConfirmPassword))
+            // ========== PASSWORD CHANGE LOGIC ==========
+            if (changingPassword)
             {
                 // 1. All fields must be filled
-                if (string.IsNullOrWhiteSpace(model.CurrentPassword) ||
-                    string.IsNullOrWhiteSpace(model.NewPassword) ||
-                    string.IsNullOrWhiteSpace(model.ConfirmPassword))
+                if (string.IsNullOrWhiteSpace(model.CurrentPassword)
+                    || string.IsNullOrWhiteSpace(model.NewPassword)
+                    || string.IsNullOrWhiteSpace(model.ConfirmPassword))
                 {
                     ModelState.AddModelError("", "All password fields are required.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                     return View(model);
                 }
 
                 // 2. Check new/confirm match
                 if (model.NewPassword != model.ConfirmPassword)
                 {
-                    ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
+                    ModelState.AddModelError("ConfirmPassword", "New password and confirm new password do not match.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                     return View(model);
                 }
 
                 // 3. Check current password matches db (hashed)
                 string currentPasswordHash = PasswordHelper.EncryptPassword(model.CurrentPassword);
-                if (legacyUser.Password != currentPasswordHash)
+                if (!string.Equals(legacyUser.Password, currentPasswordHash, StringComparison.OrdinalIgnoreCase))
                 {
                     ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
                     var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
-                    ViewBag.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
                     return View(model);
                 }
 
-                // 4. Hash and save new password
-                legacyUser.Password = PasswordHelper.EncryptPassword(model.NewPassword);
+                // 4. Optionally: Prevent reusing the same password
+                string newPasswordHash = PasswordHelper.EncryptPassword(model.NewPassword);
+                if (string.Equals(currentPasswordHash, newPasswordHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError("NewPassword", "New password must be different from the current password.");
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
+
+                // 5. Hash and save new password to legacy DB
+                legacyUser.Password = newPasswordHash;
                 legacyUser.UpdatedDate = DateTime.Now;
             }
 
-            // 4. Update user properties (directly, no OTP logic)
+            // ========== Other profile fields ==========
             legacyUser.FirstName = model.FirstName;
-            
             legacyUser.LastName = model.LastName;
             legacyUser.Email = model.Email;
-
-            // Concatenate country code and phone number for storage (if that's how you store it)
             legacyUser.Phone = $"{model.CountryCode} {model.PhoneNumber}".Trim();
 
             // Update company name if you store it in TblUsers (if not, update in suppliers table below)
-
-            // 5. Update supplier (company) info if applicable
             var supplier = await _legacyContext.TblSuppliers.FirstOrDefaultAsync(s => s.UserId == legacyUserId);
             if (supplier != null)
             {
                 supplier.TradingName = model.CompanyName;
-                supplier.LegalName = model.CompanyName; // If you want to update both, or adjust as needed
-                                                        // supplier.DisplayAsCompany = model.DisplayAsCompany; // Uncomment if this field exists
+                supplier.LegalName = model.CompanyName;
             }
 
-            // 6. Save changes
+            // Save changes to legacy DB
             await _legacyContext.SaveChangesAsync();
 
-            // 7. Success message
             TempData["ProfileUpdateSuccess"] = "Profile updated successfully.";
 
-            // 8. Redirect to GET (Post-Redirect-Get pattern)
+            // Clear password fields before redirect to prevent form resubmission issues
+            model.CurrentPassword = null;
+            model.NewPassword = null;
+            model.ConfirmPassword = null;
+
+            // Post-Redirect-Get pattern
             return RedirectToAction(nameof(OVRS_Profiles));
         }
-
-
         [HttpPost]
         public async Task<IActionResult> SendEmailOtp([FromBody] string newEmail)
         {

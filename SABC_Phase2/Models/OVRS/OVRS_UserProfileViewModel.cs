@@ -47,7 +47,7 @@ namespace SABC_Phase2.Models.OVRS
 
         [DataType(DataType.Password)]
         [Display(Name = "Confirm Password")]
-        [Compare("NewPassword", ErrorMessage = "Passwords do not match.")]
+        [Compare("NewPassword", ErrorMessage = "New password and confirm new password do not match.")]
         public string? ConfirmPassword { get; set; }
 
         [Display(Name = "Last Password Update")]

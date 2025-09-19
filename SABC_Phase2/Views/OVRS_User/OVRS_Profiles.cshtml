@@ -1,5 +1,28 @@
 ﻿@model SABC_Phase2.Models.OVRS.OVRS_UserProfileViewModel
-
+@using Microsoft.AspNetCore.Mvc.ModelBinding
+@functions {
+    private IEnumerable<ModelError> GetErrors(string key)
+    {
+        return ViewData.ModelState.ContainsKey(key)
+            ? ViewData.ModelState[key].Errors
+            : Enumerable.Empty<ModelError>();
+    }
+}
+@functions {
+    public bool ShouldShowPasswordFields()
+    {
+        // Show password fields if any were filled, or if there was a password error
+        return !string.IsNullOrWhiteSpace(Model.CurrentPassword)
+            || !string.IsNullOrWhiteSpace(Model.NewPassword)
+            || !string.IsNullOrWhiteSpace(Model.ConfirmPassword)
+            || (
+                (ViewData.ModelState["CurrentPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState["NewPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState["ConfirmPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState[string.Empty]?.Errors?.Any(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)) ?? false)
+            );
+    }
+}
 @{
     ViewData["BannerText"] = "PROFILE";
     ViewData["Title"] = "Profile";
@@ -93,31 +116,56 @@
 <hr />
 
 <!-- Password -->
+<!-- Password Section - Replace your existing password section with this -->
 <div class="form-group">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="mb-0">Password</label>
         <a href="javascript:void(0)" class="change-link" id="changePasswordBtn">Change</a>
     </div>
-    <div id="passwordFields" class="d-none">
+    
+    <!-- Consolidated error block under label/change-link row -->
+    @if (ViewData.ModelState["CurrentPassword"]?.Errors.Count > 0
+       || ViewData.ModelState["NewPassword"]?.Errors.Count > 0
+       || ViewData.ModelState["ConfirmPassword"]?.Errors.Count > 0
+       || ViewData.ModelState[string.Empty]?.Errors.Any(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)) == true)
+    {
+        <div class="text-danger mb-2" id="passwordErrorBlock">
+            @foreach (var error in GetErrors("CurrentPassword"))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+            @foreach (var error in GetErrors("NewPassword"))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+            @foreach (var error in GetErrors("ConfirmPassword"))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+            @foreach (var error in GetErrors(string.Empty).Where(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
+    }
+    
+    <div id="passwordFields" class="@(ShouldShowPasswordFields() ? "" : "d-none")">
         <div class="mb-2">
-            @* @Html.LabelFor(m => m.CurrentPassword, "Current Password", new { @class = "form-label" }) *@
             @Html.PasswordFor(m => m.CurrentPassword, new { @class = "form-control", placeholder = "Enter current password", autocomplete = "current-password" })
-            @Html.ValidationMessageFor(m => m.CurrentPassword, "", new { @class = "text-danger" })
+            <!-- Individual field validation (will be hidden/shown by JS) -->
+            @* @Html.ValidationMessageFor(m => m.CurrentPassword, "", new { @class = "text-danger field-validation" }) *@
         </div>
         <div class="mb-2">
-            @* @Html.LabelFor(m => m.NewPassword, "New Password", new { @class = "form-label" }) *@
             @Html.PasswordFor(m => m.NewPassword, new { @class = "form-control", placeholder = "Enter new password", autocomplete = "new-password" })
-            @Html.ValidationMessageFor(m => m.NewPassword, "", new { @class = "text-danger" })
+            @* @Html.ValidationMessageFor(m => m.NewPassword, "", new { @class = "text-danger field-validation" }) *@
         </div>
         <div class="mb-2">
-            @* @Html.LabelFor(m => m.ConfirmPassword, "Confirm Password", new { @class = "form-label" }) *@
             @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Confirm new password", autocomplete = "new-password" })
-            @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
+            @* @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger field-validation" }) *@
         </div>
     </div>
 </div>
 <hr />
-
                     <div class="form-group">
                         <label>Delete account</label>
                         <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
@@ -192,7 +240,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     updateFlag();
     select.addEventListener('change', updateFlag);
-   // ---- EMAIL CHANGE FLOW ----
+
+    // ---- EMAIL CHANGE FLOW ----
     var changeEmailBtn = document.getElementById('changeEmailBtn');
     var sendOtpBtn = document.getElementById('sendOtpBtn');
     var verifyOtpBtn = document.getElementById('verifyOtpBtn');
@@ -285,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
     // ---- OTP input behavior ----
     const otpInputs = document.querySelectorAll('.otp-input');
     otpInputs.forEach((input, index) => {
@@ -344,9 +394,74 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-});
 
-// ---- Password toggle remains unchanged ----
+    // ---- PASSWORD VALIDATION HIDING ON INPUT ----
+    const passwordFields = ['CurrentPassword', 'NewPassword', 'ConfirmPassword'];
+    
+    passwordFields.forEach(function(fieldName) {
+        const input = document.querySelector(`[name="${fieldName}"]`);
+        if (input) {
+            input.addEventListener('input', function () {
+                // Hide the centralized error block under the Password label
+                const passwordErrorBlock = document.getElementById('passwordErrorBlock');
+                if (passwordErrorBlock) {
+                    passwordErrorBlock.style.display = 'none';
+                }
+                
+                // Also hide individual field validation messages
+                const fieldValidationSpan = input.parentElement.querySelector('.text-danger');
+                if (fieldValidationSpan) {
+                    fieldValidationSpan.style.display = 'none';
+                }
+                
+                // Hide general model errors that contain "password" (case insensitive)
+                const generalErrors = document.querySelectorAll('.text-danger');
+                generalErrors.forEach(function(errorElement) {
+                    if (errorElement.textContent && 
+                        errorElement.textContent.toLowerCase().includes('password')) {
+                        errorElement.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+
+    // ---- FORM SUBMISSION HANDLING ----
+    // Show all password errors again when form is submitted
+    const form = document.querySelector('form[action*="OVRS_Profiles"]');
+    if (form) {
+        form.addEventListener('submit', function() {
+            // Re-show the password error block if it exists
+            const passwordErrorBlock = document.getElementById('passwordErrorBlock');
+            if (passwordErrorBlock) {
+                passwordErrorBlock.style.display = 'block';
+            }
+            
+            // Re-show individual field validation messages
+            passwordFields.forEach(function(fieldName) {
+                const input = document.querySelector(`[name="${fieldName}"]`);
+                if (input) {
+                    const fieldValidationSpan = input.parentElement.querySelector('.text-danger');
+                    if (fieldValidationSpan && fieldValidationSpan.textContent.trim()) {
+                        fieldValidationSpan.style.display = 'block';
+                    }
+                }
+            });
+            
+            // Re-show general password-related errors
+            const generalErrors = document.querySelectorAll('.text-danger');
+            generalErrors.forEach(function(errorElement) {
+                if (errorElement.textContent && 
+                    errorElement.textContent.toLowerCase().includes('password')) {
+                    errorElement.style.display = 'block';
+                }
+            });
+        });
+    }
+
+}); // End DOMContentLoaded
+
+// ---- Password and email toggle remains unchanged ----
 function toggleEdit(field) {
     if (field === 'email') {
         document.getElementById("emailStatic").classList.toggle("d-none");
@@ -354,17 +469,26 @@ function toggleEdit(field) {
     }
 }
 
-    // Password change toggle
-    var changePasswordBtn = document.getElementById('changePasswordBtn');
-    var passwordFields = document.getElementById('passwordFields');
-    if (changePasswordBtn) {
-        changePasswordBtn.addEventListener('click', function () {
-            passwordFields.classList.toggle('d-none');
-        });
-    }
+// Password change toggle
+var changePasswordBtn = document.getElementById('changePasswordBtn');
+var passwordFields = document.getElementById('passwordFields');
+if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', function () {
+        // Only allow toggling closed if no fields are filled and no errors
+        if (passwordFields.classList.contains('d-none')) {
+            passwordFields.classList.remove('d-none');
+        } else {
+            var hasFilled = !!document.querySelector('[name="CurrentPassword"]').value ||
+                            !!document.querySelector('[name="NewPassword"]').value ||
+                            !!document.querySelector('[name="ConfirmPassword"]').value;
+            var hasError = !!document.querySelector('.form-group .text-danger');
+            if (!hasFilled && !hasError) {
+                passwordFields.classList.add('d-none');
+            }
+        }
+    });
+}
 </script>
-
-
 
 <style>
 
