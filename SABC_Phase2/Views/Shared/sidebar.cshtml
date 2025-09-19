@@ -16,7 +16,7 @@
         <div class="divider-line"></div>
         <div id="sast-clock-box" class="sast-clock-box">
             <span id="sast-clock-label">South African Time</span>
-            <span id="sast-clock">--:--</span>
+            <span id="sast-clock-sidebar">--:--</span>
         </div>
        
     }
@@ -275,18 +275,27 @@
 
 <script>
     // Clock Javascript
-        function updateSASTClock() {
+    function updateSASTClock() {
         fetch('/api/time/sast-now')
             .then(response => response.json())
             .then(data => {
-                // Data.time is "yyyy-MM-dd HH:mm:ss"
-                const timeStr = data.time.split(' ')[1]; // Get just HH:mm:ss
-                document.getElementById("sast-clock").textContent = timeStr;
+                const timePart = data.time.split(' ')[1]; // HH:mm:ss
+
+                const headerClock = document.getElementById("sast-clock-header");
+                const sidebarClock = document.getElementById("sast-clock-sidebar");
+
+                if (headerClock) headerClock.textContent = timePart;
+                if (sidebarClock) sidebarClock.textContent = timePart.substring(0,5); // just HH:mm
             })
             .catch(() => {
-                document.getElementById("sast-clock").textContent = "--:--:--";
+                const headerClock = document.getElementById("sast-clock-header");
+                const sidebarClock = document.getElementById("sast-clock-sidebar");
+
+                if (headerClock) headerClock.textContent = "--:--:--";
+                if (sidebarClock) sidebarClock.textContent = "--:--";
             });
     }
+
 
     // Initial call
     updateSASTClock();
@@ -513,7 +522,23 @@
         margin-bottom: 1px;
     }
 
+    #sast-clock-header {
+        font-size: 1.1em;
+        font-weight: 400;
+        color: #fbbd08;
+        letter-spacing: 1px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
     #sast-clock {
+        font-size: 1.1em;
+        font-weight: 400;
+        color: #fbbd08;
+        letter-spacing: 1px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    #sast-clock-sidebar {
         font-size: 1.1em;
         font-weight: 400;
         color: #fbbd08;

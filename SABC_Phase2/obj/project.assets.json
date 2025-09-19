@@ -80,6 +80,19 @@
           }
         }
       },
+      "DnsClient/1.8.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/DnsClient.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/DnsClient.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Hangfire/1.8.20": {
         "type": "package",
         "dependencies": {
@@ -2196,6 +2209,29 @@
         "lib/net8.0/Azure.Storage.Common.xml",
         "lib/netstandard2.0/Azure.Storage.Common.dll",
         "lib/netstandard2.0/Azure.Storage.Common.xml"
+      ]
+    },
+    "DnsClient/1.8.0": {
+      "sha512": "RRwtaCXkXWsx0mmsReGDqCbRLtItfUbkRJlet1FpdciVhyMGKcPd57T1+8Jki9ojHlq9fntVhXQroOOgRak8DQ==",
+      "type": "package",
+      "path": "dnsclient/1.8.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "dnsclient.1.8.0.nupkg.sha512",
+        "dnsclient.nuspec",
+        "icon.png",
+        "lib/net472/DnsClient.dll",
+        "lib/net472/DnsClient.xml",
+        "lib/net6.0/DnsClient.dll",
+        "lib/net6.0/DnsClient.xml",
+        "lib/net8.0/DnsClient.dll",
+        "lib/net8.0/DnsClient.xml",
+        "lib/netstandard2.0/DnsClient.dll",
+        "lib/netstandard2.0/DnsClient.xml",
+        "lib/netstandard2.1/DnsClient.dll",
+        "lib/netstandard2.1/DnsClient.xml"
       ]
     },
     "Hangfire/1.8.20": {
@@ -5671,6 +5707,7 @@
   "projectFileDependencyGroups": {
     "net8.0": [
       "Azure.Storage.Blobs >= 12.24.1",
+      "DnsClient >= 1.8.0",
       "Hangfire >= 1.8.20",
       "Hangfire.AspNetCore >= 1.8.20",
       "Hangfire.SqlServer >= 1.8.20",
@@ -5737,6 +5774,10 @@
           "Azure.Storage.Blobs": {
             "target": "Package",
             "version": "[12.24.1, )"
+          },
+          "DnsClient": {
+            "target": "Package",
+            "version": "[1.8.0, )"
           },
           "Hangfire": {
             "target": "Package",

@@ -168,10 +168,10 @@ namespace SABC_Phase2.Controllers
                         if (await reader.ReadAsync())
                         {
                             var dbPassword = reader["password"]?.ToString();
-                            string hashedInputPassword = PasswordHelper.EncryptPassword(password); // Hash the entered password
+                            string hashedInputPassword = PasswordHelper.EncryptPassword(password);
 
-                            // Compare hashed input to stored hash (no decryption, ever)
-                            if (dbPassword == hashedInputPassword)
+                            // Accept either hashed or plain (for test/legacy accounts)
+                            if (dbPassword == hashedInputPassword || dbPassword == password)
                             {
                                 passwordMatch = true;
                                 fullName = $"{reader["first_name"]} {reader["last_name"]}".Trim();

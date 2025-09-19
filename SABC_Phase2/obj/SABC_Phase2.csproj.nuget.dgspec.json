@@ -55,6 +55,10 @@
               "target": "Package",
               "version": "[12.24.1, )"
             },
+            "DnsClient": {
+              "target": "Package",
+              "version": "[1.8.0, )"
+            },
             "Hangfire": {
               "target": "Package",
               "version": "[1.8.20, )"

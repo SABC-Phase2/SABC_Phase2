@@ -1,48 +1,8 @@
-﻿@{
+﻿@model SABC_Phase2.Models.OVRS.OVRS_UserProfileViewModel
+
+@{
     ViewData["BannerText"] = "PROFILE";
     ViewData["Title"] = "Profile";
-}
-@using SABC_Phase2.Services
-
-@if (TempData["ProfileUpdateSuccess"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["ProfileUpdateSuccess"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["InfoMessage"] != null)
-{
-    <div class="alert alert-info alert-dismissible fade show" role="alert">
-        @TempData["InfoMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@* NEW: Show OTP expiration message *@
-@if (TempData["OtpExpiredMessage"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-clock me-2"></i>@TempData["OtpExpiredMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["AccountDeletedMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle me-2"></i>@TempData["AccountDeletedMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -55,164 +15,150 @@
     <div class="profile-page container-fluid">
         <div class="row">
             <div class="col-md-12">
-                <form id="profileForm" method="post" enctype="multipart/form-data">
+                @using (Html.BeginForm("OVRS_Profiles", "OVRS_User", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                {
+                    @Html.AntiForgeryToken()
+
                     <!-- First & Last Name side by side -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="FirstName">First Name <span class="text-danger">*</span></label>
-                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="Enter your first name" value="@Model.FirstName" />
+                                @Html.LabelFor(m => m.FirstName, htmlAttributes: new { @class = "control-label" })
+                                @Html.TextBoxFor(m => m.FirstName, new { @class = "form-control", placeholder = "Enter your first name" })
+                                @Html.ValidationMessageFor(m => m.FirstName, "", new { @class = "text-danger" })
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="LastName">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
+                                @Html.LabelFor(m => m.LastName, htmlAttributes: new { @class = "control-label" })
+                                @Html.TextBoxFor(m => m.LastName, new { @class = "form-control", placeholder = "Enter your last name" })
+                                @Html.ValidationMessageFor(m => m.LastName, "", new { @class = "text-danger" })
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="CompanyName">Company name</label>
-                        <input type="text" id="CompanyName" name="CompanyName" class="form-control" placeholder="Enter your company name" value="@Model.CompanyName" readonly />
+                        @Html.LabelFor(m => m.CompanyName)
+                        @Html.TextBoxFor(m => m.CompanyName, new { @class = "form-control", placeholder = "Enter your company name" })
                     </div>
 
-                    <!-- Phone number input group -->
+                    <hr />
+
+                    <!-- Phone number with editable country code and flag -->
                     <div class="form-group mt-3">
-                        <label for="PhoneNumber">Phone number <span class="text-danger">*</span></label>
-                        <div class="input-group align-items-center" id="phoneRow">
-                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 180px;"
-                                    data-original="@Model.CountryCode" disabled>
-                                @foreach (var countryCode in (List<CountryCode>)ViewBag.CountryCodes)
+                        @Html.LabelFor(m => m.PhoneNumber)
+                        <div class="input-group phone-flex-row">
+                            <select id="CountryCode" name="CountryCode" class="form-select country-select">
+                                @foreach (var cc in Model.CountryCodes)
                                 {
-                                    var isSelected = countryCode.DialingCode == Model.CountryCode;
-                                    <option value="@countryCode.DialingCode"
-                                            data-flag="@countryCode.FlagUrl"
-                                            selected="@(isSelected ? "selected" : null)">
-                                        @countryCode.DialingCode (@countryCode.CountryName)
+                                    <option value="@cc.DialingCode"
+                                            data-flag="@cc.FlagUrl"
+                                            selected="@(cc.DialingCode == Model.CountryCode ? "selected" : null)">
+                                        @cc.CountryName (@cc.DialingCode)
                                     </option>
                                 }
                             </select>
-
-                            <input type="text" id="PhoneNumber" name="PhoneNumber"
-                                   class="form-control uniform-input" placeholder="Enter your phone number"
-                                   value="@Model.PhoneNumber" data-original="@Model.PhoneNumber" readonly />
-
-                            <span id="flagWrapper" class="input-group-text bg-white">
-                                <img id="CountryFlag" src="" alt="Country flag" style="width:40px; height:auto;" />
+                            @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control phone-input", placeholder = "Enter your phone number" })
+                            <span class="input-group-text flag-box">
+                                <img id="CountryFlag" src="" alt="Country flag" />
                             </span>
-
-                            <!-- Action links -->
-                            <div class="action-links ms-2">
-                                <a href="javascript:void(0)" id="changePhoneBtn" class="change-link">
-                                    Change
-                                </a>
-                                <a href="javascript:void(0)" id="cancelPhoneBtn" class="cancel-link d-none ms-2">
-                                    Cancel
-                                </a>
-                            </div>
                         </div>
+                        @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "text-danger" })
                     </div>
 
-                    <!-- Email -->
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label for="emailInput">Email address</label>
-                            <div class="d-flex align-items-center" id="emailRow">
-                                <input type="email" id="emailInput" name="Email"
-                                       class="form-control uniform-input me-2"
-                                       value="@Model.Email" placeholder="Enter your email address"
-                                       data-original="@Model.Email" readonly />
+                    <hr />
 
-                                <!-- Action links -->
-                                <div class="action-links ms-2">
-                                    <a href="javascript:void(0)" id="changeEmailBtn" class="change-link">
-                                        Change
-                                    </a>
-                                    <a href="javascript:void(0)" id="cancelEmailBtn" class="cancel-link d-none ms-2">
-                                        Cancel
-                                    </a>
-                                </div>
-                            </div>
+                    @* <!-- Email -->
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div>
+                            @Html.LabelFor(m => m.Email)
+                            <p id="emailStatic" class="form-static">@Model.Email</p>
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control d-none", id = "emailInput", type = "email" })
+                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                         </div>
+                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
+                    </div> *@
+                      <!-- Email (NEW FLOW) -->
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div>
+                            @Html.LabelFor(m => m.Email)
+                            <p id="emailStatic" class="form-static mb-0">@Model.Email</p>
+                        </div>
+                        <a href="javascript:void(0)" class="change-link" id="changeEmailBtn">Change</a>
                     </div>
+                    @Html.HiddenFor(m => m.Email) <!-- keep model binding for current email -->
+
 
                     <hr />
 
                     <!-- Password -->
-                    <div class="form-group">
-                        <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-group d-flex justify-content-between align-items-center">
+                        <div>
                             <label>Password</label>
-                            <div>
-                                <a href="javascript:void(0)" id="changePasswordBtn" class="change-link" onclick="showPasswordInputs()">Change</a>
-                                <a href="javascript:void(0)" id="cancelPasswordBtn" class="cancel-link d-none ms-3" onclick="hidePasswordInputs()">Cancel</a>
-                            </div>
+                            <p id="passwordStatic" class="form-static">
+                                @(Model.PasswordLastUpdated.HasValue ? $"Last updated on {Model.PasswordLastUpdated.Value:MMM dd, yyyy}" : "Never updated")
+                            </p>
+                            @Html.PasswordFor(m => m.NewPassword, new { @class = "form-control d-none", id = "passwordInput", placeholder = "Enter new password" })
+                            @Html.ValidationMessageFor(m => m.NewPassword, "", new { @class = "text-danger" })
+                            @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control d-none", id = "confirmPasswordInput", placeholder = "Confirm new password" })
+                            @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
                         </div>
-
-                        <!-- Static text -->
-                        <p id="passwordStatic" class="form-static" style="visibility: hidden;">g</p>
-
-                        <!-- Password inputs (hidden by default) -->
-                        <div id="passwordInputs" class="d-none">
-                            <input type="password" id="currentPassword" name="CurrentPassword"
-                                   class="form-control mb-2" placeholder="Enter current password" />
-                            <input type="password" id="newPassword" name="NewPassword"
-                                   class="form-control mb-2" placeholder="Enter new password" />
-                            <input type="password" id="confirmPassword" name="ConfirmPassword"
-                                   class="form-control mb-2" placeholder="Confirm new password" />
-                        </div>
+                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('password')">Change</a>
                     </div>
+
                     <hr />
 
-
-                    <!-- Delete account -->
-                    <div class="delete-account-box mt-4">
-                        <h6 class="fw-bold mb-2">Delete account</h6>
-                        <p class="text-muted small mb-3">
-                            Please note that all of the information will be permanently deleted.
-                            This action cannot be undone.
-                        </p>
-                        <button type="button" id="deleteAccountBtn" class="btn btn-danger btn-sm">Delete account</button>
+                    <div class="form-group">
+                        <label>Delete account</label>
+                        <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
+                        <button type="button" class="btn btn-danger">Delete account</button>
                     </div>
-
 
                     <div class="form-group text-end mt-4">
                         <button type="submit" class="btn btn-success">Save</button>
                     </div>
-                </form>
+                }
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+<!-- ...other code unchanged... -->
+<!-- Email Change Modal -->
+<div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-dark-green text-white">
-                <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="deleteAccountForm" method="post" action="@Url.Action("DeleteAccount", "OVRS_User")">
-                @Html.AntiForgeryToken()
+            <form id="changeEmailForm" autocomplete="off" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email Address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to permanently delete your account? This action cannot be undone.</p>
-
                     <div class="mb-3">
-                        <label for="confirmEmail" class="form-label">Your Email Address</label>
-                        <input type="email" class="form-control" id="confirmEmail" name="ConfirmEmail"
-                               placeholder="Enter your email address" required />
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="newEmailInput" name="newEmail" placeholder="Enter new email address" required />
+                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Send OTP</button>
+                        </div>
+                        <div class="invalid-feedback" id="newEmailError" style="display:block"></div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="confirmPhrase" class="form-label">
-                            To verify, type <strong>"Delete my account"</strong> exactly as it appears
-                        </label>
-                        <input type="text" class="form-control" id="confirmPhrase" name="ConfirmPhrase" required />
+                    <div id="otpSection" class="mb-3 d-none">
+                        <label>Enter OTP Code</label>
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" id="verifyOtpBtn">Verify OTP</button>
+                        <div class="invalid-feedback" id="otpError" style="display:block"></div>
+                        <div class="valid-feedback" id="otpSuccess" style="display:block"></div>
                     </div>
                 </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-dark-green" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" id="confirmDeleteBtn" class="btn btn-dark-red" disabled>Yes, Delete</button>
+                <div class="modal-footer">
+                    @* <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button> *@
                 </div>
             </form>
         </div>
@@ -220,583 +166,265 @@
 </div>
 
 
-
-
-<!-- Password Validation Modal -->
-<div class="modal fade" id="passwordValidationModal" tabindex="-1" aria-labelledby="passwordValidationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="passwordValidationModalLabel">Password Validation Error</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="passwordValidationModalMessage">
-                <!-- JS will fill error message here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- OTP Verification Modal -->
-<div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="otpModalLabel">Verify Contact Information</h5>
-
-            </div>
-            <div class="modal-body">
-                <p id="otpMessage">We've sent a 6-digit verification code to <strong id="otpContactInfo"></strong></p>
-                <p class="text-muted small">The code will expire in 5 minutes.</p>
-
-                <div class="form-group text-center">
-                    <label class="mb-2">Enter verification code:</label>
-                    <div id="otpInputs" class="d-flex justify-content-center gap-2">
-                        <input type="text" maxlength="1" class="otp-input" />
-                        <input type="text" maxlength="1" class="otp-input" />
-                        <input type="text" maxlength="1" class="otp-input" />
-                        <input type="text" maxlength="1" class="otp-input" />
-                        <input type="text" maxlength="1" class="otp-input" />
-                        <input type="text" maxlength="1" class="otp-input" />
-                    </div>
-                    <p class="text-muted small mt-2" id="otpTimer">05:00</p>
-                </div>
-
-
-                <div id="otpError" class="alert alert-danger mt-3 d-none"></div>
-                <div id="otpSuccess" class="alert alert-success mt-3 d-none"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelOtpBtn">Cancel</button>
-                <button type="button" class="btn btn-primary" id="verifyOtpBtn">Verify Code</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
+    // ---- Display flag next to selected country code ----
+    var select = document.getElementById('CountryCode');
+    var img = document.getElementById('CountryFlag');
+    function updateFlag() {
+        var opt = select.options[select.selectedIndex];
+        var url = opt.getAttribute('data-flag');
+        if (url) {
+            img.src = url;
+            img.style.display = '';
+        } else {
+            img.style.display = 'none';
+        }
+    }
+    updateFlag();
+    select.addEventListener('change', updateFlag);
+   // ---- EMAIL CHANGE FLOW ----
+    var changeEmailBtn = document.getElementById('changeEmailBtn');
+    var sendOtpBtn = document.getElementById('sendOtpBtn');
+    var verifyOtpBtn = document.getElementById('verifyOtpBtn');
+    var otpSection = document.getElementById('otpSection');
+    var newEmailInput = document.getElementById('newEmailInput');
 
-
-            // --- Delete Account Validation ---
-    const confirmEmail = document.getElementById("confirmEmail");
-    const confirmPhrase = document.getElementById("confirmPhrase");
-    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-
-    // The actual email from DB (passed into Razor from @Model.Email)
-    const userEmail = "@Model.Email";
-
-    function validateDeleteFields() {
-        const emailValid = confirmEmail.value.trim().toLowerCase() === userEmail.toLowerCase();
-        const phraseValid = confirmPhrase.value.trim() === "Delete my account";
-
-        confirmDeleteBtn.disabled = !(emailValid && phraseValid);
+    // Add spinner inside buttons
+    if (sendOtpBtn) {
+        sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Send OTP</span>';
+    }
+    if (verifyOtpBtn) {
+        verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify OTP</span>';
     }
 
-    // Hook input events
-    confirmEmail.addEventListener("input", validateDeleteFields);
-    confirmPhrase.addEventListener("input", validateDeleteFields);
+    var sendOtpSpinner = document.getElementById('sendOtpSpinner');
+    var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
+    var newEmailError = document.getElementById('newEmailError');
 
-    // Optional: clear fields when modal opens
-    document.getElementById("deleteAccountModal").addEventListener("shown.bs.modal", function () {
-        confirmEmail.value = "";
-        confirmPhrase.value = "";
-        confirmDeleteBtn.disabled = true;
-        confirmEmail.focus();
-    });
+    if (changeEmailBtn) {
+        changeEmailBtn.addEventListener('click', function () {
+            // Clear inputs/errors when opening modal
+            newEmailInput.value = '';
+            newEmailInput.classList.remove('is-invalid', 'is-valid');
+            document.querySelectorAll('.otp-input').forEach(i => i.value = '');
+            document.getElementById('otpError').textContent = '';
+            document.getElementById('otpSuccess').textContent = '';
+            newEmailError.textContent = '';
+            otpSection.classList.add('d-none');
 
+            newEmailInput.removeAttribute('readonly');
+            sendOtpBtn.disabled = false;
 
-            // --- Delete Account Modal ---
-    var deleteAccountBtn = document.getElementById('deleteAccountBtn');
-    var deleteAccountModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
-
-    deleteAccountBtn.addEventListener('click', function () {
-        deleteAccountModal.show();
-    });
-
-
-        // --- Password Validation Modal Logic ---
-        var form = document.getElementById('profileForm');
-        var passwordModal = new bootstrap.Modal(document.getElementById('passwordValidationModal'));
-        var otpModal = new bootstrap.Modal(document.getElementById('otpModal'));
-
-        // Save original values for email and phone
-        var emailInput = document.getElementById('emailInput');
-        var phoneInput = document.getElementById('PhoneNumber');
-        var countryInput = document.getElementById('CountryCode');
-        var originalEmail = emailInput.getAttribute('data-original');
-        var originalPhone = phoneInput.getAttribute('data-original');
-        var originalCountry = countryInput.getAttribute('data-original');
-
-        // Helper to check if OTP modal is open
-        let otpInProgress = false;
-
-        // Show OTP modal if needed
-        @if (ViewBag.ShowOtpModal == true)
-        {
-                                <text>
-                                var otpType = '@ViewBag.OtpType';
-                                var otpSentTo = '@ViewBag.OtpSentTo';
-
-                                // Update modal content based on OTP type
-                                document.getElementById('otpContactInfo').textContent = otpSentTo;
-
-                                var modalTitle = document.getElementById('otpModalLabel');
-                                var otpMessage = document.getElementById('otpMessage');
-
-                                if (otpType === 'phone') {
-                                    modalTitle.textContent = 'Verify New Phone Number';
-                                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new phone number <strong>' + otpSentTo + '</strong>';
-                                } else if (otpType === 'email') {
-                                    modalTitle.textContent = 'Verify New Email Address';
-                                    otpMessage.innerHTML = 'We\'ve sent a 6-digit verification code to your new email address <strong>' + otpSentTo + '</strong>';
-                                }
-
-                                otpModal.show();
-                                </text>
-        }
-
-        // ---- OTP Input Box Handling ----
-        const otpInputs = document.querySelectorAll('.otp-input');
-        otpInputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                input.value = input.value.replace(/[^0-9]/g, ''); // numbers only
-                if (input.value && index < otpInputs.length - 1) {
-                    otpInputs[index + 1].focus(); // move forward
-                }
-                // Auto-submit when last box is filled
-                if (index === otpInputs.length - 1 && input.value) {
-                    document.getElementById('verifyOtpBtn').click();
-                }
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && index > 0) {
-                    otpInputs[index - 1].focus(); // move backward
-                }
-            });
+            var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+            modal.show();
         });
+    }
 
-        function getOtpCode() {
-            return Array.from(otpInputs).map(i => i.value).join('');
-        }
+    // Send OTP with visual feedback
+    if (sendOtpBtn) {
+        sendOtpBtn.addEventListener('click', async function () {
+            var newEmail = newEmailInput.value.trim();
+            newEmailInput.classList.remove('is-invalid', 'is-valid');
+            newEmailError.textContent = "";
 
-        // ---- Cancel OTP Functionality (Reusable) ----
-        function cancelOtpProcess(isTimerExpired = false) {
-            // Don't show loading state if called from timer
-            var cancelBtn = document.getElementById('cancelOtpBtn');
-            if (!isTimerExpired && cancelBtn) {
-                cancelBtn.disabled = true;
-                cancelBtn.textContent = 'Cancelling...';
+            if (!newEmail) {
+                newEmailError.textContent = "Please enter email.";
+                newEmailInput.classList.add('is-invalid');
+                return;
             }
 
-            fetch('@Url.Action("CancelOtp", "OVRS_User")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
+            sendOtpSpinner.classList.remove('d-none');
+            sendOtpBtn.disabled = true;
+
+            try {
+                let res = await fetch('/OVRS_User/SendEmailOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newEmail)
+                });
+                let data = await res.json();
                 if (data.success) {
-                    // Restore original values to the form
-                    if (data.originalData) {
-                        if (data.originalData.otpType === 'email' && data.originalData.originalEmail) {
-                            // Restore original email
-                            emailInput.value = data.originalData.originalEmail;
-                            emailInput.setAttribute('data-original', data.originalData.originalEmail);
-                        } else if (data.originalData.otpType === 'phone') {
-                            // Restore original phone and country code
-                            if (data.originalData.originalPhone) {
-                                // Parse the original phone to separate country code and number
-                                var phoneMatch = data.originalData.originalPhone.match(/^(\+\d{1,4})[\s\-]?(.+)$/);
-                                if (phoneMatch) {
-                                    var originalCountryCode = phoneMatch[1];
-                                    var originalPhoneNumber = phoneMatch[2].trim();
-
-                                    // Update country code dropdown
-                                    countryInput.value = originalCountryCode;
-                                    countryInput.setAttribute('data-original', originalCountryCode);
-
-                                    // Update phone number input
-                                    phoneInput.value = originalPhoneNumber;
-                                    phoneInput.setAttribute('data-original', originalPhoneNumber);
-
-                                    // Update flag
-                                    updateFlag();
-                                } else {
-                                    // If parsing fails, use the full original phone
-                                    phoneInput.value = data.originalData.originalPhone || '';
-                                    phoneInput.setAttribute('data-original', data.originalData.originalPhone || '');
-                                }
-                            }
-                        }
-                    }
-
-                    // Hide the modal
-                    otpModal.hide();
-
-                    // Reset edit mode
-                    resetEditMode();
-
-                    // Show appropriate message based on how it was triggered
-                    var message = isTimerExpired
-                        ? 'Verification code has expired. Please try again if you want to make changes.'
-                        : data.message;
-
-                    var alertHtml = '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
-                        message +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-                        '</div>';
-
-                    // Insert the alert at the top of the page
-                    var container = document.querySelector('.tab-container');
-                    container.insertAdjacentHTML('afterbegin', alertHtml);
+                    otpSection.classList.remove('d-none');
+                    newEmailError.textContent = '';
+                    newEmailInput.classList.remove('is-invalid');
+                    newEmailInput.classList.add('is-valid');
+                    document.querySelector('.otp-input').focus();
+                    newEmailInput.setAttribute('readonly', true);
+                    sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
                 } else {
-                    console.error('Failed to cancel OTP:', data.message);
-                    if (!isTimerExpired) {
-                        alert('Failed to cancel verification. Please try again.');
-                    }
+                    newEmailError.textContent = data.message;
+                    newEmailInput.value = '';
+                    newEmailInput.classList.remove('is-valid');
+                    newEmailInput.classList.add('is-invalid');
+                    newEmailInput.focus();
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
+                    otpSection.classList.add('d-none');
                 }
-            })
-            .catch(error => {
-                console.error('Error cancelling OTP:', error);
-                if (!isTimerExpired) {
-                    alert('An error occurred while cancelling. Please try again.');
-                }
-            })
-            .finally(() => {
-                if (!isTimerExpired && cancelBtn) {
-                    cancelBtn.disabled = false;
-                    cancelBtn.textContent = 'Cancel';
-                }
-            });
-        }
-
-        // OTP Verification
-        document.getElementById('verifyOtpBtn').addEventListener('click', function () {
-            var otpCode = getOtpCode();
-            var errorDiv = document.getElementById('otpError');
-            var successDiv = document.getElementById('otpSuccess');
-
-            errorDiv.classList.add('d-none');
-            successDiv.classList.add('d-none');
-
-            if (!otpCode || otpCode.length !== 6) {
-                errorDiv.textContent = 'Please enter a valid 6-digit code.';
-                errorDiv.classList.remove('d-none');
-                return;
-            }
-
-            var verifyBtn = this;
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying...';
-
-            fetch('@Url.Action("VerifyOtp", "OVRS_User")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: 'otpCode=' + encodeURIComponent(otpCode)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    successDiv.textContent = data.message;
-                    successDiv.classList.remove('d-none');
-                    setTimeout(function () {
-                        otpModal.hide();
-                        location.reload();
-                    }, 2000);
-                } else {
-                    errorDiv.textContent = data.message;
-                    errorDiv.classList.remove('d-none');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                errorDiv.textContent = 'An error occurred. Please try again.';
-                errorDiv.classList.remove('d-none');
-            })
-            .finally(() => {
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = 'Verify Code';
-            });
-        });
-
-        // Cancel button click handler
-        document.getElementById('cancelOtpBtn').addEventListener('click', function () {
-            cancelOtpProcess(false); // Explicitly called by user
-        });
-
-        // ---- OTP Countdown Timer ----
-        let otpTimerInterval;
-        function startOtpTimer() {
-            let remaining = 300; // 5 min
-            const timerDisplay = document.getElementById('otpTimer');
-            function updateTimer() {
-                const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
-                const seconds = String(remaining % 60).padStart(2, '0');
-                timerDisplay.textContent = `${minutes}:${seconds}`;
-                if (remaining <= 0) {
-                    clearInterval(otpTimerInterval);
-                    // Auto-cancel OTP when timer expires with same functionality as cancel button
-                    cancelOtpProcess(true); // Timer expired
-                } else {
-                    remaining--;
-                }
-            }
-            updateTimer();
-            otpTimerInterval = setInterval(updateTimer, 1000);
-        }
-
-        function resetOtpInputs() {
-            otpInputs.forEach(input => input.value = '');
-            if (otpInputs.length) otpInputs[0].focus();
-        }
-
-        document.getElementById('otpModal').addEventListener('shown.bs.modal', () => {
-            resetOtpInputs();
-            clearInterval(otpTimerInterval);
-            startOtpTimer();
-        });
-
-        document.getElementById('otpModal').addEventListener('hidden.bs.modal', () => {
-            clearInterval(otpTimerInterval);
-            resetOtpInputs();
-            document.getElementById('otpError').classList.add('d-none');
-            document.getElementById('otpSuccess').classList.add('d-none');
-        });
-
-        // ---- Form submit password validation ----
-        form.addEventListener('submit', function (e) {
-            if (otpInProgress) {
-                otpInProgress = false;
-                return;
-            }
-            var current = document.getElementById('currentPassword').value.trim();
-            var newPass = document.getElementById('newPassword').value.trim();
-            var confirm = document.getElementById('confirmPassword').value.trim();
-            var errors = [];
-            if (current || newPass || confirm) {
-                if (!current || !newPass || !confirm) {
-                    errors.push("All password fields are required.");
-                } else if (newPass !== confirm) {
-                    errors.push("Passwords do not match.");
-                }
-            }
-            if (errors.length > 0) {
-                e.preventDefault();
-                var message = errors.map(x => `<div>${x}</div>`).join('');
-                document.getElementById('passwordValidationModalMessage').innerHTML = message;
-                passwordModal.show();
-                return;
+            } catch (err) {
+                newEmailError.textContent = "Error sending OTP. Please try again.";
+                newEmailInput.value = '';
+                newEmailInput.classList.remove('is-valid');
+                newEmailInput.classList.add('is-invalid');
+                newEmailInput.focus();
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
+                otpSection.classList.add('d-none');
+            } finally {
+                sendOtpSpinner.classList.add('d-none');
             }
         });
-
-        // ---- Existing phone/email edit logic ----
-        let editMode = "";
-
-        window.phoneChanged = function () {
-            const origPhone = phoneInput.getAttribute('data-original');
-            const origCode = countryInput.getAttribute('data-original');
-            return (origPhone !== phoneInput.value) || (origCode !== countryInput.value);
-        };
-
-        window.emailChanged = function () {
-            return emailInput.value !== emailInput.getAttribute('data-original');
-        };
-
-        window.setPhoneEditable = function (editable) {
-            phoneInput.readOnly = !editable;
-            countryInput.disabled = !editable;
-            document.getElementById('changePhoneBtn').classList.toggle('d-none', editable);
-            document.getElementById('cancelPhoneBtn').classList.toggle('d-none', !editable);
-            const flagWrapper = document.getElementById('flagWrapper');
-            if (!editable) {
-                flagWrapper.classList.add("disabled-bg");
-                flagWrapper.classList.remove("bg-white");
-            } else {
-                flagWrapper.classList.remove("disabled-bg");
-                flagWrapper.classList.add("bg-white");
+    }
+    // ---- OTP input behavior ----
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+            if (input.value.length === 1 && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
             }
-        };
-
-        window.setEmailEditable = function (editable) {
-            const changeBtn = document.getElementById('changeEmailBtn');
-            const cancelBtn = document.getElementById('cancelEmailBtn');
-            if (editable) {
-                emailInput.readOnly = false;
-                emailInput.value = "";
-                emailInput.placeholder = "Enter new email address";
-                changeBtn.classList.add("d-none");
-                cancelBtn.classList.remove("d-none");
-                emailInput.focus();
-            } else {
-                emailInput.readOnly = true;
-                emailInput.value = emailInput.getAttribute('data-original');
-                emailInput.placeholder = "Enter your email address";
-                changeBtn.classList.remove("d-none");
-                cancelBtn.classList.add("d-none");
-            }
-        };
-
-        window.togglePhoneEdit = function () {
-            if (editMode === "email" && emailChanged()) {
-                alert("You have made changes to your email address. Please save or reset those changes before editing your phone number.");
-                setPhoneEditable(false);
-                return;
-            }
-            if (editMode !== "phone") {
-                editMode = "phone";
-                setPhoneEditable(true);
-                setEmailEditable(false);
-            }
-        };
-
-        window.cancelPhoneEdit = function () {
-            editMode = "";
-            setPhoneEditable(false);
-            setEmailEditable(false);
-            phoneInput.value = phoneInput.getAttribute('data-original');
-            countryInput.value = countryInput.getAttribute('data-original');
-        };
-
-        window.toggleEmailEdit = function () {
-            if (editMode === "phone" && phoneChanged()) {
-                alert("You have made changes to your phone number. Please save or reset those changes before editing your email address.");
-                setEmailEditable(false);
-                return;
-            }
-            if (editMode !== "email") {
-                editMode = "email";
-                setEmailEditable(true);
-                setPhoneEditable(false);
-            }
-        };
-
-        window.cancelEmailEdit = function () {
-            editMode = "";
-            setEmailEditable(false);
-            setPhoneEditable(false);
-            emailInput.value = emailInput.getAttribute('data-original');
-        };
-
-        window.handlePhoneEdit = function () {
-            if (editMode === "email") {
-                setPhoneEditable(false);
-                return;
-            }
-            setPhoneEditable(true);
-            setEmailEditable(false);
-            editMode = "phone";
-        };
-
-        window.resetEditMode = function () {
-            editMode = "";
-            setPhoneEditable(false);
-            setEmailEditable(false);
-            phoneInput.setAttribute('data-original', phoneInput.value);
-            countryInput.setAttribute('data-original', countryInput.value);
-            emailInput.setAttribute('data-original', emailInput.value);
-            hidePasswordInputs();
-        };
-
-        window.updateFlag = function () {
-            var select = document.getElementById('CountryCode');
-            var selectedOption = select.options[select.selectedIndex];
-            var flagUrl = selectedOption.getAttribute('data-flag');
-            var flagImg = document.getElementById('CountryFlag');
-            if (flagUrl) {
-                flagImg.src = flagUrl;
-                flagImg.style.display = 'inline-block';
-            } else {
-                flagImg.style.display = 'none';
-            }
-        };
-
-        window.showPasswordInputs = function () {
-            document.getElementById("passwordStatic").classList.add("d-none");
-            document.getElementById("passwordInputs").classList.remove("d-none");
-            document.getElementById("changePasswordBtn").classList.add("d-none");
-            document.getElementById("cancelPasswordBtn").classList.remove("d-none");
-            document.getElementById("currentPassword").value = "";
-            document.getElementById("newPassword").value = "";
-            document.getElementById("confirmPassword").value = "";
-        };
-
-        window.hidePasswordInputs = function () {
-            document.getElementById("passwordStatic").classList.remove("d-none");
-            document.getElementById("passwordInputs").classList.add("d-none");
-            document.getElementById("changePasswordBtn").classList.remove("d-none");
-            document.getElementById("cancelPasswordBtn").classList.add("d-none");
-            document.getElementById("currentPassword").value = "";
-            document.getElementById("newPassword").value = "";
-            document.getElementById("confirmPassword").value = "";
-        };
-
-        // Initial setup
-        updateFlag();
-        setPhoneEditable(false);
-        setEmailEditable(false);
-
-        document.getElementById('CountryCode').addEventListener('change', function () {
-            updateFlag();
-            if (editMode === "phone") handlePhoneEdit();
         });
-        document.getElementById('PhoneNumber').addEventListener('input', function () {
-            if (editMode === "phone") handlePhoneEdit();
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
         });
-        document.getElementById('changePhoneBtn').addEventListener('click', togglePhoneEdit);
-        document.getElementById('cancelPhoneBtn').addEventListener('click', cancelPhoneEdit);
-
-        document.getElementById('changeEmailBtn').addEventListener('click', toggleEmailEdit);
-        document.getElementById('cancelEmailBtn').addEventListener('click', cancelEmailEdit);
     });
+
+    // Verify OTP
+    if (verifyOtpBtn) {
+        verifyOtpBtn.addEventListener('click', async function () {
+            let otpCode = Array.from(otpInputs)
+                                .map(i => i.value)
+                                .join('');
+
+            if (!otpCode || otpCode.length < 6) {
+                document.getElementById('otpError').textContent = "Please enter full 6-digit OTP.";
+                return;
+            }
+
+            // Show spinner and disable button
+            verifyOtpSpinner.classList.remove('d-none');
+            verifyOtpBtn.disabled = true;
+
+            try {
+                let res = await fetch('/OVRS_User/VerifyEmailOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp: otpCode })
+                });
+                let data = await res.json();
+                if (data.success) {
+                    document.getElementById('otpError').textContent = '';
+                    document.getElementById('otpSuccess').textContent = data.message;
+                    document.getElementById('emailStatic').textContent = newEmailInput.value;
+
+                    setTimeout(() => {
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
+                        modal.hide();
+                    }, 1500);
+                } else {
+                    document.getElementById('otpError').textContent = data.message;
+                    verifyOtpBtn.disabled = false; // re-enable if failed
+                }
+            } catch (err) {
+                document.getElementById('otpError').textContent = "Error verifying OTP.";
+                verifyOtpBtn.disabled = false; // re-enable if failed
+            } finally {
+                verifyOtpSpinner.classList.add('d-none'); // hide spinner
+            }
+        });
+    }
+});
+
+// ---- Password toggle remains unchanged ----
+function toggleEdit(field) {
+    if (field === 'email') {
+        document.getElementById("emailStatic").classList.toggle("d-none");
+        document.getElementById("emailInput").classList.toggle("d-none");
+    }
+    if (field === 'password') {
+        document.getElementById("passwordStatic").classList.toggle("d-none");
+        document.getElementById("passwordInput").classList.toggle("d-none");
+        document.getElementById("confirmPasswordInput").classList.toggle("d-none");
+    }
+}
 </script>
 
+
+
 <style>
-    .bg-dark-green {
-    background-color: #004d00 !important;
+
+.spinner-border {
+    width: 1rem;
+    height: 1rem;
+    vertical-align: middle;
+    margin-right: 6px;
 }
 
-    .btn-dark-green {
-        background-color: #004d00 !important; /* dark green */
-        color: #fff !important;
-        border: none;
-        min-width: 120px; /* ensures consistent button size */
+
+    #changeEmailModal .input-group .form-control,
+#changeEmailModal .input-group .btn {
+    height: 44px;
+    box-sizing: border-box;
+}
+
+    /* Phone input row with country code and flag */
+    .phone-flex-row {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
     }
 
-        .btn-dark-green:hover {
-            background-color: #006600 !important; /* lighter green on hover */
+    .country-select {
+        min-width: 150px;
+        max-width: 180px;
+        border-radius: 8px 0 0 8px !important;
+        margin-right: -1px;
+        height: 44px;
+        box-sizing: border-box;
+        /* Match Bootstrap .form-control height if customized elsewhere */
+    }
+
+    .phone-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        border-radius: 0 !important;
+        margin-right: -1px;
+        height: 44px;
+        box-sizing: border-box;
+    }
+
+    .flag-box {
+        width: 60px;
+        min-width: 60px;
+        max-width: 80px;
+        height: 44px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0 8px 8px 0 !important;
+        background: #fff;
+        border-left: 1px solid #ced4da;
+        padding: 0;
+    }
+
+        .flag-box img#CountryFlag {
+            width: 32px;
+            height: 20px;
+            object-fit: cover;
+            border-radius: 3px;
+            display: block;
+            margin: auto;
+            box-shadow: 0 0 2px #9992;
         }
-
-    .btn-dark-red {
-        background-color: #8B0000 !important; /* dark red */
-        color: #fff !important;
-        border: none;
-        min-width: 120px; /* same width as green */
+    /* Remove extra spacing from .input-group-text if using Bootstrap */
+    .input-group .flag-box {
+        padding: 0 !important;
     }
 
-        .btn-dark-red:hover {
-            background-color: #a30000 !important; /* lighter dark red */
-        }
-
-
-
-    .disabled-flag {
-        filter: grayscale(100%) opacity(0.6);
-    }
-
-    .input-group-text.disabled-bg {
-        background-color: #e9ecef; /* same as readonly inputs */
-        opacity: 1; /* keep the flag visible */
-    }
-
+    /* General form styling */
     .profile-page {
         padding: 20px;
     }
@@ -810,9 +438,11 @@
         margin-bottom: 14px;
     }
 
-    .form-control {
+    .form-control, .form-select {
         border-radius: 8px;
         padding: 10px 12px;
+        height: 44px;
+        box-sizing: border-box;
     }
 
     .form-static {
@@ -840,37 +470,6 @@
         border-top: 3px solid #1BA548;
     }
 
-    /* Force consistent height across phone input row */
-    #phoneRow .form-select,
-    #phoneRow .form-control,
-    #phoneRow .input-group-text {
-        height: 100%;
-        min-height: 44px; /* matches Bootstrap input default */
-        display: flex;
-        align-items: center;
-    }
-
-        /* Keep flag nicely aligned */
-        #phoneRow .input-group-text img {
-            max-height: 24px;
-            width: auto;
-        }
-
-    /* Uniform styling across inputs */
-    .uniform-input {
-        flex: 1;
-        min-width: 250px;
-        height: 44px;
-    }
-
-    /* Action links (Change & Cancel) */
-    .action-links {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* Change link */
     .change-link {
         color: #1BA548;
         font-weight: 700;
@@ -878,20 +477,7 @@
     }
 
         .change-link:hover {
-            color: #14863a; /* darker green */
-            text-decoration: none; /* remove underline */
-        }
-
-    /* Cancel link */
-    .cancel-link {
-        color: #e63946;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-        .cancel-link:hover {
-            color: #b71c1c;
-            text-decoration: none;
+            text-decoration: underline;
         }
 
     .tab-container {
@@ -928,77 +514,5 @@
             color: #1a7f37;
             font-weight: 600;
         }
-
-    /* Space out Change/Cancel links nicely */
-    #changePasswordBtn,
-    #cancelPasswordBtn {
-        font-size: 0.95rem;
-    }
-
-    #cancelPasswordBtn {
-        color: #e63946;
-        font-weight: 600;
-    }
-
-        #cancelPasswordBtn:hover {
-            color: #b71c1c;
-        }
-
-    /* Delete account box */
-    .delete-account-box {
-        border: 1.5px solid #e63946;
-        border-radius: 10px;
-        padding: 18px 22px;
-        margin-top: 24px;
-    }
-
-        /* Button inside delete box */
-        .delete-account-box .btn-danger {
-            background-color: #e63946;
-            border-color: #e63946;
-            font-weight: 600;
-            border-radius: 6px;
-            padding: 6px 16px; /* smaller size */
-            font-size: 0.875rem; /* slightly smaller text */
-        }
-
-            .delete-account-box .btn-danger:hover {
-                background-color: #c92a37;
-                border-color: #c92a37;
-            }
-
-    /* OTP input boxes */
-    .otp-input {
-        width: 45px;
-        height: 55px;
-        font-size: 1.5rem;
-        text-align: center;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        outline: none;
-        transition: border-color 0.2s;
-    }
-
-        .otp-input:focus {
-            border-color: #1BA548;
-            box-shadow: 0 0 4px rgba(27, 165, 72, 0.4);
-        }
-
-    /* NEW: Warning alert styling */
-    .alert-warning {
-        background-color: #fff3cd;
-        border-color: #ffecb5;
-        color: #664d03;
-        border-radius: 8px;
-    }
-
-        .alert-warning .btn-close {
-            filter: none !important; /* Remove any filter */
-            color: #000 !important; /* Make X black */
-            opacity: 1; /* Ensure full opacity */
-        }
-
-        .alert-warning i.fas.fa-clock {
-            color: #f0ad4e;
-        }
 </style>
+

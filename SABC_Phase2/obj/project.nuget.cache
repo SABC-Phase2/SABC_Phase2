@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "VRGpn8An0LA=",
+  "dgSpecHash": "kaBYTKU3Q/Q=",
   "success": true,
   "projectFilePath": "C:\\Users\\New User\\source\\repos\\SABC_Phase2_Cleaned\\SABC_Phase2\\SABC_Phase2.csproj",
   "expectedPackageFiles": [
@@ -8,6 +8,7 @@
     "C:\\Users\\New User\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\azure.storage.blobs\\12.24.1\\azure.storage.blobs.12.24.1.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\azure.storage.common\\12.23.0\\azure.storage.common.12.23.0.nupkg.sha512",
+    "C:\\Users\\New User\\.nuget\\packages\\dnsclient\\1.8.0\\dnsclient.1.8.0.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\hangfire\\1.8.20\\hangfire.1.8.20.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\hangfire.aspnetcore\\1.8.20\\hangfire.aspnetcore.1.8.20.nupkg.sha512",
     "C:\\Users\\New User\\.nuget\\packages\\hangfire.core\\1.8.20\\hangfire.core.1.8.20.nupkg.sha512",

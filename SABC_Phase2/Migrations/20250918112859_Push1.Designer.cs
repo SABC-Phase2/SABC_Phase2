@@ -12,8 +12,8 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250916065004_Push2")]
-    partial class Push2
+    [Migration("20250918112859_Push1")]
+    partial class Push1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
