@@ -168,7 +168,7 @@
                     <div class="form-group">
                         <label>Delete account</label>
                         <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
-                        <button type="button" class="btn btn-danger">Delete account</button>
+                      <button type="button" class="btn btn-danger" id="showDeleteAccountModalBtn">Delete account</button>
                     </div>
 
                     <div class="form-group text-end mt-4">
@@ -180,7 +180,7 @@
     </div>
 </div>
 
-<!-- ...other code unchanged... -->
+
 <!-- Email Change Modal -->
 <div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -215,6 +215,40 @@
                 </div>
                 <div class="modal-footer">
                     @* <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button> *@
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!--Delete Account Model Popup-->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="deleteAccountForm" method="post" action="@Url.Action("DeleteAccount", "OVRS_User")">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to permanently delete your account? This action cannot be undone.</p>
+                    <div class="mb-3">
+                        <label for="confirmEmail" class="form-label">Your Email Address</label>
+                        <input type="email" class="form-control" id="confirmEmail" name="ConfirmEmail"
+                               placeholder="Enter your email address" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPhrase" class="form-label">
+                            To verify, type <strong>"Delete my account"</strong> exactly as it appears
+                        </label>
+                        <input type="text" class="form-control" id="confirmPhrase" name="ConfirmPhrase" required />
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="confirmDeleteBtn" class="btn btn-danger" disabled>Yes, Delete</button>
                 </div>
             </form>
         </div>
@@ -487,6 +521,49 @@ if (changePasswordBtn) {
         }
     });
 }
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Show the delete modal on delete button click
+    const deleteBtn = document.querySelector('button.btn-danger:not([type="submit"])'); // Your "Delete account" button
+    const deleteModal = document.getElementById('deleteAccountModal');
+    if (deleteBtn && deleteModal) {
+        deleteBtn.addEventListener('click', function () {
+            var modal = new bootstrap.Modal(deleteModal);
+            modal.show();
+        });
+    }
+
+    // Validate email and phrase for enabling the delete confirm button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const confirmEmail = document.getElementById('confirmEmail');
+    const confirmPhrase = document.getElementById('confirmPhrase');
+
+    function validateDeleteFields() {
+        if (
+            confirmEmail.value.trim() &&
+            confirmPhrase.value.trim() === 'Delete my account'
+        ) {
+            confirmDeleteBtn.disabled = false;
+        } else {
+            confirmDeleteBtn.disabled = true;
+        }
+    }
+
+    if (confirmEmail && confirmPhrase) {
+        confirmEmail.addEventListener('input', validateDeleteFields);
+        confirmPhrase.addEventListener('input', validateDeleteFields);
+    }
+
+    // Optional: clear the form when modal is closed
+    if (deleteModal) {
+        deleteModal.addEventListener('hidden.bs.modal', function () {
+            if (confirmEmail) confirmEmail.value = '';
+            if (confirmPhrase) confirmPhrase.value = '';
+            if (confirmDeleteBtn) confirmDeleteBtn.disabled = true;
+        });
+    }
+});
 </script>
 
 <style>
