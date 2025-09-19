@@ -165,10 +165,10 @@ namespace SABC_Phase2.Services
             // Patterns that are likely to be invalid Gmail addresses
             var suspiciousPatterns = new[]
             {
-                @"^[a-z]{4,}[a-z0-9]*[0-9]{2,}$",       // letters + numbers (like blahuewd3)
-                @"^[a-z]+[0-9]{4,}$",                    // letters followed by many numbers
+                //@"^[a-z]{4,}[a-z0-9]*[0-9]{2,}$",       // letters + numbers (like blahuewd3)
+                //@"^[a-z]+[0-9]{4,}$",                    // letters followed by many numbers
                 @"^test[a-z0-9]*$",                      // starts with "test"
-                @"^[a-z]{3,6}[0-9]{3,6}$",              // short letters + numbers pattern
+                //@"^[a-z]{3,6}[0-9]{3,6}$",              // short letters + numbers pattern
                 @"^(blah|dummy|fake|invalid|temp|spam)[a-z0-9]*$"  // obvious fake patterns
             };
 
@@ -201,8 +201,9 @@ namespace SABC_Phase2.Services
                 @"\.comm$",                              // .com typo
                 @"\.cmo$",                               // .com typo
                 // Specific patterns for suspicious emails like "blahuewd3@gmail.com"
-                @"^[a-z]+[a-z0-9]*[0-9]{2,}@gmail\.com$",     // suspicious gmail pattern
-                @"^blah[a-z0-9]+@gmail\.com$",                // starts with "blah"
+               // Remove patterns that match legit emails!
+              // @"^[a-z]+[a-z0-9]*[0-9]{2,}@gmail\.com$",     // suspicious gmail pattern
+              // @"^blah[a-z0-9]+@gmail\.com$",               // starts with "blah"
                 @"^(test|fake|dummy|invalid|temp|spam)[a-z0-9]*@.*$",  // obvious fake patterns
             };
 

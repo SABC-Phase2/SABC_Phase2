@@ -90,24 +90,33 @@
                     @Html.HiddenFor(m => m.Email) <!-- keep model binding for current email -->
 
 
-                    <hr />
+<hr />
 
-                    <!-- Password -->
-                    <div class="form-group d-flex justify-content-between align-items-center">
-                        <div>
-                            <label>Password</label>
-                            <p id="passwordStatic" class="form-static">
-                                @(Model.PasswordLastUpdated.HasValue ? $"Last updated on {Model.PasswordLastUpdated.Value:MMM dd, yyyy}" : "Never updated")
-                            </p>
-                            @Html.PasswordFor(m => m.NewPassword, new { @class = "form-control d-none", id = "passwordInput", placeholder = "Enter new password" })
-                            @Html.ValidationMessageFor(m => m.NewPassword, "", new { @class = "text-danger" })
-                            @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control d-none", id = "confirmPasswordInput", placeholder = "Confirm new password" })
-                            @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
-                        </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('password')">Change</a>
-                    </div>
-
-                    <hr />
+<!-- Password -->
+<div class="form-group">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="mb-0">Password</label>
+        <a href="javascript:void(0)" class="change-link" id="changePasswordBtn">Change</a>
+    </div>
+    <div id="passwordFields" class="d-none">
+        <div class="mb-2">
+            @* @Html.LabelFor(m => m.CurrentPassword, "Current Password", new { @class = "form-label" }) *@
+            @Html.PasswordFor(m => m.CurrentPassword, new { @class = "form-control", placeholder = "Enter current password", autocomplete = "current-password" })
+            @Html.ValidationMessageFor(m => m.CurrentPassword, "", new { @class = "text-danger" })
+        </div>
+        <div class="mb-2">
+            @* @Html.LabelFor(m => m.NewPassword, "New Password", new { @class = "form-label" }) *@
+            @Html.PasswordFor(m => m.NewPassword, new { @class = "form-control", placeholder = "Enter new password", autocomplete = "new-password" })
+            @Html.ValidationMessageFor(m => m.NewPassword, "", new { @class = "text-danger" })
+        </div>
+        <div class="mb-2">
+            @* @Html.LabelFor(m => m.ConfirmPassword, "Confirm Password", new { @class = "form-label" }) *@
+            @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Confirm new password", autocomplete = "new-password" })
+            @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
+        </div>
+    </div>
+</div>
+<hr />
 
                     <div class="form-group">
                         <label>Delete account</label>
@@ -343,12 +352,16 @@ function toggleEdit(field) {
         document.getElementById("emailStatic").classList.toggle("d-none");
         document.getElementById("emailInput").classList.toggle("d-none");
     }
-    if (field === 'password') {
-        document.getElementById("passwordStatic").classList.toggle("d-none");
-        document.getElementById("passwordInput").classList.toggle("d-none");
-        document.getElementById("confirmPasswordInput").classList.toggle("d-none");
-    }
 }
+
+    // Password change toggle
+    var changePasswordBtn = document.getElementById('changePasswordBtn');
+    var passwordFields = document.getElementById('passwordFields');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', function () {
+            passwordFields.classList.toggle('d-none');
+        });
+    }
 </script>
 
 
