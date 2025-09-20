@@ -1295,6 +1295,7 @@ namespace SABC_Phase2.Controllers
             // Post-Redirect-Get pattern
             return RedirectToAction(nameof(OVRS_Profiles));
         }
+      
         [HttpPost]
         public async Task<IActionResult> SendEmailOtp([FromBody] string newEmail)
         {
@@ -1395,6 +1396,14 @@ namespace SABC_Phase2.Controllers
                 if (legacyUser != null)
                 {
                     legacyUser.Email = user.PendingEmail;
+
+                    // Update email in tbl_suppliers as well
+                    var supplier = await _legacyContext.TblSuppliers.FirstOrDefaultAsync(s => s.UserId == legacyUser.UserId);
+                    if (supplier != null)
+                    {
+                        supplier.Email = user.PendingEmail;
+                    }
+
                     await _legacyContext.SaveChangesAsync();
                 }
 

@@ -68,7 +68,7 @@
 
                     <hr />
 
-                    <!-- Phone number with editable country code and flag -->
+                    @* <!-- Phone number with editable country code and flag -->
                     <div class="form-group mt-3">
                         @Html.LabelFor(m => m.PhoneNumber)
                         <div class="input-group phone-flex-row">
@@ -88,7 +88,20 @@
                             </span>
                         </div>
                         @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "text-danger" })
-                    </div>
+                    </div> *@
+                    <!-- Phone Number (NEW FLOW) -->
+<div class="form-group d-flex justify-content-between align-items-center">
+    <div>
+        @Html.LabelFor(m => m.PhoneNumber)
+        <p id="phoneStatic" class="form-static mb-0">
+            @Model.CountryCode @Model.PhoneNumber
+        </p>
+    </div>
+  <a href="javascript:void(0)" class="change-link" id="changePhoneBtn" data-bs-toggle="modal" data-bs-target="#changePhoneModal">Change</a>
+</div>
+@Html.HiddenFor(m => m.PhoneNumber) <!-- Keep binding -->
+@Html.HiddenFor(m => m.CountryCode)
+
 
                     <hr />
 
@@ -222,6 +235,63 @@
 </div>
 
 
+<!-- Phone Change Modal -->
+<div class="modal fade" id="changePhoneModal" tabindex="-1" aria-labelledby="changePhoneModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="changePhoneForm" autocomplete="off" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePhoneModalLabel">Change Phone Number</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                      <div class="input-group">
+                             <span class="input-group-text flag-box">
+        <img id="newCountryFlag" src="@Model.CountryCodes.FirstOrDefault(c => c.DialingCode == Model.CountryCode)?.FlagUrl" alt="Country flag" />
+    </span>
+    <select id="newCountryCode" name="newCountryCode" class="form-select country-select">
+        @foreach (var cc in Model.CountryCodes)
+        {
+           <option value="@cc.DialingCode"
+        data-flag="@cc.FlagUrl"
+        data-country="@cc.CountryName"
+        selected="@(cc.DialingCode == Model.CountryCode ? "selected" : null)">
+    @cc.CountryName (@cc.DialingCode)
+</option>
+        }
+    </select>
+  
+    <input type="tel" class="form-control phone-input" id="newPhoneInput" name="newPhone" placeholder="Enter new phone number" required />
+   
+    <button type="button" class="btn btn-success" id="sendPhoneOtpBtn" style="min-width:130px;">Send OTP</button>
+</div>
+<div class="invalid-feedback" id="newPhoneError" style="display:block"></div>
+
+                    </div>
+
+                    <div id="phoneOtpSection" class="mb-3 d-none">
+                        <label>Enter OTP Code</label>
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" id="verifyPhoneOtpBtn">Verify OTP</button>
+                        <div class="invalid-feedback" id="phoneOtpError" style="display:block"></div>
+                        <div class="valid-feedback" id="phoneOtpSuccess" style="display:block"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
 <!--Delete Account Model Popup-->
 <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -258,21 +328,195 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // ---- Display flag next to selected country code ----
-    var select = document.getElementById('CountryCode');
-    var img = document.getElementById('CountryFlag');
-    function updateFlag() {
-        var opt = select.options[select.selectedIndex];
-        var url = opt.getAttribute('data-flag');
-        if (url) {
-            img.src = url;
-            img.style.display = '';
+
+
+// ---- PHONE CHANGE FLAG ----
+var newCountryCodeSelect = document.getElementById('newCountryCode');
+var newCountryFlag = document.getElementById('newCountryFlag');
+
+if (newCountryCodeSelect && newCountryFlag) {
+    function updateNewFlag() {
+        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+        var flagUrl = selectedOption.getAttribute('data-flag');
+        if (flagUrl) {
+            newCountryFlag.src = flagUrl;
+            newCountryFlag.style.display = '';
         } else {
-            img.style.display = 'none';
+            newCountryFlag.style.display = 'none';
         }
     }
-    updateFlag();
-    select.addEventListener('change', updateFlag);
+
+    // Function to update option texts based on dropdown state
+    function updateOptionTexts() {
+        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+        var selectedValue = selectedOption.value;
+        
+        Array.from(newCountryCodeSelect.options).forEach(function(option) {
+            var countryCode = option.value;
+            var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+            
+            if (option.value === selectedValue) {
+                // For the selected option, show only country code when closed
+                option.textContent = countryCode;
+            } else {
+                // For other options, show full text
+                option.textContent = countryName + ' (' + countryCode + ')';
+            }
+        });
+    }
+
+    function updateSelectDisplay() {
+        updateNewFlag();
+        updateOptionTexts();
+    }
+
+    // Update display when selection changes
+    newCountryCodeSelect.addEventListener('change', updateSelectDisplay);
+
+    // When dropdown opens, show full text for all options
+    newCountryCodeSelect.addEventListener('mousedown', function() {
+        Array.from(newCountryCodeSelect.options).forEach(function(option) {
+            var countryCode = option.value;
+            var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+            option.textContent = countryName + ' (' + countryCode + ')';
+        });
+    });
+
+    // When dropdown closes, update display back to country code only for selected
+    newCountryCodeSelect.addEventListener('blur', function() {
+        setTimeout(function() {
+            updateOptionTexts();
+        }, 100);
+    });
+
+    document.getElementById('changePhoneModal')
+        .addEventListener('shown.bs.modal', updateSelectDisplay);
+
+    // Run once on page load
+    updateSelectDisplay();
+}
+
+
+
+    // ---- PHONE CHANGE FLOW ----
+var changePhoneBtn = document.getElementById('changePhoneBtn');
+var sendPhoneOtpBtn = document.getElementById('sendPhoneOtpBtn');
+var verifyPhoneOtpBtn = document.getElementById('verifyPhoneOtpBtn');
+var phoneOtpSection = document.getElementById('phoneOtpSection');
+var newPhoneInput = document.getElementById('newPhoneInput');
+var newCountryCode = document.getElementById('newCountryCode');
+// Update flag when selecting new country code
+var newCountryCodeSelect = document.getElementById('newCountryCode');
+var newCountryFlag = document.getElementById('newCountryFlag');
+
+@* if (newCountryCodeSelect && newCountryFlag) {
+    newCountryCodeSelect.addEventListener('change', function () {
+        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+        var flagUrl = selectedOption.getAttribute('data-flag');
+        newCountryFlag.src = flagUrl;
+    });
+} *@
+
+
+if (changePhoneBtn) {
+    changePhoneBtn.addEventListener('click', function () {
+        // Reset form
+        newPhoneInput.value = '';
+        document.querySelectorAll('.phone-otp-input').forEach(i => i.value = '');
+        document.getElementById('phoneOtpError').textContent = '';
+        document.getElementById('phoneOtpSuccess').textContent = '';
+        document.getElementById('newPhoneError').textContent = '';
+        phoneOtpSection.classList.add('d-none');
+        
+        var modal = new bootstrap.Modal(document.getElementById('changePhoneModal'));
+        modal.show();
+    });
+}
+
+@* ------------------------------------------------------------------ *@
+// Send OTP
+if (sendPhoneOtpBtn) {
+    sendPhoneOtpBtn.addEventListener('click', async function () {
+        var phone = newPhoneInput.value.trim();
+        var code = newCountryCode.value;
+
+        if (!phone) {
+            document.getElementById('newPhoneError').textContent = "Please enter phone number.";
+            return;
+        }
+
+        sendPhoneOtpBtn.disabled = true;
+
+        try {
+            let res = await fetch('/OVRS_User/SendPhoneOtp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: phone, countryCode: code })
+            });
+            let data = await res.json();
+            if (data.success) {
+                phoneOtpSection.classList.remove('d-none');
+                document.getElementById('newPhoneError').textContent = '';
+            } else {
+                document.getElementById('newPhoneError').textContent = data.message;
+                sendPhoneOtpBtn.disabled = false;
+            }
+        } catch {
+            document.getElementById('newPhoneError').textContent = "Error sending OTP. Try again.";
+            sendPhoneOtpBtn.disabled = false;
+        }
+    });
+}
+
+// OTP Inputs auto-move
+const phoneOtpInputs = document.querySelectorAll('.phone-otp-input');
+phoneOtpInputs.forEach((input, index) => {
+    input.addEventListener('input', () => {
+        if (input.value.length === 1 && index < phoneOtpInputs.length - 1) {
+            phoneOtpInputs[index + 1].focus();
+        }
+    });
+});
+
+// Verify OTP
+if (verifyPhoneOtpBtn) {
+    verifyPhoneOtpBtn.addEventListener('click', async function () {
+        let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
+
+        if (otpCode.length < 6) {
+            document.getElementById('phoneOtpError').textContent = "Enter full 6-digit OTP.";
+            return;
+        }
+
+        verifyPhoneOtpBtn.disabled = true;
+
+        try {
+            let res = await fetch('/OVRS_User/VerifyPhoneOtp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp: otpCode })
+            });
+            let data = await res.json();
+            if (data.success) {
+                document.getElementById('phoneOtpSuccess').textContent = data.message;
+                document.getElementById('phoneStatic').textContent = 
+                    newCountryCode.value + " " + newPhoneInput.value;
+
+                setTimeout(() => {
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('changePhoneModal'));
+                    modal.hide();
+                }, 1500);
+            } else {
+                document.getElementById('phoneOtpError').textContent = data.message;
+                verifyPhoneOtpBtn.disabled = false;
+            }
+        } catch {
+            document.getElementById('phoneOtpError').textContent = "Error verifying OTP.";
+            verifyPhoneOtpBtn.disabled = false;
+        }
+    });
+}
+@* ------------------------------------ *@
 
     // ---- EMAIL CHANGE FLOW ----
     var changeEmailBtn = document.getElementById('changeEmailBtn');
@@ -367,21 +611,28 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-
-    // ---- OTP input behavior ----
-    const otpInputs = document.querySelectorAll('.otp-input');
-    otpInputs.forEach((input, index) => {
-        input.addEventListener('input', () => {
-            if (input.value.length === 1 && index < otpInputs.length - 1) {
-                otpInputs[index + 1].focus();
+// ---- OTP input behavior ----
+const otpInputs = document.querySelectorAll('.otp-input');
+otpInputs.forEach((input, index) => {
+    input.addEventListener('input', () => {
+        if (input.value.length === 1 && index < otpInputs.length - 1) {
+            otpInputs[index + 1].focus();
+        }
+        // Auto-submit when all inputs are filled
+        let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+        if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
+            // Optionally, disable auto-submit if already submitting
+            if (!verifyOtpBtn.disabled) {
+                verifyOtpBtn.click();
             }
-        });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !input.value && index > 0) {
-                otpInputs[index - 1].focus();
-            }
-        });
+        }
     });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && index > 0) {
+            otpInputs[index - 1].focus();
+        }
+    });
+});
 
     // Verify OTP
     if (verifyOtpBtn) {
@@ -507,17 +758,26 @@ var changePasswordBtn = document.getElementById('changePasswordBtn');
 var passwordFields = document.getElementById('passwordFields');
 if (changePasswordBtn) {
     changePasswordBtn.addEventListener('click', function () {
-        // Only allow toggling closed if no fields are filled and no errors
         if (passwordFields.classList.contains('d-none')) {
+            // OPEN: Show password fields
             passwordFields.classList.remove('d-none');
         } else {
-            var hasFilled = !!document.querySelector('[name="CurrentPassword"]').value ||
-                            !!document.querySelector('[name="NewPassword"]').value ||
-                            !!document.querySelector('[name="ConfirmPassword"]').value;
-            var hasError = !!document.querySelector('.form-group .text-danger');
-            if (!hasFilled && !hasError) {
-                passwordFields.classList.add('d-none');
-            }
+            // CLOSE: Hide password fields, clear values and errors
+            passwordFields.classList.add('d-none');
+
+            // Clear input values
+            document.querySelector('[name="CurrentPassword"]').value = '';
+            document.querySelector('[name="NewPassword"]').value = '';
+            document.querySelector('[name="ConfirmPassword"]').value = '';
+
+            // Optionally hide error block/messages
+            var passwordErrorBlock = document.getElementById('passwordErrorBlock');
+            if (passwordErrorBlock) passwordErrorBlock.style.display = 'none';
+
+            // Hide individual field validation (if present)
+            document.querySelectorAll('#passwordFields .text-danger').forEach(function(span) {
+                span.style.display = 'none';
+            });
         }
     });
 }
@@ -567,6 +827,27 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
+.flag-box {
+    width: 60px;
+    min-width: 60px;
+    height: 44px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 8px 0 0 8px !important;
+    padding: 2px 6px;
+}
+
+.flag-box img {
+    width: 24px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+}
+
 
 .spinner-border {
     width: 1rem;
@@ -589,53 +870,79 @@ document.addEventListener('DOMContentLoaded', function () {
         width: 100%;
     }
 
-    .country-select {
-        min-width: 150px;
-        max-width: 180px;
-        border-radius: 8px 0 0 8px !important;
-        margin-right: -1px;
-        height: 44px;
-        box-sizing: border-box;
-        /* Match Bootstrap .form-control height if customized elsewhere */
-    }
+.country-select {
+    min-width: 120px;
+    max-width: 140px;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 0 !important;
+    border: 1px solid #ced4da; /* Add full border */
+    border-left: 1px solid #e0e0e0; /* Lighter left border to show separation */
+    margin: 0;
+}
 
-    .phone-input {
-        flex: 1 1 auto;
-        min-width: 0;
-        border-radius: 0 !important;
-        margin-right: -1px;
-        height: 44px;
-        box-sizing: border-box;
-    }
+.phone-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 0 !important;
+    border: 1px solid #ced4da; /* Add full border */
+    border-left: 1px solid #e0e0e0; /* Lighter left border to show separation */
+    margin: 0;
+}
 
-    .flag-box {
-        width: 60px;
-        min-width: 60px;
-        max-width: 80px;
-        height: 44px;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0 8px 8px 0 !important;
-        background: #fff;
-        border-left: 1px solid #ced4da;
-        padding: 0;
-    }
 
-        .flag-box img#CountryFlag {
-            width: 32px;
-            height: 20px;
-            object-fit: cover;
-            border-radius: 3px;
-            display: block;
-            margin: auto;
-            box-shadow: 0 0 2px #9992;
-        }
-    /* Remove extra spacing from .input-group-text if using Bootstrap */
-    .input-group .flag-box {
-        padding: 0 !important;
-    }
+#sendPhoneOtpBtn {
+    background-color: #1BA548 !important;
+    border-color: #1BA548 !important;
+    padding: 10px 25px;
+    font-weight: bold;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 0 8px 8px 0 !important;
+    border: 1px solid #1BA548; /* Add full border */
+    border-left: 1px solid #0d8f35; /* Slightly darker left border to show separation */
+    min-width: 130px;
+    margin: 0;
+}
+
+/* Ensure input-group elements align properly */
+.input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group > * {
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: -1px; /* Overlap borders slightly for clean look */
+}
+
+.input-group > .flag-box {
+    margin-left: 0; /* Don't apply negative margin to first element */
+}
+
+.input-group > .phone-input {
+    flex: 1 1 auto;
+}
+
+/* Fix any focus states - bring focused element to front */
+.flag-box:focus,
+.country-select:focus,
+.phone-input:focus,
+#sendPhoneOtpBtn:focus {
+    z-index: 2;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#sendPhoneOtpBtn:focus {
+    border-color: #0d8f35;
+    box-shadow: 0 0 0 0.25rem rgba(27, 165, 72, 0.25);
+}
+
 
     /* General form styling */
     .profile-page {
