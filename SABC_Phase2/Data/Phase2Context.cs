@@ -27,6 +27,8 @@ namespace SABC_Phase2.Data
         public DbSet<TenderApplicationDraftDocument> TenderApplicationDraftDocuments { get; set; }
 
         public DbSet<AwardedTender> AwardedTenders { get; set; }
+
+        public DbSet<AuditLog> AuditLogs { get; set; }
         //--------------------------------------------------------------------------------------------------------
         // Adminstrator dummy data
         public DbSet<Administrator> Administrators { get; set; }

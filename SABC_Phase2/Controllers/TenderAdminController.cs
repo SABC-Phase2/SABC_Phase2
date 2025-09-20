@@ -19,6 +19,7 @@ namespace SABC_Phase2.Controllers
     /// </summary>
     public class TenderAdminController : Controller
     {
+        private readonly AuditLogService _auditLogService;
         // Dependency-injected database context for EF Core operations.
         private readonly Phase2Context _context;
         private readonly LegacyDbContext _legacyContext;
@@ -31,7 +32,7 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService)
+        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService, AuditLogService auditLogService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -53,8 +54,34 @@ namespace SABC_Phase2.Controllers
 
             //(NodaTime Time API))
             _saTimeService = saTimeService;
+
+            _auditLogService = auditLogService;
         }
 
+        // Helper to get current admin info
+        private async Task<(int adminId, string adminEmail, string adminFullName)> GetCurrentAdminAsync()
+        {
+            var idStr = User.FindFirst("UserId")?.Value ?? User.FindFirst("AdminId")?.Value;
+            int adminId = 0;
+            int.TryParse(idStr, out adminId);
+
+            var email = User.FindFirst("AdminEmail")?.Value
+                ?? User.FindFirst(ClaimTypes.Email)?.Value
+                ?? User.Identity?.Name;
+
+            // Get full name from DB using adminId
+            string fullName = email; // fallback
+            if (adminId > 0)
+            {
+                var admin = await _context.Administrators.FindAsync(adminId);
+                if (admin != null && !string.IsNullOrWhiteSpace(admin.FirstName) && !string.IsNullOrWhiteSpace(admin.LastName))
+                {
+                    fullName = $"{admin.FirstName} {admin.LastName}";
+                }
+            }
+
+            return (adminId, email, fullName);
+        }
 
 
         [HttpGet]
@@ -74,6 +101,9 @@ namespace SABC_Phase2.Controllers
         {
             if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
                 return Forbid();
+
+            // --- Get Admin Info ONCE for audit logging ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
 
             // --- TENDER NUMBER UNIQUENESS VALIDATION ---
             if (!string.IsNullOrWhiteSpace(model.TenderNumber))
@@ -148,6 +178,15 @@ namespace SABC_Phase2.Controllers
 
                     _context.ScheduledTenders.Add(scheduledTender);
                     await _context.SaveChangesAsync();
+
+                    // --- AUDIT LOG: Log scheduled tender creation ---
+                    await _auditLogService.LogAsync(
+                        adminId,
+                        adminEmail,
+                        adminFullName,
+                        "ScheduleTender",
+                        $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was created by {adminFullName} ({adminEmail})"
+                    );
 
                     var delay = scheduledUtc - DateTime.UtcNow;
                     if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
@@ -245,6 +284,15 @@ namespace SABC_Phase2.Controllers
             _context.Tenders.Add(tender);
             await _context.SaveChangesAsync();
 
+            // --- AUDIT LOG: Log immediate tender creation ---
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                "CreateTender",
+                $"Tender \"{tender.TenderNumber}\" was published by {adminFullName} ({adminEmail})"
+            );
+
             if (model.DraftId.HasValue)
             {
                 var draft = await _context.TenderAdminsDraft
@@ -258,6 +306,15 @@ namespace SABC_Phase2.Controllers
 
                     _context.TenderAdminsDraft.Remove(draft);
                     await _context.SaveChangesAsync();
+
+                    // --- AUDIT LOG: Log draft deletion after publish ---
+                    await _auditLogService.LogAsync(
+                        adminId,
+                        adminEmail,
+                        adminFullName,
+                        "DeleteDraftAfterPublish",
+                        $"Draft for tender \"{tender.TenderNumber}\" was published by {adminFullName} ({adminEmail})."
+                    );
                 }
             }
 
@@ -268,7 +325,6 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("Index", "TenderAdmin")
             });
         }
-
         public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
 
         {
@@ -597,6 +653,19 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
+            // --- AUDIT LOG: Log draft save ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            string actionType = isNewDraft ? "CreateDraft" : "EditDraft";
+            string description = isNewDraft
+                ? $"Draft for Tender \"{draft.TenderNumber}\" was created by {adminFullName} ({adminEmail})"
+                : $"Draft for Tender \"{draft.TenderNumber}\" was edited by {adminFullName} ({adminEmail})";
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                actionType,
+                description
+            );
             return Json(new
             {
                 success = true,
@@ -1296,10 +1365,31 @@ namespace SABC_Phase2.Controllers
                 tender.AwardedTenderId = null;
             }
 
-            await _context.SaveChangesAsync();
-
-            // Determine if this was an award operation
+            // --- AUDIT LOG: Log tender edit or award ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
             bool isAwarded = dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender);
+
+            if (isAwarded)
+            {
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "EditTender",
+                    $"Tender \"{tender.TenderNumber}\" was edited by {adminFullName} ({adminEmail}) and has awarded this Tender to {dto.AwardedTender}"
+                );
+            }
+            else
+            {
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "EditTender",
+                    $"Tender \"{tender.TenderNumber}\" was edited by {adminFullName} ({adminEmail})"
+                );
+            }
+
 
             // Return JSON for regular success, set awarded appropriately
             return Json(new
@@ -1524,6 +1614,16 @@ namespace SABC_Phase2.Controllers
 
             await _context.SaveChangesAsync();
 
+            // --- AUDIT LOG: Log scheduled tender edit ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                "EditScheduledTender",
+                $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was edited by {adminFullName} ({adminEmail})"
+            );
+
             return Json(new
             {
                 success = true,
@@ -1645,7 +1745,7 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
-        public IActionResult GenerateTenderSupplierReport(int id, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<IActionResult> GenerateTenderSupplierReport(int id, DateTime? startDate = null, DateTime? endDate = null)
         {
             // Retrieve the tender record by its ID from the database
             var tender = _context.Tenders.FirstOrDefault(t => t.Id == id);
@@ -1700,12 +1800,21 @@ namespace SABC_Phase2.Controllers
             // Generate the supplier report PDF from the list
             var pdfBytes = _pdfService.GenerateSupplierReport(tender, pdfInfos);
 
+            // --- AUDIT LOG: Log supplier report generation ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                "GenerateTenderSupplierReport",
+                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated by {adminFullName} ({adminEmail})"
+            );
+
             // Return the PDF file as a download, naming it with the tender number
             return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
         }
-
         [HttpGet]
-        public IActionResult GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
         {
             // Validate that both start and end dates are provided
             if (!startDate.HasValue || !endDate.HasValue)
@@ -1772,11 +1881,22 @@ namespace SABC_Phase2.Controllers
             // Generate the summary PDF report for closed tenders
             var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
 
+            // --- AUDIT LOG: Log closed tenders summary report generation ---
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                "GenerateClosedTendersSummaryReport",
+                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated by {adminFullName} ({adminEmail})"
+            );
+
             // Return the PDF file as a download, naming it with the date range
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
-
         // This deals with deleting entire draft
+       
+        
         [HttpPost]
         public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
         {
@@ -1824,6 +1944,16 @@ namespace SABC_Phase2.Controllers
                 // Remove the draft itself
                 _context.TenderAdminsDraft.Remove(draft);
                 await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log draft deletion ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "DeleteDraft",
+                    $"Draft for Tender \"{draft.TenderNumber}\" (DraftId: {draft.Id}) was deleted by {adminFullName} ({adminEmail})"
+                );
 
                 return Ok(new { success = true, message = "Draft deleted successfully" });
             }
@@ -1905,6 +2035,16 @@ namespace SABC_Phase2.Controllers
                 // Remove the scheduled tender itself
                 _context.ScheduledTenders.Remove(scheduledTender);
                 await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log scheduled tender deletion ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "DeleteScheduledTender",
+                    $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was deleted by {adminFullName} ({adminEmail})"
+                );
 
                 return Ok(new { success = true, message = "Scheduled tender deleted successfully" });
             }
