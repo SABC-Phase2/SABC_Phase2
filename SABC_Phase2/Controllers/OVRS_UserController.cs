@@ -1424,7 +1424,144 @@ namespace SABC_Phase2.Controllers
         }
 
 
-   
+
+        [HttpPost]
+        public async Task<IActionResult> SendPhoneOtp([FromBody] SendPhoneOtpRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.PhoneNumber) || string.IsNullOrWhiteSpace(request?.CountryCode))
+                return BadRequest(new { success = false, message = "Phone number and country code are required" });
+
+            // Get logged in Phase2 user
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+                return Unauthorized();
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (user == null) return Unauthorized();
+
+            // Get their legacy user (to get current name)
+            var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
+            if (legacyUser == null)
+                return BadRequest(new { success = false, message = "User not found." });
+
+            // Format the complete phone number
+            string fullPhoneNumber = $"{request.CountryCode.Trim()} {request.PhoneNumber.Trim()}";
+            string cleanPhoneNumber = $"{request.CountryCode.Trim()}{request.PhoneNumber.Trim()}";
+
+            // Check if phone is already in use by another account (excluding current user)
+            var existingUser = await _legacyContext.TblUsers
+                .FirstOrDefaultAsync(u => u.Phone != null &&
+                                   u.Phone.Replace(" ", "").Replace("-", "") == cleanPhoneNumber.Replace("+", "")
+                                   && u.UserId != user.LegacyUserId);
+
+            if (existingUser != null)
+                return BadRequest(new { success = false, message = "This phone number is already in use by another account." });
+
+            // Check if trying to change to current phone number
+            if (legacyUser.Phone != null)
+            {
+                string currentClean = legacyUser.Phone.Replace(" ", "").Replace("-", "").Replace("+", "");
+                string newClean = cleanPhoneNumber.Replace("+", "");
+                if (currentClean == newClean)
+                    return BadRequest(new { success = false, message = "You are already using this phone number." });
+            }
+
+            // Generate OTP
+            var otpCode = _otpService.GenerateOtpCode();
+            var expiry = _otpService.GetOtpExpiration();
+
+            // Save OTP + pending phone details
+            user.OtpCode = otpCode;
+            user.OtpExpiration = expiry;
+            user.PendingPhoneNumber = request.PhoneNumber.Trim();
+            user.PendingCountryCode = request.CountryCode.Trim();
+            user.OtpType = "phone";
+            await _context.SaveChangesAsync();
+
+            // Send OTP SMS
+            try
+            {
+                var smsOtpService = HttpContext.RequestServices.GetRequiredService<SmsOtpService>();
+                string userName = $"{legacyUser.FirstName} {legacyUser.LastName}".Trim();
+                if (string.IsNullOrEmpty(userName)) userName = "User";
+
+                await smsOtpService.SendPhoneOtpSmsAsync(cleanPhoneNumber, userName, otpCode);
+
+                return Ok(new { success = true, message = "OTP sent successfully to your phone" });
+            }
+            catch (Exception ex)
+            {
+                // Clear the OTP data since SMS failed
+                user.OtpCode = null;
+                user.OtpExpiration = null;
+                user.PendingPhoneNumber = null;
+                user.PendingCountryCode = null;
+                user.OtpType = null;
+                await _context.SaveChangesAsync();
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to send SMS verification. Please check the phone number and try again."
+                });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyPhoneOtp([FromBody] VerifyOtpRequest request)
+        {
+            if (string.IsNullOrEmpty(request?.Otp))
+                return BadRequest(new { success = false, message = "OTP is required" });
+
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+                return Unauthorized();
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (user == null) return Unauthorized();
+
+            bool valid = _otpService.ValidateOtp(user.OtpCode, user.OtpExpiration, request.Otp);
+            if (!valid)
+                return BadRequest(new { success = false, message = "Invalid or expired OTP" });
+
+            // Update legacy user phone number only
+            if (!string.IsNullOrEmpty(user.PendingPhoneNumber) && !string.IsNullOrEmpty(user.PendingCountryCode))
+            {
+                var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
+                if (legacyUser != null)
+                {
+                    legacyUser.Phone = $"{user.PendingCountryCode} {user.PendingPhoneNumber}";
+                    //legacyUser.UpdatedDate = DateTime.Now;
+               
+
+                    await _legacyContext.SaveChangesAsync();
+                }
+
+                // Update original phone in Phase2 user
+                user.OriginalPhoneNumber = user.PendingPhoneNumber;
+                user.OriginalCountryCode = user.PendingCountryCode;
+
+                // Clear pending data
+                user.PendingPhoneNumber = null;
+                user.PendingCountryCode = null;
+                user.OtpCode = null;
+                user.OtpExpiration = null;
+                user.OtpType = null;
+
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { success = true, message = "Phone number updated successfully" });
+        }
+
+        // Request models
+        public class SendPhoneOtpRequest
+        {
+            public string PhoneNumber { get; set; }
+            public string CountryCode { get; set; }
+        }
+
+
         //[HttpPost]
         //[ValidateAntiForgeryToken]
         //public async Task<IActionResult> CancelOtp()

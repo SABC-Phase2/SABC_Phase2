@@ -68,6 +68,8 @@ builder.Services.AddScoped<OtpService>();
 // Add this line with your other service registrations
 builder.Services.AddScoped<PhoneOtpEmailService>();
 
+
+
 builder.Services.AddScoped<SmsOtpService>();
 builder.Services.AddHttpClient(); // Required for SMS API calls
 

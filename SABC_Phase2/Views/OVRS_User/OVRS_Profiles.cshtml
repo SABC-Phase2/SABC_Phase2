@@ -1,4 +1,7 @@
-﻿@model SABC_Phase2.Models.OVRS.OVRS_UserProfileViewModel
+﻿
+
+
+@model SABC_Phase2.Models.OVRS.OVRS_UserProfileViewModel
 @using Microsoft.AspNetCore.Mvc.ModelBinding
 @functions {
     private IEnumerable<ModelError> GetErrors(string key)
@@ -68,27 +71,7 @@
 
                     <hr />
 
-                    @* <!-- Phone number with editable country code and flag -->
-                    <div class="form-group mt-3">
-                        @Html.LabelFor(m => m.PhoneNumber)
-                        <div class="input-group phone-flex-row">
-                            <select id="CountryCode" name="CountryCode" class="form-select country-select">
-                                @foreach (var cc in Model.CountryCodes)
-                                {
-                                    <option value="@cc.DialingCode"
-                                            data-flag="@cc.FlagUrl"
-                                            selected="@(cc.DialingCode == Model.CountryCode ? "selected" : null)">
-                                        @cc.CountryName (@cc.DialingCode)
-                                    </option>
-                                }
-                            </select>
-                            @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control phone-input", placeholder = "Enter your phone number" })
-                            <span class="input-group-text flag-box">
-                                <img id="CountryFlag" src="" alt="Country flag" />
-                            </span>
-                        </div>
-                        @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "text-danger" })
-                    </div> *@
+                   
                     <!-- Phone Number (NEW FLOW) -->
 <div class="form-group d-flex justify-content-between align-items-center">
     <div>
@@ -105,16 +88,6 @@
 
                     <hr />
 
-                    @* <!-- Email -->
-                    <div class="form-group d-flex justify-content-between align-items-center">
-                        <div>
-                            @Html.LabelFor(m => m.Email)
-                            <p id="emailStatic" class="form-static">@Model.Email</p>
-                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control d-none", id = "emailInput", type = "email" })
-                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
-                        </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
-                    </div> *@
                       <!-- Email (NEW FLOW) -->
                     <div class="form-group d-flex justify-content-between align-items-center">
                         <div>
@@ -246,44 +219,58 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                      <div class="input-group">
-                             <span class="input-group-text flag-box">
-        <img id="newCountryFlag" src="@Model.CountryCodes.FirstOrDefault(c => c.DialingCode == Model.CountryCode)?.FlagUrl" alt="Country flag" />
-    </span>
-    <select id="newCountryCode" name="newCountryCode" class="form-select country-select">
-        @foreach (var cc in Model.CountryCodes)
-        {
-           <option value="@cc.DialingCode"
-        data-flag="@cc.FlagUrl"
-        data-country="@cc.CountryName"
-        selected="@(cc.DialingCode == Model.CountryCode ? "selected" : null)">
-    @cc.CountryName (@cc.DialingCode)
-</option>
-        }
-    </select>
-  
-    <input type="tel" class="form-control phone-input" id="newPhoneInput" name="newPhone" placeholder="Enter new phone number" required />
-   
-    <button type="button" class="btn btn-success" id="sendPhoneOtpBtn" style="min-width:130px;">Send OTP</button>
-</div>
-<div class="invalid-feedback" id="newPhoneError" style="display:block"></div>
-
+                        <label class="form-label">New Phone Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text flag-box">
+                                <img id="newCountryFlag" src="@Model.CountryCodes.FirstOrDefault(c => c.DialingCode == Model.CountryCode)?.FlagUrl" alt="Country flag" />
+                            </span>
+                            <select id="newCountryCode" name="newCountryCode" class="form-select country-select" style="max-width: 150px;">
+                                @foreach (var cc in Model.CountryCodes)
+                                {
+                                    <option value="@cc.DialingCode"
+                                            data-flag="@cc.FlagUrl"
+                                            data-country="@cc.CountryName"
+                                            selected="@(cc.DialingCode == Model.CountryCode ? "selected" : null)">
+                                        @cc.CountryName (@cc.DialingCode)
+                                    </option>
+                                }
+                            </select>
+                            <input type="tel" 
+                                   class="form-control phone-input" 
+                                   id="newPhoneInput" 
+                                   name="newPhone" 
+                                   placeholder="Enter new phone number" 
+                                   maxlength="15"
+                                   required />
+                            <button type="button" class="btn btn-success" id="sendPhoneOtpBtn" style="min-width:130px;">
+                                Send OTP
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="newPhoneError" style="display:block"></div>
                     </div>
 
                     <div id="phoneOtpSection" class="mb-3 d-none">
-                        <label>Enter OTP Code</label>
-                        <div class="d-flex justify-content-between gap-2 mb-2">
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" />
+                        <label class="form-label">Enter 6-Digit OTP Code</label>
+                        <div class="d-flex justify-content-between gap-2 mb-3">
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
                         </div>
-                        <button type="button" class="btn btn-primary w-100" id="verifyPhoneOtpBtn">Verify OTP</button>
+                        <button type="button" class="btn btn-primary w-100" id="verifyPhoneOtpBtn">
+                            Verify OTP
+                        </button>
                         <div class="invalid-feedback" id="phoneOtpError" style="display:block"></div>
-                        <div class="valid-feedback" id="phoneOtpSuccess" style="display:block"></div>
+                        <div class="valid-feedback text-success" id="phoneOtpSuccess" style="display:block"></div>
+                        <small class="text-muted mt-2 d-block">
+                            Didn't receive the code? Make sure your phone number is correct and try again.
+                        </small>
                     </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
         </div>
@@ -329,194 +316,332 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
+    // ---- PHONE CHANGE FLAG ----
+    var newCountryCodeSelect = document.getElementById('newCountryCode');
+    var newCountryFlag = document.getElementById('newCountryFlag');
 
-// ---- PHONE CHANGE FLAG ----
-var newCountryCodeSelect = document.getElementById('newCountryCode');
-var newCountryFlag = document.getElementById('newCountryFlag');
-
-if (newCountryCodeSelect && newCountryFlag) {
-    function updateNewFlag() {
-        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
-        var flagUrl = selectedOption.getAttribute('data-flag');
-        if (flagUrl) {
-            newCountryFlag.src = flagUrl;
-            newCountryFlag.style.display = '';
-        } else {
-            newCountryFlag.style.display = 'none';
-        }
-    }
-
-    // Function to update option texts based on dropdown state
-    function updateOptionTexts() {
-        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
-        var selectedValue = selectedOption.value;
-        
-        Array.from(newCountryCodeSelect.options).forEach(function(option) {
-            var countryCode = option.value;
-            var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
-            
-            if (option.value === selectedValue) {
-                // For the selected option, show only country code when closed
-                option.textContent = countryCode;
+    if (newCountryCodeSelect && newCountryFlag) {
+        function updateNewFlag() {
+            var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+            var flagUrl = selectedOption.getAttribute('data-flag');
+            if (flagUrl) {
+                newCountryFlag.src = flagUrl;
+                newCountryFlag.style.display = '';
             } else {
-                // For other options, show full text
-                option.textContent = countryName + ' (' + countryCode + ')';
+                newCountryFlag.style.display = 'none';
             }
-        });
-    }
+        }
 
-    function updateSelectDisplay() {
-        updateNewFlag();
-        updateOptionTexts();
-    }
+        // Function to update option texts based on dropdown state
+        function updateOptionTexts() {
+            var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+            var selectedValue = selectedOption.value;
+            
+            Array.from(newCountryCodeSelect.options).forEach(function(option) {
+                var countryCode = option.value;
+                var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+                
+                if (option.value === selectedValue) {
+                    // For the selected option, show only country code when closed
+                    option.textContent = countryCode;
+                } else {
+                    // For other options, show full text
+                    option.textContent = countryName + ' (' + countryCode + ')';
+                }
+            });
+        }
 
-    // Update display when selection changes
-    newCountryCodeSelect.addEventListener('change', updateSelectDisplay);
-
-    // When dropdown opens, show full text for all options
-    newCountryCodeSelect.addEventListener('mousedown', function() {
-        Array.from(newCountryCodeSelect.options).forEach(function(option) {
-            var countryCode = option.value;
-            var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
-            option.textContent = countryName + ' (' + countryCode + ')';
-        });
-    });
-
-    // When dropdown closes, update display back to country code only for selected
-    newCountryCodeSelect.addEventListener('blur', function() {
-        setTimeout(function() {
+        function updateSelectDisplay() {
+            updateNewFlag();
             updateOptionTexts();
-        }, 100);
-    });
+        }
 
-    document.getElementById('changePhoneModal')
-        .addEventListener('shown.bs.modal', updateSelectDisplay);
+        // Update display when selection changes
+        newCountryCodeSelect.addEventListener('change', updateSelectDisplay);
 
-    // Run once on page load
-    updateSelectDisplay();
-}
+        // When dropdown opens, show full text for all options
+        newCountryCodeSelect.addEventListener('mousedown', function() {
+            Array.from(newCountryCodeSelect.options).forEach(function(option) {
+                var countryCode = option.value;
+                var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+                option.textContent = countryName + ' (' + countryCode + ')';
+            });
+        });
 
+        // When dropdown closes, update display back to country code only for selected
+        newCountryCodeSelect.addEventListener('blur', function() {
+            setTimeout(function() {
+                updateOptionTexts();
+            }, 100);
+        });
 
+        var changePhoneModalEl = document.getElementById('changePhoneModal');
+        if (changePhoneModalEl) {
+            changePhoneModalEl.addEventListener('shown.bs.modal', updateSelectDisplay);
+        }
+
+        // Run once on page load
+        updateSelectDisplay();
+    }
 
     // ---- PHONE CHANGE FLOW ----
-var changePhoneBtn = document.getElementById('changePhoneBtn');
-var sendPhoneOtpBtn = document.getElementById('sendPhoneOtpBtn');
-var verifyPhoneOtpBtn = document.getElementById('verifyPhoneOtpBtn');
-var phoneOtpSection = document.getElementById('phoneOtpSection');
-var newPhoneInput = document.getElementById('newPhoneInput');
-var newCountryCode = document.getElementById('newCountryCode');
-// Update flag when selecting new country code
-var newCountryCodeSelect = document.getElementById('newCountryCode');
-var newCountryFlag = document.getElementById('newCountryFlag');
+    var changePhoneBtn = document.getElementById('changePhoneBtn');
+    var sendPhoneOtpBtn = document.getElementById('sendPhoneOtpBtn');
+    var verifyPhoneOtpBtn = document.getElementById('verifyPhoneOtpBtn');
+    var phoneOtpSection = document.getElementById('phoneOtpSection');
+    var newPhoneInput = document.getElementById('newPhoneInput');
+    var changePhoneModal = null;
 
-@* if (newCountryCodeSelect && newCountryFlag) {
-    newCountryCodeSelect.addEventListener('change', function () {
-        var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
-        var flagUrl = selectedOption.getAttribute('data-flag');
-        newCountryFlag.src = flagUrl;
-    });
-} *@
+    // Initialize modal instance
+    var changePhoneModalEl = document.getElementById('changePhoneModal');
+    if (changePhoneModalEl) {
+        changePhoneModal = bootstrap.Modal.getInstance(changePhoneModalEl) || new bootstrap.Modal(changePhoneModalEl);
+    }
 
-
-if (changePhoneBtn) {
-    changePhoneBtn.addEventListener('click', function () {
-        // Reset form
-        newPhoneInput.value = '';
+    // Function to reset phone form
+    function resetPhoneForm() {
+        if (newPhoneInput) newPhoneInput.value = '';
         document.querySelectorAll('.phone-otp-input').forEach(i => i.value = '');
         document.getElementById('phoneOtpError').textContent = '';
         document.getElementById('phoneOtpSuccess').textContent = '';
         document.getElementById('newPhoneError').textContent = '';
-        phoneOtpSection.classList.add('d-none');
-        
-        var modal = new bootstrap.Modal(document.getElementById('changePhoneModal'));
-        modal.show();
-    });
-}
-
-@* ------------------------------------------------------------------ *@
-// Send OTP
-if (sendPhoneOtpBtn) {
-    sendPhoneOtpBtn.addEventListener('click', async function () {
-        var phone = newPhoneInput.value.trim();
-        var code = newCountryCode.value;
-
-        if (!phone) {
-            document.getElementById('newPhoneError').textContent = "Please enter phone number.";
-            return;
-        }
-
-        sendPhoneOtpBtn.disabled = true;
-
-        try {
-            let res = await fetch('/OVRS_User/SendPhoneOtp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: phone, countryCode: code })
-            });
-            let data = await res.json();
-            if (data.success) {
-                phoneOtpSection.classList.remove('d-none');
-                document.getElementById('newPhoneError').textContent = '';
-            } else {
-                document.getElementById('newPhoneError').textContent = data.message;
-                sendPhoneOtpBtn.disabled = false;
-            }
-        } catch {
-            document.getElementById('newPhoneError').textContent = "Error sending OTP. Try again.";
+        if (phoneOtpSection) phoneOtpSection.classList.add('d-none');
+        if (sendPhoneOtpBtn) {
             sendPhoneOtpBtn.disabled = false;
+            sendPhoneOtpBtn.textContent = 'Send OTP';
         }
-    });
-}
-
-// OTP Inputs auto-move
-const phoneOtpInputs = document.querySelectorAll('.phone-otp-input');
-phoneOtpInputs.forEach((input, index) => {
-    input.addEventListener('input', () => {
-        if (input.value.length === 1 && index < phoneOtpInputs.length - 1) {
-            phoneOtpInputs[index + 1].focus();
-        }
-    });
-});
-
-// Verify OTP
-if (verifyPhoneOtpBtn) {
-    verifyPhoneOtpBtn.addEventListener('click', async function () {
-        let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
-
-        if (otpCode.length < 6) {
-            document.getElementById('phoneOtpError').textContent = "Enter full 6-digit OTP.";
-            return;
-        }
-
-        verifyPhoneOtpBtn.disabled = true;
-
-        try {
-            let res = await fetch('/OVRS_User/VerifyPhoneOtp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ otp: otpCode })
-            });
-            let data = await res.json();
-            if (data.success) {
-                document.getElementById('phoneOtpSuccess').textContent = data.message;
-                document.getElementById('phoneStatic').textContent = 
-                    newCountryCode.value + " " + newPhoneInput.value;
-
-                setTimeout(() => {
-                    var modal = bootstrap.Modal.getInstance(document.getElementById('changePhoneModal'));
-                    modal.hide();
-                }, 1500);
-            } else {
-                document.getElementById('phoneOtpError').textContent = data.message;
-                verifyPhoneOtpBtn.disabled = false;
-            }
-        } catch {
-            document.getElementById('phoneOtpError').textContent = "Error verifying OTP.";
+        if (verifyPhoneOtpBtn) {
             verifyPhoneOtpBtn.disabled = false;
+            verifyPhoneOtpBtn.textContent = 'Verify OTP';
         }
+        // Re-enable inputs
+        if (newPhoneInput) newPhoneInput.disabled = false;
+        if (newCountryCodeSelect) newCountryCodeSelect.disabled = false;
+    }
+
+    // Handle change phone button click
+    if (changePhoneBtn) {
+        changePhoneBtn.addEventListener('click', function () {
+            resetPhoneForm();
+            if (changePhoneModal) {
+                changePhoneModal.show();
+            }
+        });
+    }
+
+    // Send Phone OTP
+    if (sendPhoneOtpBtn) {
+        sendPhoneOtpBtn.addEventListener('click', async function () {
+            var phone = newPhoneInput.value.trim();
+            var countryCode = newCountryCodeSelect.value.trim();
+
+            // Clear previous errors
+            document.getElementById('newPhoneError').textContent = '';
+
+            // Validation
+            if (!phone) {
+                document.getElementById('newPhoneError').textContent = "Please enter phone number.";
+                return;
+            }
+
+            if (!countryCode) {
+                document.getElementById('newPhoneError').textContent = "Please select country code.";
+                return;
+            }
+
+            // Basic phone number validation (digits only, reasonable length)
+            if (!/^\d{8,15}$/.test(phone)) {
+                document.getElementById('newPhoneError').textContent = "Please enter a valid phone number (8-15 digits).";
+                return;
+            }
+
+            // Disable button and show loading state
+            sendPhoneOtpBtn.disabled = true;
+            sendPhoneOtpBtn.textContent = 'Sending...';
+
+            try {
+                // Get CSRF token
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['RequestVerificationToken'] = token.value;
+                }
+
+                let response = await fetch('/OVRS_User/SendPhoneOtp', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ 
+                        phoneNumber: phone, 
+                        countryCode: countryCode 
+                    })
+                });
+                
+                let data = await response.json();
+                
+                if (data.success) {
+                    // Show OTP section
+                    phoneOtpSection.classList.remove('d-none');
+                    document.getElementById('newPhoneError').textContent = '';
+                    sendPhoneOtpBtn.textContent = 'OTP Sent';
+                    
+                    // Focus first OTP input
+                    const firstOtpInput = document.querySelector('.phone-otp-input');
+                    if (firstOtpInput) firstOtpInput.focus();
+                    
+                    // Disable inputs to prevent changes
+                    newPhoneInput.disabled = true;
+                    newCountryCodeSelect.disabled = true;
+                } else {
+                    // Show error
+                    document.getElementById('newPhoneError').textContent = data.message || 'Failed to send OTP';
+                    sendPhoneOtpBtn.disabled = false;
+                    sendPhoneOtpBtn.textContent = 'Send OTP';
+                }
+            } catch (error) {
+                console.error('Error sending phone OTP:', error);
+                document.getElementById('newPhoneError').textContent = "Error sending OTP. Please try again.";
+                sendPhoneOtpBtn.disabled = false;
+                sendPhoneOtpBtn.textContent = 'Send OTP';
+            }
+        });
+    }
+
+    // Phone OTP Inputs auto-move and validation
+    const phoneOtpInputs = document.querySelectorAll('.phone-otp-input');
+    phoneOtpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            // Only allow digits
+            input.value = input.value.replace(/[^0-9]/g, '');
+            
+            if (input.value.length === 1 && index < phoneOtpInputs.length - 1) {
+                phoneOtpInputs[index + 1].focus();
+            }
+            
+            // Auto-verify when all inputs are filled
+            let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
+            if (otpCode.length === 6 && /^\d{6}$/.test(otpCode)) {
+                // Small delay to ensure UI updates
+                setTimeout(() => {
+                    if (verifyPhoneOtpBtn && !verifyPhoneOtpBtn.disabled) {
+                        verifyPhoneOtpBtn.click();
+                    }
+                }, 100);
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                phoneOtpInputs[index - 1].focus();
+            }
+        });
+        
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = paste.replace(/[^0-9]/g, '').substring(0, 6);
+            
+            digits.split('').forEach((digit, i) => {
+                if (phoneOtpInputs[index + i]) {
+                    phoneOtpInputs[index + i].value = digit;
+                }
+            });
+            
+            // Focus next empty input or trigger verification
+            const nextEmptyIndex = digits.length + index;
+            if (nextEmptyIndex < phoneOtpInputs.length) {
+                phoneOtpInputs[nextEmptyIndex].focus();
+            } else if (digits.length === 6) {
+                setTimeout(() => {
+                    if (verifyPhoneOtpBtn && !verifyPhoneOtpBtn.disabled) {
+                        verifyPhoneOtpBtn.click();
+                    }
+                }, 100);
+            }
+        });
     });
-}
-@* ------------------------------------ *@
+
+    // Verify Phone OTP
+    if (verifyPhoneOtpBtn) {
+        verifyPhoneOtpBtn.addEventListener('click', async function () {
+            let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
+
+            // Clear previous errors
+            document.getElementById('phoneOtpError').textContent = '';
+            document.getElementById('phoneOtpSuccess').textContent = '';
+
+            if (otpCode.length < 6 || !/^\d{6}$/.test(otpCode)) {
+                document.getElementById('phoneOtpError').textContent = "Please enter the complete 6-digit OTP.";
+                return;
+            }
+
+            // Disable button and show loading state
+            verifyPhoneOtpBtn.disabled = true;
+            verifyPhoneOtpBtn.textContent = 'Verifying...';
+
+            try {
+                // Get CSRF token
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['RequestVerificationToken'] = token.value;
+                }
+
+                let response = await fetch('/OVRS_User/VerifyPhoneOtp', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ otp: otpCode })
+                });
+                
+                let data = await response.json();
+                
+                if (data.success) {
+                    // Show success message
+                    document.getElementById('phoneOtpSuccess').textContent = data.message || 'Phone number updated successfully';
+                    document.getElementById('phoneOtpError').textContent = '';
+                    
+                    // Update the displayed phone number on the main form
+                    const phoneStatic = document.getElementById('phoneStatic');
+                    if (phoneStatic) {
+                        phoneStatic.textContent = `${newCountryCodeSelect.value} ${newPhoneInput.value}`;
+                    }
+                    
+                    // Update hidden form fields for main form submission
+                    const hiddenPhoneInput = document.querySelector('input[name="PhoneNumber"]');
+                    const hiddenCountryCodeInput = document.querySelector('input[name="CountryCode"]');
+                    if (hiddenPhoneInput) hiddenPhoneInput.value = newPhoneInput.value;
+                    if (hiddenCountryCodeInput) hiddenCountryCodeInput.value = newCountryCodeSelect.value;
+                    
+                    // Close modal after delay
+                    setTimeout(() => {
+                        if (changePhoneModal) {
+                            changePhoneModal.hide();
+                        }
+                    }, 1500);
+                } else {
+                    // Show error
+                    document.getElementById('phoneOtpError').textContent = data.message || 'Invalid or expired OTP';
+                    verifyPhoneOtpBtn.disabled = false;
+                    verifyPhoneOtpBtn.textContent = 'Verify OTP';
+                    
+                    // Clear OTP inputs for retry
+                    phoneOtpInputs.forEach(input => input.value = '');
+                    phoneOtpInputs[0].focus();
+                }
+            } catch (error) {
+                console.error('Error verifying phone OTP:', error);
+                document.getElementById('phoneOtpError').textContent = "Error verifying OTP. Please try again.";
+                verifyPhoneOtpBtn.disabled = false;
+                verifyPhoneOtpBtn.textContent = 'Verify OTP';
+            }
+        });
+    }
+
+    // Reset form when modal is closed
+    if (changePhoneModalEl) {
+        changePhoneModalEl.addEventListener('hidden.bs.modal', function () {
+            resetPhoneForm();
+        });
+    }
 
     // ---- EMAIL CHANGE FLOW ----
     var changeEmailBtn = document.getElementById('changeEmailBtn');
@@ -556,7 +681,7 @@ if (verifyPhoneOtpBtn) {
         });
     }
 
-    // Send OTP with visual feedback
+    // Send Email OTP with visual feedback
     if (sendOtpBtn) {
         sendOtpBtn.addEventListener('click', async function () {
             var newEmail = newEmailInput.value.trim();
@@ -611,30 +736,31 @@ if (verifyPhoneOtpBtn) {
             }
         });
     }
-// ---- OTP input behavior ----
-const otpInputs = document.querySelectorAll('.otp-input');
-otpInputs.forEach((input, index) => {
-    input.addEventListener('input', () => {
-        if (input.value.length === 1 && index < otpInputs.length - 1) {
-            otpInputs[index + 1].focus();
-        }
-        // Auto-submit when all inputs are filled
-        let otpCode = Array.from(otpInputs).map(i => i.value).join('');
-        if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
-            // Optionally, disable auto-submit if already submitting
-            if (!verifyOtpBtn.disabled) {
-                verifyOtpBtn.click();
-            }
-        }
-    });
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !input.value && index > 0) {
-            otpInputs[index - 1].focus();
-        }
-    });
-});
 
-    // Verify OTP
+    // Email OTP input behavior
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+            if (input.value.length === 1 && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+            // Auto-submit when all inputs are filled
+            let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+            if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
+                // Optionally, disable auto-submit if already submitting
+                if (!verifyOtpBtn.disabled) {
+                    verifyOtpBtn.click();
+                }
+            }
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+    });
+
+    // Verify Email OTP
     if (verifyOtpBtn) {
         verifyOtpBtn.addEventListener('click', async function () {
             let otpCode = Array.from(otpInputs)
@@ -782,10 +908,10 @@ if (changePasswordBtn) {
     });
 }
 
-
+// Delete Account Modal
 document.addEventListener('DOMContentLoaded', function () {
     // Show the delete modal on delete button click
-    const deleteBtn = document.querySelector('button.btn-danger:not([type="submit"])'); // Your "Delete account" button
+    const deleteBtn = document.getElementById('showDeleteAccountModalBtn');
     const deleteModal = document.getElementById('deleteAccountModal');
     if (deleteBtn && deleteModal) {
         deleteBtn.addEventListener('click', function () {
@@ -801,6 +927,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function validateDeleteFields() {
         if (
+            confirmEmail && confirmPhrase &&
             confirmEmail.value.trim() &&
             confirmPhrase.value.trim() === 'Delete my account'
         ) {
@@ -825,7 +952,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
-
 <style>
 .flag-box {
     width: 60px;
@@ -1035,4 +1161,6 @@ document.addEventListener('DOMContentLoaded', function () {
             font-weight: 600;
         }
 </style>
+
+
 
