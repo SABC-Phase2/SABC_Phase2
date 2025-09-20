@@ -91,19 +91,36 @@ namespace SABC_Phase2.Controllers
                     await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
                     var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
-                        new Claim(ClaimTypes.Role, adminRole),
-                        new Claim("AdminId", adminId.ToString()),
-                        new Claim("AdminEmail", email)
-                    };
+        {
+            new Claim(ClaimTypes.Name, $"{adminFirstName} {adminLastName}"),
+            new Claim(ClaimTypes.Role, adminRole),
+            new Claim("AdminId", adminId.ToString()),
+            new Claim("AdminEmail", email)
+        };
 
                     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var principal = new ClaimsPrincipal(identity);
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-                    return RedirectToAction("Index", "TenderAdmin");
+                    // Role-based landing page
+                    if (string.Equals(adminRole, "IT_Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return RedirectToAction("Users_Management", "TenderAdmin");
+                    }
+                    else if (string.Equals(adminRole, "Vendor_Administrator", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return RedirectToAction("Help", "Home");
+                    }
+                    else if (string.Equals(adminRole, "Tender_Administrator", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return RedirectToAction("Index", "TenderAdmin");
+                    }
+                    else
+                    {
+                        // Fallback: generic dashboard or denied
+                        return RedirectToAction("Index", "TenderAdmin");
+                    }
                 }
                 else
                 {

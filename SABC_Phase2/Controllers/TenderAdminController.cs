@@ -1895,8 +1895,8 @@ namespace SABC_Phase2.Controllers
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
         // This deals with deleting entire draft
-       
-        
+
+
         [HttpPost]
         public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
         {
@@ -2299,17 +2299,24 @@ namespace SABC_Phase2.Controllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> Administrator_Profiles()
+        {
+
+            return View();
+        }
+
         // ----------------------------------------------------------------------------------------------------------------------------------------------
 
-    }
 
-    public class DeleteDraftDocumentRequest
-    {
-        public int DocumentId { get; set; }
-    }
+        public class DeleteDraftDocumentRequest
+        {
+            public int DocumentId { get; set; }
+        }
 
-    public class DeleteDraftReq
-    {
-        public int Id { get; set; }
+        public class DeleteDraftReq
+        {
+            public int Id { get; set; }
+        }
     }
 }
