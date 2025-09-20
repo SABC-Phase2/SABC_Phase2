@@ -1,4 +1,6 @@
-﻿@{
+﻿@model SABC_Phase2.Models.Tender.AdministratorProfileViewModel
+
+@{
     ViewData["BannerText"] = "PROFILE";
     ViewData["Title"] = "Profile";
 }
@@ -21,31 +23,14 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="FirstName">First Name <span class="text-danger">*</span></label>
-                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="Enter your first name" />
+                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="Enter your first name" value="@Model.FirstName" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="LastName">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" />
+                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
                             </div>
-                        </div>
-                    </div>
-
-                    <hr />
-
-                    <!-- Phone number with editable country code -->
-                    <div class="form-group mt-3">
-                        <label for="PhoneNumber">Phone number <span class="text-danger"></span></label>
-                        <div class="input-group">
-                            <select id="CountryCode" name="CountryCode" class="form-select" style="max-width: 100px;">
-                                <option value="+27" selected>+27</option>
-                                <option value="+1">+1</option>
-                                <option value="+44">+44</option>
-                                <option value="+91">+91</option>
-                                <!-- add more as needed -->
-                            </select>
-                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control" placeholder="Enter your phone number" />
                         </div>
                     </div>
 
@@ -55,8 +40,8 @@
                     <div class="form-group d-flex justify-content-between align-items-center">
                         <div>
                             <label>Email address</label>
-                            <p id="emailStatic" class="form-static">yourname@example.gov.za</p>
-                            <input type="email" id="emailInput" name="Email" class="form-control d-none" value="yourname@example.gov.za" />
+                            <p id="emailStatic" class="form-static">@Model.Email</p>
+                            <input type="email" id="emailInput" name="Email" class="form-control d-none" value="@Model.Email" />
                         </div>
                         <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
                     </div>
@@ -89,6 +74,19 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleEdit(field) {
+        if (field === 'email') {
+            document.getElementById("emailStatic").classList.toggle("d-none");
+            document.getElementById("emailInput").classList.toggle("d-none");
+        }
+        if (field === 'password') {
+            document.getElementById("passwordStatic").classList.toggle("d-none");
+            document.getElementById("passwordInput").classList.toggle("d-none");
+        }
+    }
+</script>
 
 <style>
     .profile-page {
@@ -180,15 +178,4 @@
         }
 </style>
 
-<script>
-    function toggleEdit(field) {
-        if (field === 'email') {
-            document.getElementById("emailStatic").classList.toggle("d-none");
-            document.getElementById("emailInput").classList.toggle("d-none");
-        }
-        if (field === 'password') {
-            document.getElementById("passwordStatic").classList.toggle("d-none");
-            document.getElementById("passwordInput").classList.toggle("d-none");
-        }
-    }
-</script>
+

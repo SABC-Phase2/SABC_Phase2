@@ -2302,8 +2302,33 @@ namespace SABC_Phase2.Controllers
         [HttpGet]
         public async Task<IActionResult> Administrator_Profiles()
         {
+            // Get the AdminId from the current user's claims
+            var adminIdClaim = User.FindFirst("AdminId")?.Value;
+            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+            {
+                // Not logged in as admin, redirect or show error
+                return Unauthorized();
+            }
 
-            return View();
+            // Query the admin info from the DB
+            var admin = await _context.Administrators
+                .Where(a => a.Id == adminId)
+                .Select(a => new AdministratorProfileViewModel
+                {
+                    Id = a.Id,
+                    Email = a.Email,
+                    FirstName = a.FirstName,
+                    LastName = a.LastName,
+                    // Add other properties if you want
+                })
+                .FirstOrDefaultAsync();
+
+            if (admin == null)
+            {
+                return NotFound();
+            }
+
+            return View(admin);
         }
 
         // ----------------------------------------------------------------------------------------------------------------------------------------------

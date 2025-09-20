@@ -44,7 +44,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 
-    @* ---- Inject Logged-in User Info into JS ---- *@
+    ---- Inject Logged-in User Info into JS ----
     @{
         var user = Context.User;
         string userInfoJson = null;
@@ -68,7 +68,7 @@
             const currentUser = @Html.Raw(userInfoJson);
             console.log("✅ Logged in user:", currentUser);
         </script>
-    }
+    } 
 </body>
 </html>
 
@@ -130,7 +130,7 @@
 
 
 
-@* <!DOCTYPE html> *@
+@* <!DOCTYPE html>
 @* <html lang="en"> *@
 @* <head> *@
 @*     <meta charset="utf-8" /> *@
