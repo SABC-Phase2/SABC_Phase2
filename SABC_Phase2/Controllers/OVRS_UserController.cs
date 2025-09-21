@@ -1296,6 +1296,7 @@ namespace SABC_Phase2.Controllers
             return RedirectToAction(nameof(OVRS_Profiles));
         }
       
+
         [HttpPost]
         public async Task<IActionResult> SendEmailOtp([FromBody] string newEmail)
         {
