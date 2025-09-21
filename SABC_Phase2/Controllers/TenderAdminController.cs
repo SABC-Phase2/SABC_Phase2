@@ -2410,16 +2410,13 @@ namespace SABC_Phase2.Controllers
                 }
 
                 // 5. FIXED: Validate password requirements - DON'T add to ModelState
+                // Controller: pass the attempted password to the view for modal checklist,
+                // and show the modal if requirements not met
+
                 if (!ValidatePasswordRequirements(model.NewPassword, out List<string> passwordErrors))
                 {
-                    // ❌ REMOVED: Don't add individual errors to ModelState
-                    // foreach (var error in passwordErrors)
-                    // {
-                    //     ModelState.AddModelError("NewPassword", error);
-                    // }
-
-                    // ✅ ONLY set flag to show password requirements modal
                     ViewBag.ShowPasswordRequirementsModal = true;
+                    ViewBag.AttemptedPassword = model.NewPassword; // Pass attempted password
                     return View(model);
                 }
 

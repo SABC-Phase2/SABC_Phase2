@@ -210,48 +210,6 @@
     </div>
 </div>
 
-<!-- Password Security Requirements Modal (SAME AS OVRS) -->
-<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Security Requirements</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-3">Your password must meet the following security requirements:</p>
-                <div id="passwordRequirementsList">
-                    <div class="requirement-item" id="req-length">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must be 8 to 15 characters long</span>
-                    </div>
-                    <div class="requirement-item" id="req-lowercase">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a lowercase letter (a-z)</span>
-                    </div>
-                    <div class="requirement-item" id="req-uppercase">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain an uppercase letter (A-Z)</span>
-                    </div>
-                    <div class="requirement-item" id="req-number">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a number (0-9)</span>
-                    </div>
-                    <div class="requirement-item" id="req-special">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a special character (!@@#$%^&*()_+-=[]{}|;:,.<>?)</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
 <!-- Profile Update Success Modal -->
 <div id="profileSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="profileSuccessModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 350px;">
@@ -273,104 +231,70 @@
     </div>
 </div>
 
+
+<!-- Place this at the bottom of your view, after your other modals -->
+<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title" id="passwordRequirementsModalLabel">
+          Password Requirements
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closePasswordReqModal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Your new password must meet all of the following:</p>
+        <ul class="list-unstyled mb-0" id="passwordRequirementsChecklist">
+          @{
+              // Use ViewBag.AttemptedPassword or Model.NewPassword as appropriate
+              string attemptedPassword = ViewBag.AttemptedPassword ?? Model?.NewPassword ?? "";
+              bool hasLength = attemptedPassword.Length >= 8 && attemptedPassword.Length <= 15;
+              bool hasLower = attemptedPassword.Any(char.IsLower);
+              bool hasUpper = attemptedPassword.Any(char.IsUpper);
+              bool hasDigit = attemptedPassword.Any(char.IsDigit);
+              bool hasSpecial = attemptedPassword.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c));
+          }
+          <li>
+            <span class="@(hasLength ? "text-success" : "text-danger")">
+              <i class="fa-solid @(hasLength ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+              Must be 8 to 15 characters long.
+            </span>
+          </li>
+          <li>
+            <span class="@(hasLower ? "text-success" : "text-danger")">
+              <i class="fa-solid @(hasLower ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+              Must contain a lowercase letter.
+            </span>
+          </li>
+          <li>
+            <span class="@(hasUpper ? "text-success" : "text-danger")">
+              <i class="fa-solid @(hasUpper ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+              Must contain an uppercase letter.
+            </span>
+          </li>
+          <li>
+            <span class="@(hasDigit ? "text-success" : "text-danger")">
+              <i class="fa-solid @(hasDigit ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+              Must contain a number.
+            </span>
+          </li>
+          <li>
+            <span class="@(hasSpecial ? "text-success" : "text-danger")">
+              <i class="fa-solid @(hasSpecial ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+              Must contain a special character.
+            </span>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer border-0 d-flex justify-content-center">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closePasswordReqModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-          // ---- PASSWORD VALIDATION MODAL (FIXED) ----
-        const passwordRequirementsModalElement = document.getElementById('passwordRequirementsModal');
-        const passwordRequirementsModal = new bootstrap.Modal(passwordRequirementsModalElement);
-        const newPasswordField = document.querySelector('[name="NewPassword"]');
-
-        // Password validation functions
-        function validatePasswordRequirements(password) {
-            const requirements = {
-                length: password.length >= 8 && password.length <= 15,
-                lowercase: /[a-z]/.test(password),
-                uppercase: /[A-Z]/.test(password),
-                number: /\d/.test(password),
-                special: /[!@@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)
-            };
-            return requirements;
-        }
-
-         // FIXED: Updated function with proper class and icon management
-        function updateRequirementDisplay(requirements) {
-            const requirementElements = {
-                length: document.getElementById('req-length'),
-                lowercase: document.getElementById('req-lowercase'),
-                uppercase: document.getElementById('req-uppercase'),
-                number: document.getElementById('req-number'),
-                special: document.getElementById('req-special')
-            };
-
-            Object.keys(requirements).forEach(key => {
-                const element = requirementElements[key];
-                if (element) {
-                    const icon = element.querySelector('i');
-                    const span = element.querySelector('span');
-
-                    if (requirements[key]) {
-                        // Requirement is MET - make it green
-                        element.classList.remove('requirement-not-met');
-                        element.classList.add('requirement-met');
-
-                        if (icon) {
-                            icon.className = 'fas fa-check requirement-met';
-                        }
-
-                        if (span) {
-                            span.classList.remove('requirement-not-met');
-                            span.classList.add('requirement-met');
-                        }
-                    } else {
-                        // Requirement is NOT MET - make it red
-                        element.classList.remove('requirement-met');
-                        element.classList.add('requirement-not-met');
-
-                        if (icon) {
-                            icon.className = 'fas fa-times requirement-not-met';
-                        }
-
-                        if (span) {
-                            span.classList.remove('requirement-met');
-                            span.classList.add('requirement-not-met');
-                        }
-                    }
-                }
-            });
-        }
-
-        function isPasswordValid(requirements) {
-            return Object.values(requirements).every(req => req === true);
-        }
-
-        // Real-time password validation
-        if (newPasswordField) {
-            newPasswordField.addEventListener('input', function() {
-                const password = this.value;
-                if (password) {
-                    const requirements = validatePasswordRequirements(password);
-                    updateRequirementDisplay(requirements);
-                }
-            });
-        }
-
-        // Check for server-side validation flag and show modal
-        @if (ViewBag.ShowPasswordRequirementsModal == true)
-        {
-                <text>
-                // Update requirements display with current password value
-                if (newPasswordField && newPasswordField.value) {
-                    const requirements = validatePasswordRequirements(newPasswordField.value);
-                    updateRequirementDisplay(requirements);
-                }
-
-                // Show the modal automatically
-                setTimeout(() => {
-                    passwordRequirementsModal.show();
-                }, 500); // Small delay to ensure page is fully loaded
-                </text>
-        }
-
         // ---- EMAIL CHANGE FLOW (Existing) ----
         var changeEmailBtn = document.getElementById('changeEmailBtn');
         var sendOtpBtn = document.getElementById('sendOtpBtn');
@@ -572,53 +496,13 @@
             }
         });
 
-        // ---- FORM SUBMISSION HANDLING (FIXED LOGIC) ----
+        // ---- FORM SUBMISSION HANDLING (Simplified) ----
         const form = document.querySelector('form[method="post"]');
         const saveBtn = document.getElementById('saveBtn');
         const deleteBtn = document.getElementById('showDeleteAccountModalBtn');
 
         if (form) {
             form.addEventListener('submit', function(e) {
-                const currentPassword = document.querySelector('[name="CurrentPassword"]')?.value || '';
-                const newPassword = document.querySelector('[name="NewPassword"]')?.value || '';
-                const confirmPassword = document.querySelector('[name="ConfirmPassword"]')?.value || '';
-
-                const changingPassword = currentPassword || newPassword || confirmPassword;
-
-                if (changingPassword) {
-                    // Check if user is attempting to change password (has new password)
-                    if (newPassword) {
-                        const requirements = validatePasswordRequirements(newPassword);
-                        updateRequirementDisplay(requirements);
-
-                        // Show modal if password requirements are not met
-                        if (!isPasswordValid(requirements)) {
-                            e.preventDefault(); // Prevent form submission
-                            passwordRequirementsModal.show();
-
-                            // Re-enable buttons since form submission was prevented
-                            if (saveBtn) {
-                                saveBtn.disabled = false;
-                                saveBtn.textContent = 'Save';
-                                saveBtn.classList.remove('btn-disabled-saving');
-                            }
-                            if (deleteBtn) {
-                                deleteBtn.disabled = false;
-                                deleteBtn.classList.remove('btn-disabled-saving');
-                            }
-
-                            return false;
-                        }
-
-                        // Check if passwords match (client-side check before submission)
-                        if (confirmPassword && newPassword !== confirmPassword) {
-                            // Let this go to server for proper validation message
-                            // Don't show the requirements modal for mismatch
-                        }
-                    }
-                }
-
-                // If we reach here, either not changing password or password meets requirements
                 // Disable buttons to prevent double submission
                 if (saveBtn) {
                     saveBtn.disabled = true;
@@ -632,29 +516,13 @@
             });
         }
 
-        // Initialize requirement display on page load
-        if (document.getElementById('passwordRequirementsModal')) {
-            const initialPassword = newPasswordField ? newPasswordField.value : '';
-            const requirements = validatePasswordRequirements(initialPassword);
-            updateRequirementDisplay(requirements);
-        }
-
-        // Modal close handler - focus back on password field
-        if (passwordRequirementsModalElement) {
-            passwordRequirementsModalElement.addEventListener('hidden.bs.modal', function () {
-                if (newPasswordField) {
-                    newPasswordField.focus();
-                }
-            });
-        }
-
         // Show success modal if profile updated
         @if (TempData["ProfileUpdateSuccess"] != null)
         {
-                <text>
-                var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
-                modal.show();
-                </text>
+                    <text>
+                    var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
+                    modal.show();
+                    </text>
         }
 
         // ---- PASSWORD CHANGE TOGGLE ----
@@ -685,10 +553,6 @@
                     document.querySelectorAll('#passwordFields .text-danger').forEach(function(span) {
                         span.style.display = 'none';
                     });
-
-                    // Reset password requirements display
-                    const requirements = validatePasswordRequirements('');
-                    updateRequirementDisplay(requirements);
                 }
             });
         }
@@ -732,10 +596,36 @@
             });
         }
 
+         // Show password requirements modal if set in ViewBag
+        @if (ViewBag.ShowPasswordRequirementsModal == true)
+        {
+                <text>
+                var pwModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
+                pwModal.show();
+                </text>
+        }
+
+        // Optional: Clear password fields when closing the modal
+        document.getElementById('passwordRequirementsModal')?.addEventListener('hidden.bs.modal', function () {
+            document.querySelector('[name="NewPassword"]')?.focus();
+        });
+
     }); // End DOMContentLoaded
 </script>
 
 <style>
+    #passwordRequirementsChecklist li {
+        margin-bottom: 8px;
+        font-size: 1rem;
+    }
+
+    .text-success {
+        color: #16a34a !important;
+    }
+
+    .text-danger {
+        color: #e53935 !important;
+    }
 
     .profile-success-modal {
         border-radius: 1.25rem !important; /* More rounded than Bootstrap's default */
@@ -832,51 +722,6 @@
         .breadcrumb-custom .breadcrumb-active {
             color: #1a7f37;
             font-weight: 600;
-        }
-
-    /* Password Requirements Modal Styling - FIXED */
-    .requirement-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-        padding: 4px 0;
-        transition: all 0.3s ease;
-    }
-
-        .requirement-item i {
-            margin-right: 8px;
-            width: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .requirement-item span {
-            transition: all 0.3s ease;
-        }
-
-    /* Green for met requirements */
-    .requirement-met {
-        color: #28a745 !important;
-    }
-
-        .requirement-met i {
-            color: #28a745 !important;
-        }
-
-        .requirement-met span {
-            color: #28a745 !important;
-        }
-
-    /* Red for unmet requirements */
-    .requirement-not-met {
-        color: #dc3545 !important;
-    }
-
-        .requirement-not-met i {
-            color: #dc3545 !important;
-        }
-
-        .requirement-not-met span {
-            color: #dc3545 !important;
         }
 
     /* OTP Input Styling */
