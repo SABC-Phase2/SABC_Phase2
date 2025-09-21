@@ -12,5 +12,15 @@
 
         // ✅ New column: 1 = Active, 0 = Deleted
         public int AccountStatus { get; set; }
+
+        // OTP functionality fields (existing)
+        public string? OtpCode { get; set; }
+        public DateTime? OtpExpiration { get; set; }
+        public string? PendingEmail { get; set; }
+        public string? OtpType { get; set; }
+        public DateTime? LastOtpRequestTime { get; set; }
+
+        // Add password last updated tracking
+        public DateTime? PasswordLastUpdated { get; set; }
     }
 }

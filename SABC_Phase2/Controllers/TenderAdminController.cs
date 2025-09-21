@@ -2306,7 +2306,6 @@ namespace SABC_Phase2.Controllers
             var adminIdClaim = User.FindFirst("AdminId")?.Value;
             if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
             {
-                // Not logged in as admin, redirect or show error
                 return Unauthorized();
             }
 
@@ -2319,7 +2318,6 @@ namespace SABC_Phase2.Controllers
                     Email = a.Email,
                     FirstName = a.FirstName,
                     LastName = a.LastName,
-                    // Add other properties if you want
                 })
                 .FirstOrDefaultAsync();
 
@@ -2331,6 +2329,249 @@ namespace SABC_Phase2.Controllers
             return View(admin);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Administrator_Profiles(AdministratorProfileViewModel model)
+        {
+            // Clear password-related model state if password change is not being attempted
+            bool changingPassword = !string.IsNullOrWhiteSpace(model.CurrentPassword)
+                || !string.IsNullOrWhiteSpace(model.NewPassword)
+                || !string.IsNullOrWhiteSpace(model.ConfirmPassword);
+
+            if (!changingPassword)
+            {
+                // Clear any password-related validation errors if user isn't trying to change password
+                ModelState.Remove("CurrentPassword");
+                ModelState.Remove("NewPassword");
+                ModelState.Remove("ConfirmPassword");
+
+                // Clear the password fields to ensure they don't hold values
+                model.CurrentPassword = null;
+                model.NewPassword = null;
+                model.ConfirmPassword = null;
+            }
+
+            // Clear email from model state since it's handled via OTP
+            ModelState.Remove("Email");
+            model.Email = null;
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            // Get current admin
+            var adminIdClaim = User.FindFirst("AdminId")?.Value;
+            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+            {
+                return Unauthorized();
+            }
+
+            var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == adminId);
+            if (admin == null)
+            {
+                ModelState.AddModelError("", "Administrator not found.");
+                return View(model);
+            }
+
+            // ========== PASSWORD CHANGE LOGIC ==========
+            if (changingPassword)
+            {
+                // 1. All fields must be filled
+                if (string.IsNullOrWhiteSpace(model.CurrentPassword)
+                    || string.IsNullOrWhiteSpace(model.NewPassword)
+                    || string.IsNullOrWhiteSpace(model.ConfirmPassword))
+                {
+                    ModelState.AddModelError("", "All password fields are required.");
+                    return View(model);
+                }
+
+                // 2. Check new/confirm match
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    ModelState.AddModelError("ConfirmPassword", "New password and confirm new password do not match.");
+                    return View(model);
+                }
+
+                // 3. Check current password matches db
+                string currentPasswordHash = PasswordHelper.EncryptPassword(model.CurrentPassword);
+                if (!string.Equals(admin.PasswordHash, currentPasswordHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
+                    return View(model);
+                }
+
+                // 4. Prevent reusing the same password
+                string newPasswordHash = PasswordHelper.EncryptPassword(model.NewPassword);
+                if (string.Equals(currentPasswordHash, newPasswordHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError("NewPassword", "New password must be different from the current password.");
+                    return View(model);
+                }
+
+                // 5. FIXED: Validate password requirements - DON'T add to ModelState
+                if (!ValidatePasswordRequirements(model.NewPassword, out List<string> passwordErrors))
+                {
+                    // ❌ REMOVED: Don't add individual errors to ModelState
+                    // foreach (var error in passwordErrors)
+                    // {
+                    //     ModelState.AddModelError("NewPassword", error);
+                    // }
+
+                    // ✅ ONLY set flag to show password requirements modal
+                    ViewBag.ShowPasswordRequirementsModal = true;
+                    return View(model);
+                }
+
+                // 6. Hash and save new password
+                admin.PasswordHash = newPasswordHash;
+                admin.PasswordLastUpdated = DateTime.UtcNow;
+            }
+
+            // ========== Other profile fields ==========
+            admin.FirstName = model.FirstName;
+            admin.LastName = model.LastName;
+            // Note: Email is updated via OTP flow, not here
+
+            await _context.SaveChangesAsync();
+
+            TempData["ProfileUpdateSuccess"] = "Profile updated successfully.";
+
+            // Clear password fields before redirect
+            model.CurrentPassword = null;
+            model.NewPassword = null;
+            model.ConfirmPassword = null;
+
+            return RedirectToAction(nameof(Administrator_Profiles));
+        }
+
+
+        // Step 1: Send Email OTP
+        [HttpPost]
+        public async Task<IActionResult> SendAdminEmailOtp([FromBody] string newEmail)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail))
+                return BadRequest(new { success = false, message = "Email is required" });
+
+            // Get email validation service
+            var emailValidationService = HttpContext.RequestServices.GetRequiredService<EmailValidationService>();
+
+            // Comprehensive email validation
+            var validationResult = await emailValidationService.ValidateEmailAsync(newEmail);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(new { success = false, message = validationResult.ErrorMessage });
+            }
+
+            // Get logged in admin
+            var adminIdClaim = User.FindFirst("AdminId")?.Value;
+            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+                return Unauthorized();
+
+            var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == adminId);
+            if (admin == null) return Unauthorized();
+
+            // --- Block if changing to own current email ---
+            if (admin.Email != null && admin.Email.Trim().ToLower() == newEmail.Trim().ToLower())
+            {
+                return BadRequest(new { success = false, message = "You are already using this email address." });
+            }
+
+            // Check if email is already in use by another admin
+            var existingAdmin = await _context.Administrators
+                .FirstOrDefaultAsync(a => a.Email.ToLower() == newEmail.ToLower() && a.Id != adminId);
+
+            if (existingAdmin != null)
+                return BadRequest(new { success = false, message = "This email address is already in use by another administrator." });
+
+            // Rate limiting check
+            if (admin.LastOtpRequestTime.HasValue &&
+                DateTime.UtcNow.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds < 60)
+            {
+                return BadRequest(new { success = false, message = "Please wait before requesting another code." });
+            }
+
+            // Generate OTP
+            var otpService = HttpContext.RequestServices.GetRequiredService<OtpService>();
+            var otpCode = otpService.GenerateOtpCode();
+            var expiry = otpService.GetOtpExpiration();
+
+            // Save OTP + pending email
+            admin.OtpCode = otpCode;
+            admin.OtpExpiration = expiry;
+            admin.PendingEmail = newEmail;
+            admin.OtpType = "email";
+            admin.LastOtpRequestTime = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            // Send OTP email with error handling
+            var emailService = HttpContext.RequestServices.GetRequiredService<PhoneOtpEmailService>();
+            var emailResult = await emailService.SendEmailOtpAsync(newEmail, $"{admin.FirstName} {admin.LastName}", otpCode);
+
+            if (!emailResult.Success)
+            {
+                // Clear the OTP data since email failed
+                admin.OtpCode = null;
+                admin.OtpExpiration = null;
+                admin.PendingEmail = null;
+                admin.OtpType = null;
+                admin.LastOtpRequestTime = null;
+                await _context.SaveChangesAsync();
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to send verification email. Please check the email address and try again."
+                });
+            }
+
+            return Ok(new { success = true, message = "OTP sent successfully" });
+        }
+
+        // Step 2: Verify OTP and update email
+        [HttpPost]
+        public async Task<IActionResult> VerifyAdminEmailOtp([FromBody] VerifyAdminOtpRequest request)
+        {
+            if (string.IsNullOrEmpty(request?.Otp))
+                return BadRequest(new { success = false, message = "OTP is required" });
+
+            var adminIdClaim = User.FindFirst("AdminId")?.Value;
+            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+                return Unauthorized();
+
+            var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == adminId);
+            if (admin == null) return Unauthorized();
+
+            var otpService = HttpContext.RequestServices.GetRequiredService<OtpService>();
+            bool valid = otpService.ValidateOtp(admin.OtpCode, admin.OtpExpiration, request.Otp);
+            if (!valid)
+                return BadRequest(new { success = false, message = "Invalid or expired OTP" });
+
+            // Update email
+            if (!string.IsNullOrEmpty(admin.PendingEmail))
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    admin.Email = admin.PendingEmail;
+                    admin.PendingEmail = null;
+                    admin.OtpCode = null;
+                    admin.OtpExpiration = null;
+                    admin.OtpType = null;
+                    admin.LastOtpRequestTime = null;
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+
+            return Ok(new { success = true, message = "Email updated successfully" });
+        }
         // ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -2342,6 +2583,45 @@ namespace SABC_Phase2.Controllers
         public class DeleteDraftReq
         {
             public int Id { get; set; }
+        }
+
+        // Password validation method (SAME AS OVRS)
+        private bool ValidatePasswordRequirements(string password, out List<string> errors)
+        {
+            errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                errors.Add("Password is required.");
+                return false;
+            }
+
+            if (password.Length < 8 || password.Length > 15)
+            {
+                errors.Add("Password must be 8 to 15 characters long.");
+            }
+
+            if (!password.Any(char.IsLower))
+            {
+                errors.Add("Password must contain a lowercase letter.");
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                errors.Add("Password must contain an uppercase letter.");
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                errors.Add("Password must contain a number.");
+            }
+
+            if (!password.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c)))
+            {
+                errors.Add("Password must contain a special character.");
+            }
+
+            return errors.Count == 0;
         }
     }
 }

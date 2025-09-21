@@ -1263,7 +1263,21 @@ namespace SABC_Phase2.Controllers
                     return View(model);
                 }
 
-                // 5. Hash and save new password to legacy DB
+
+
+                // 5. Validate password requirements
+                if (!ValidatePasswordRequirements(model.NewPassword, out List<string> passwordErrors))
+                {
+                    foreach (var error in passwordErrors)
+                    {
+                        ModelState.AddModelError("NewPassword", error);
+                    }
+                    var countryCodeService = HttpContext.RequestServices.GetRequiredService<CountryCodeService>();
+                    model.CountryCodes = await countryCodeService.GetCountryCodesAsync();
+                    return View(model);
+                }
+
+                // 6. Hash and save new password to legacy DB
                 legacyUser.Password = newPasswordHash;
                 legacyUser.UpdatedDate = DateTime.Now;
             }
@@ -1682,9 +1696,51 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+        private bool ValidatePasswordRequirements(string password, out List<string> errors)
+        {
+            errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                errors.Add("Password is required.");
+                return false;
+            }
+
+            if (password.Length < 8 || password.Length > 15)
+            {
+                errors.Add("Password must be 8 to 15 characters long.");
+            }
+
+            if (!password.Any(char.IsLower))
+            {
+                errors.Add("Password must contain a lowercase letter.");
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                errors.Add("Password must contain an uppercase letter.");
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                errors.Add("Password must contain a number.");
+            }
+
+            if (!password.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c)))
+            {
+                errors.Add("Password must contain a special character.");
+            }
+
+            return errors.Count == 0;
+        }
+
     }
+
+
     public class DeleteDraftRequest
     {
         public Guid DraftId { get; set; }
     }
+
+
 }

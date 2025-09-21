@@ -1,4 +1,28 @@
 ﻿@model SABC_Phase2.Models.Tender.AdministratorProfileViewModel
+@using Microsoft.AspNetCore.Mvc.ModelBinding
+
+@functions {
+    private IEnumerable<ModelError> GetErrors(string key)
+    {
+        return ViewData.ModelState.ContainsKey(key)
+            ? ViewData.ModelState[key].Errors
+            : Enumerable.Empty<ModelError>();
+    }
+
+    public bool ShouldShowPasswordFields()
+    {
+        // Show password fields if any were filled, or if there was a password error
+        return !string.IsNullOrWhiteSpace(Model.CurrentPassword)
+            || !string.IsNullOrWhiteSpace(Model.NewPassword)
+            || !string.IsNullOrWhiteSpace(Model.ConfirmPassword)
+            || (
+                (ViewData.ModelState["CurrentPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState["NewPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState["ConfirmPassword"]?.Errors.Count ?? 0) > 0
+                || (ViewData.ModelState[string.Empty]?.Errors?.Any(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)) ?? false)
+            );
+    }
+}
 
 @{
     ViewData["BannerText"] = "PROFILE";
@@ -17,45 +41,86 @@
             <!-- Left section -->
             <div class="col-md-12">
                 <form method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
 
                     <!-- First & Last Name side by side -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="FirstName">First Name <span class="text-danger">*</span></label>
-                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder="Enter your first name" value="@Model.FirstName" />
+                                @Html.LabelFor(m => m.FirstName, new { @class = "" })
+                                <span class="text-danger">*</span>
+                                @Html.TextBoxFor(m => m.FirstName, new { @class = "form-control", placeholder = "Enter your first name" })
+                                @Html.ValidationMessageFor(m => m.FirstName, "", new { @class = "text-danger" })
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="LastName">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder="Enter your last name" value="@Model.LastName" />
+                                @Html.LabelFor(m => m.LastName, new { @class = "" })
+                                <span class="text-danger">*</span>
+                                @Html.TextBoxFor(m => m.LastName, new { @class = "form-control", placeholder = "Enter your last name" })
+                                @Html.ValidationMessageFor(m => m.LastName, "", new { @class = "text-danger" })
                             </div>
                         </div>
                     </div>
 
                     <hr />
 
-                    <!-- Email -->
+                    <!-- Email (NEW FLOW) -->
                     <div class="form-group d-flex justify-content-between align-items-center">
                         <div>
-                            <label>Email address</label>
-                            <p id="emailStatic" class="form-static">@Model.Email</p>
-                            <input type="email" id="emailInput" name="Email" class="form-control d-none" value="@Model.Email" />
+                            @Html.LabelFor(m => m.Email)
+                            <p id="emailStatic" class="form-static mb-0">@Model.Email</p>
                         </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('email')">Change</a>
+                        <a href="javascript:void(0)" class="change-link" id="changeEmailBtn">Change</a>
                     </div>
+                    @Html.HiddenFor(m => m.Email) <!-- keep model binding for current email -->
 
                     <hr />
 
-                    <!-- Password -->
-                    <div class="form-group d-flex justify-content-between align-items-center">
-                        <div>
-                            <label>Password</label>
-                            <p id="passwordStatic" class="form-static">Last updated on Mar 23, 2025</p>
-                            <input type="password" id="passwordInput" name="Password" class="form-control d-none" placeholder="Enter new password" />
+                    <!-- Password (SAME AS OVRS) -->
+                    <div class="form-group">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="mb-0">Password</label>
+                            <a href="javascript:void(0)" class="change-link" id="changePasswordBtn">Change</a>
                         </div>
-                        <a href="javascript:void(0)" class="change-link" onclick="toggleEdit('password')">Change</a>
+
+                        <!-- Consolidated error block under label/change-link row -->
+                        @if (ViewData.ModelState["CurrentPassword"]?.Errors.Count > 0
+                                                || ViewData.ModelState["NewPassword"]?.Errors.Count > 0
+                                                || ViewData.ModelState["ConfirmPassword"]?.Errors.Count > 0
+                                                || ViewData.ModelState[string.Empty]?.Errors.Any(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)) == true)
+                        {
+                            <div class="text-danger mb-2" id="passwordErrorBlock">
+                                @foreach (var error in GetErrors("CurrentPassword"))
+                                {
+                                    <div>@error.ErrorMessage</div>
+                                }
+                                @foreach (var error in GetErrors("NewPassword"))
+                                {
+                                    <div>@error.ErrorMessage</div>
+                                }
+                                @foreach (var error in GetErrors("ConfirmPassword"))
+                                {
+                                    <div>@error.ErrorMessage</div>
+                                }
+                                @foreach (var error in GetErrors(string.Empty).Where(e => e.ErrorMessage.Contains("password", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    <div>@error.ErrorMessage</div>
+                                }
+                            </div>
+                        }
+
+                        <div id="passwordFields" class="@(ShouldShowPasswordFields() ? "" : "d-none")">
+                            <div class="mb-2">
+                                @Html.PasswordFor(m => m.CurrentPassword, new { @class = "form-control", placeholder = "Enter current password", autocomplete = "current-password" })
+                            </div>
+                            <div class="mb-2">
+                                @Html.PasswordFor(m => m.NewPassword, new { @class = "form-control", placeholder = "Enter new password", autocomplete = "new-password" })
+                            </div>
+                            <div class="mb-2">
+                                @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Confirm new password", autocomplete = "new-password" })
+                            </div>
+                        </div>
                     </div>
 
                     <hr />
@@ -63,11 +128,11 @@
                     <div class="form-group">
                         <label>Delete account</label>
                         <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
-                        <button type="button" class="btn btn-danger">Delete account</button>
+                        <button type="button" class="btn btn-danger" id="showDeleteAccountModalBtn">Delete account</button>
                     </div>
 
                     <div class="form-group text-end mt-4">
-                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="submit" class="btn btn-success" id="saveBtn">Save</button>
                     </div>
                 </form>
             </div>
@@ -75,17 +140,597 @@
     </div>
 </div>
 
+<!-- Email Change Modal (Existing) -->
+<div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="changeEmailForm" autocomplete="off" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email Address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="newEmailInput" name="newEmail" placeholder="Enter new email address" required />
+                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Send OTP</button>
+                        </div>
+                        <div class="invalid-feedback" id="newEmailError" style="display:block"></div>
+                    </div>
+                    <div id="otpSection" class="mb-3 d-none">
+                        <label>Enter OTP Code</label>
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" id="verifyOtpBtn">Verify OTP</button>
+                        <div class="invalid-feedback" id="otpError" style="display:block"></div>
+                        <div class="valid-feedback" id="otpSuccess" style="display:block"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="deleteAccountForm" method="post" action="@Url.Action("DeleteAccount", "TenderAdmin")">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to permanently delete your account? This action cannot be undone.</p>
+                    <div class="mb-3">
+                        <label for="confirmEmail" class="form-label">Your Email Address</label>
+                        <input type="email" class="form-control" id="confirmEmail" name="ConfirmEmail"
+                               placeholder="Enter your email address" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPhrase" class="form-label">
+                            To verify, type <strong>"Delete my account"</strong> exactly as it appears
+                        </label>
+                        <input type="text" class="form-control" id="confirmPhrase" name="ConfirmPhrase" required />
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="confirmDeleteBtn" class="btn btn-danger" disabled>Yes, Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Password Security Requirements Modal (SAME AS OVRS) -->
+<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Security Requirements</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Your password must meet the following security requirements:</p>
+                <div id="passwordRequirementsList">
+                    <div class="requirement-item" id="req-length">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must be 8 to 15 characters long</span>
+                    </div>
+                    <div class="requirement-item" id="req-lowercase">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a lowercase letter (a-z)</span>
+                    </div>
+                    <div class="requirement-item" id="req-uppercase">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain an uppercase letter (A-Z)</span>
+                    </div>
+                    <div class="requirement-item" id="req-number">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a number (0-9)</span>
+                    </div>
+                    <div class="requirement-item" id="req-special">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a special character (!@@#$%^&*()_+-=[]{}|;:,.<>?)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="profileSuccessModal" tabindex="-1" aria-labelledby="profileSuccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="profileSuccessModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Success
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">Profile Updated Successfully!</h4>
+                <p class="text-muted">Your profile information has been updated.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    function toggleEdit(field) {
-        if (field === 'email') {
-            document.getElementById("emailStatic").classList.toggle("d-none");
-            document.getElementById("emailInput").classList.toggle("d-none");
+    document.addEventListener('DOMContentLoaded', function () {
+          // ---- PASSWORD VALIDATION MODAL (FIXED) ----
+        const passwordRequirementsModalElement = document.getElementById('passwordRequirementsModal');
+        const passwordRequirementsModal = new bootstrap.Modal(passwordRequirementsModalElement);
+        const newPasswordField = document.querySelector('[name="NewPassword"]');
+
+        // Password validation functions
+        function validatePasswordRequirements(password) {
+            const requirements = {
+                length: password.length >= 8 && password.length <= 15,
+                lowercase: /[a-z]/.test(password),
+                uppercase: /[A-Z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)
+            };
+            return requirements;
         }
-        if (field === 'password') {
-            document.getElementById("passwordStatic").classList.toggle("d-none");
-            document.getElementById("passwordInput").classList.toggle("d-none");
+
+         // FIXED: Updated function with proper class and icon management
+        function updateRequirementDisplay(requirements) {
+            const requirementElements = {
+                length: document.getElementById('req-length'),
+                lowercase: document.getElementById('req-lowercase'),
+                uppercase: document.getElementById('req-uppercase'),
+                number: document.getElementById('req-number'),
+                special: document.getElementById('req-special')
+            };
+
+            Object.keys(requirements).forEach(key => {
+                const element = requirementElements[key];
+                if (element) {
+                    const icon = element.querySelector('i');
+                    const span = element.querySelector('span');
+
+                    if (requirements[key]) {
+                        // Requirement is MET - make it green
+                        element.classList.remove('requirement-not-met');
+                        element.classList.add('requirement-met');
+
+                        if (icon) {
+                            icon.className = 'fas fa-check requirement-met';
+                        }
+
+                        if (span) {
+                            span.classList.remove('requirement-not-met');
+                            span.classList.add('requirement-met');
+                        }
+                    } else {
+                        // Requirement is NOT MET - make it red
+                        element.classList.remove('requirement-met');
+                        element.classList.add('requirement-not-met');
+
+                        if (icon) {
+                            icon.className = 'fas fa-times requirement-not-met';
+                        }
+
+                        if (span) {
+                            span.classList.remove('requirement-met');
+                            span.classList.add('requirement-not-met');
+                        }
+                    }
+                }
+            });
         }
-    }
+
+        function isPasswordValid(requirements) {
+            return Object.values(requirements).every(req => req === true);
+        }
+
+        // Real-time password validation
+        if (newPasswordField) {
+            newPasswordField.addEventListener('input', function() {
+                const password = this.value;
+                if (password) {
+                    const requirements = validatePasswordRequirements(password);
+                    updateRequirementDisplay(requirements);
+                }
+            });
+        }
+
+        // Check for server-side validation flag and show modal
+        @if (ViewBag.ShowPasswordRequirementsModal == true)
+        {
+                <text>
+                // Update requirements display with current password value
+                if (newPasswordField && newPasswordField.value) {
+                    const requirements = validatePasswordRequirements(newPasswordField.value);
+                    updateRequirementDisplay(requirements);
+                }
+
+                // Show the modal automatically
+                setTimeout(() => {
+                    passwordRequirementsModal.show();
+                }, 500); // Small delay to ensure page is fully loaded
+                </text>
+        }
+
+        // ---- EMAIL CHANGE FLOW (Existing) ----
+        var changeEmailBtn = document.getElementById('changeEmailBtn');
+        var sendOtpBtn = document.getElementById('sendOtpBtn');
+        var verifyOtpBtn = document.getElementById('verifyOtpBtn');
+        var otpSection = document.getElementById('otpSection');
+        var newEmailInput = document.getElementById('newEmailInput');
+
+        // Add spinner inside buttons
+        if (sendOtpBtn) {
+            sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Send OTP</span>';
+        }
+        if (verifyOtpBtn) {
+            verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify OTP</span>';
+        }
+
+        var sendOtpSpinner = document.getElementById('sendOtpSpinner');
+        var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
+        var newEmailError = document.getElementById('newEmailError');
+
+        if (changeEmailBtn) {
+            changeEmailBtn.addEventListener('click', function () {
+                // Clear inputs/errors when opening modal
+                newEmailInput.value = '';
+                newEmailInput.classList.remove('is-invalid', 'is-valid');
+                document.querySelectorAll('.otp-input').forEach(i => i.value = '');
+                document.getElementById('otpError').textContent = '';
+                document.getElementById('otpSuccess').textContent = '';
+                newEmailError.textContent = '';
+                otpSection.classList.add('d-none');
+
+                newEmailInput.removeAttribute('readonly');
+                sendOtpBtn.disabled = false;
+
+                var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+                modal.show();
+            });
+        }
+
+        // Send Email OTP
+        if (sendOtpBtn) {
+            sendOtpBtn.addEventListener('click', async function () {
+                var newEmail = newEmailInput.value.trim();
+                newEmailInput.classList.remove('is-invalid', 'is-valid');
+                newEmailError.textContent = "";
+
+                if (!newEmail) {
+                    newEmailError.textContent = "Please enter email.";
+                    newEmailInput.classList.add('is-invalid');
+                    return;
+                }
+
+                sendOtpSpinner.classList.remove('d-none');
+                sendOtpBtn.disabled = true;
+
+                try {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) {
+                        headers['RequestVerificationToken'] = token.value;
+                    }
+
+                    let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(newEmail)
+                    });
+
+                    let data = await res.json();
+                    if (data.success) {
+                        otpSection.classList.remove('d-none');
+                        newEmailError.textContent = '';
+                        newEmailInput.classList.remove('is-invalid');
+                        newEmailInput.classList.add('is-valid');
+                        document.querySelector('.otp-input').focus();
+                        newEmailInput.setAttribute('readonly', true);
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
+                    } else {
+                        newEmailError.textContent = data.message;
+                        newEmailInput.value = '';
+                        newEmailInput.classList.remove('is-valid');
+                        newEmailInput.classList.add('is-invalid');
+                        newEmailInput.focus();
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
+                        otpSection.classList.add('d-none');
+                    }
+                } catch (err) {
+                    console.error('Detailed error:', err);
+                    newEmailError.textContent = "Error sending OTP. Please try again.";
+                    newEmailInput.value = '';
+                    newEmailInput.classList.remove('is-valid');
+                    newEmailInput.classList.add('is-invalid');
+                    newEmailInput.focus();
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
+                    otpSection.classList.add('d-none');
+                } finally {
+                    sendOtpSpinner.classList.add('d-none');
+                }
+            });
+        }
+
+        // Email OTP input behavior
+        const otpInputs = document.querySelectorAll('.otp-input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', () => {
+                if (input.value.length === 1 && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+                let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+                if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
+                    if (!verifyOtpBtn.disabled) {
+                        verifyOtpBtn.click();
+                    }
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+        });
+
+        // Verify Email OTP
+        if (verifyOtpBtn) {
+            verifyOtpBtn.addEventListener('click', async function () {
+                let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+
+                if (!otpCode || otpCode.length < 6) {
+                    document.getElementById('otpError').textContent = "Please enter full 6-digit OTP.";
+                    return;
+                }
+
+                verifyOtpSpinner.classList.remove('d-none');
+                verifyOtpBtn.disabled = true;
+
+                try {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) {
+                        headers['RequestVerificationToken'] = token.value;
+                    }
+
+                    let res = await fetch('/TenderAdmin/VerifyAdminEmailOtp', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ otp: otpCode })
+                    });
+
+                    let data = await res.json();
+                    if (data.success) {
+                        document.getElementById('otpError').textContent = '';
+                        document.getElementById('otpSuccess').textContent = data.message;
+                        document.getElementById('emailStatic').textContent = newEmailInput.value;
+
+                        setTimeout(() => {
+                            var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
+                            modal.hide();
+                        }, 1500);
+                    } else {
+                        document.getElementById('otpError').textContent = data.message;
+                        verifyOtpBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Verify OTP error:', err);
+                    document.getElementById('otpError').textContent = "Error verifying OTP.";
+                    verifyOtpBtn.disabled = false;
+                } finally {
+                    verifyOtpSpinner.classList.add('d-none');
+                }
+            });
+        }
+
+        // ---- PASSWORD VALIDATION HIDING ON INPUT ----
+        const passwordFieldNames = ['CurrentPassword', 'NewPassword', 'ConfirmPassword'];
+
+        passwordFieldNames.forEach(function(fieldName) {
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+                input.addEventListener('input', function () {
+                    const passwordErrorBlock = document.getElementById('passwordErrorBlock');
+                    if (passwordErrorBlock) {
+                        passwordErrorBlock.style.display = 'none';
+                    }
+
+                    const fieldValidationSpan = input.parentElement.querySelector('.text-danger');
+                    if (fieldValidationSpan) {
+                        fieldValidationSpan.style.display = 'none';
+                    }
+
+                    const generalErrors = document.querySelectorAll('.text-danger');
+                    generalErrors.forEach(function(errorElement) {
+                        if (errorElement.textContent &&
+                            errorElement.textContent.toLowerCase().includes('password')) {
+                            errorElement.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+
+        // ---- FORM SUBMISSION HANDLING (FIXED LOGIC) ----
+        const form = document.querySelector('form[method="post"]');
+        const saveBtn = document.getElementById('saveBtn');
+        const deleteBtn = document.getElementById('showDeleteAccountModalBtn');
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const currentPassword = document.querySelector('[name="CurrentPassword"]')?.value || '';
+                const newPassword = document.querySelector('[name="NewPassword"]')?.value || '';
+                const confirmPassword = document.querySelector('[name="ConfirmPassword"]')?.value || '';
+
+                const changingPassword = currentPassword || newPassword || confirmPassword;
+
+                if (changingPassword) {
+                    // Check if user is attempting to change password (has new password)
+                    if (newPassword) {
+                        const requirements = validatePasswordRequirements(newPassword);
+                        updateRequirementDisplay(requirements);
+
+                        // Show modal if password requirements are not met
+                        if (!isPasswordValid(requirements)) {
+                            e.preventDefault(); // Prevent form submission
+                            passwordRequirementsModal.show();
+
+                            // Re-enable buttons since form submission was prevented
+                            if (saveBtn) {
+                                saveBtn.disabled = false;
+                                saveBtn.textContent = 'Save';
+                                saveBtn.classList.remove('btn-disabled-saving');
+                            }
+                            if (deleteBtn) {
+                                deleteBtn.disabled = false;
+                                deleteBtn.classList.remove('btn-disabled-saving');
+                            }
+
+                            return false;
+                        }
+
+                        // Check if passwords match (client-side check before submission)
+                        if (confirmPassword && newPassword !== confirmPassword) {
+                            // Let this go to server for proper validation message
+                            // Don't show the requirements modal for mismatch
+                        }
+                    }
+                }
+
+                // If we reach here, either not changing password or password meets requirements
+                // Disable buttons to prevent double submission
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Saving...';
+                    saveBtn.classList.add('btn-disabled-saving');
+                }
+                if (deleteBtn) {
+                    deleteBtn.disabled = true;
+                    deleteBtn.classList.add('btn-disabled-saving');
+                }
+            });
+        }
+
+        // Initialize requirement display on page load
+        if (document.getElementById('passwordRequirementsModal')) {
+            const initialPassword = newPasswordField ? newPasswordField.value : '';
+            const requirements = validatePasswordRequirements(initialPassword);
+            updateRequirementDisplay(requirements);
+        }
+
+        // Modal close handler - focus back on password field
+        if (passwordRequirementsModalElement) {
+            passwordRequirementsModalElement.addEventListener('hidden.bs.modal', function () {
+                if (newPasswordField) {
+                    newPasswordField.focus();
+                }
+            });
+        }
+
+        // Show success modal if profile updated
+        @if (TempData["ProfileUpdateSuccess"] != null)
+        {
+                <text>
+                var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
+                modal.show();
+                </text>
+        }
+
+        // ---- PASSWORD CHANGE TOGGLE ----
+        var changePasswordBtn = document.getElementById('changePasswordBtn');
+        var passwordFieldsContainer = document.getElementById('passwordFields');
+
+        if (changePasswordBtn) {
+            changePasswordBtn.addEventListener('click', function () {
+                if (passwordFieldsContainer.classList.contains('d-none')) {
+                    passwordFieldsContainer.classList.remove('d-none');
+                } else {
+                    passwordFieldsContainer.classList.add('d-none');
+
+                    // Clear input values
+                    var currentPwField = document.querySelector('[name="CurrentPassword"]');
+                    var newPwField = document.querySelector('[name="NewPassword"]');
+                    var confirmPwField = document.querySelector('[name="ConfirmPassword"]');
+
+                    if (currentPwField) currentPwField.value = '';
+                    if (newPwField) newPwField.value = '';
+                    if (confirmPwField) confirmPwField.value = '';
+
+                    // Hide error blocks
+                    var passwordErrorBlock = document.getElementById('passwordErrorBlock');
+                    if (passwordErrorBlock) passwordErrorBlock.style.display = 'none';
+
+                    // Hide individual field errors
+                    document.querySelectorAll('#passwordFields .text-danger').forEach(function(span) {
+                        span.style.display = 'none';
+                    });
+
+                    // Reset password requirements display
+                    const requirements = validatePasswordRequirements('');
+                    updateRequirementDisplay(requirements);
+                }
+            });
+        }
+
+        // ---- DELETE ACCOUNT MODAL ----
+        const deleteBtnModal = document.getElementById('showDeleteAccountModalBtn');
+        const deleteModal = document.getElementById('deleteAccountModal');
+        if (deleteBtnModal && deleteModal) {
+            deleteBtnModal.addEventListener('click', function () {
+                var modal = new bootstrap.Modal(deleteModal);
+                modal.show();
+            });
+        }
+
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const confirmEmail = document.getElementById('confirmEmail');
+        const confirmPhrase = document.getElementById('confirmPhrase');
+
+        function validateDeleteFields() {
+            if (
+                confirmEmail && confirmPhrase &&
+                confirmEmail.value.trim() &&
+                confirmPhrase.value.trim() === 'Delete my account'
+            ) {
+                confirmDeleteBtn.disabled = false;
+            } else {
+                confirmDeleteBtn.disabled = true;
+            }
+        }
+
+        if (confirmEmail && confirmPhrase) {
+            confirmEmail.addEventListener('input', validateDeleteFields);
+            confirmPhrase.addEventListener('input', validateDeleteFields);
+        }
+
+        if (deleteModal) {
+            deleteModal.addEventListener('hidden.bs.modal', function () {
+                if (confirmEmail) confirmEmail.value = '';
+                if (confirmPhrase) confirmPhrase.value = '';
+                if (confirmDeleteBtn) confirmDeleteBtn.disabled = true;
+            });
+        }
+
+    }); // End DOMContentLoaded
 </script>
 
 <style>
@@ -176,6 +821,66 @@
             color: #1a7f37;
             font-weight: 600;
         }
+
+    /* Password Requirements Modal Styling - FIXED */
+    .requirement-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 4px 0;
+        transition: all 0.3s ease;
+    }
+
+        .requirement-item i {
+            margin-right: 8px;
+            width: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .requirement-item span {
+            transition: all 0.3s ease;
+        }
+
+    /* Green for met requirements */
+    .requirement-met {
+        color: #28a745 !important;
+    }
+
+        .requirement-met i {
+            color: #28a745 !important;
+        }
+
+        .requirement-met span {
+            color: #28a745 !important;
+        }
+
+    /* Red for unmet requirements */
+    .requirement-not-met {
+        color: #dc3545 !important;
+    }
+
+        .requirement-not-met i {
+            color: #dc3545 !important;
+        }
+
+        .requirement-not-met span {
+            color: #dc3545 !important;
+        }
+
+    /* OTP Input Styling */
+    .otp-input {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .modal-header.bg-success {
+        background-color: #1BA548 !important;
+    }
+
+    .btn-disabled-saving {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 </style>
-
-

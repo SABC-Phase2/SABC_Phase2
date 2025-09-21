@@ -61,10 +61,10 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        @Html.LabelFor(m => m.CompanyName)
-                        @Html.TextBoxFor(m => m.CompanyName, new { @class = "form-control", placeholder = "Enter your company name" })
-                    </div>
+        <div class="form-group">
+    @Html.LabelFor(m => m.CompanyName)
+    @Html.TextBoxFor(m => m.CompanyName, new { @class = "form-control", placeholder = "Enter your company name", @readonly = "readonly" })
+</div>
 
                     <hr />
 
@@ -155,7 +155,7 @@
                     </div>
 
                     <div class="form-group text-end mt-4">
-                        <button type="submit" class="btn btn-success">Save</button>
+                      <button type="submit" class="btn btn-success" id="saveBtn">Save</button>
                     </div>
                 }
             </div>
@@ -309,9 +309,128 @@
     </div>
 </div>
 
+<!-- Password Security Requirements Modal -->
+<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Security Requirements</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Your password must meet the following security requirements:</p>
+                <div id="passwordRequirementsList">
+                    <div class="requirement-item" id="req-length">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must be 8 to 15 characters long</span>
+                    </div>
+                    <div class="requirement-item" id="req-lowercase">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a lowercase letter (a-z)</span>
+                    </div>
+                    <div class="requirement-item" id="req-uppercase">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain an uppercase letter (A-Z)</span>
+                    </div>
+                    <div class="requirement-item" id="req-number">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a number (0-9)</span>
+                    </div>
+                    <div class="requirement-item" id="req-special">
+                        <i class="fas fa-times requirement-not-met"></i>
+                        <span>Must contain a special character (!@@#$%^&*()_+-=[]{}|;:,.<>?)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Update Success Modal -->
+<div id="profileSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="profileSuccessModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 350px;">
+        <div class="modal-content rounded-4 profile-success-modal" style="text-align:center;">
+            <div class="modal-header d-block border-0">
+                <h5 class="modal-title w-100" id="profileSuccessModalLabel" style="width:100%;text-align:center;"></h5>
+                <!-- Tick Box Image (reuse your path) -->
+                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+            </div>
+            <div class="modal-body">
+                <!-- Success in green and bold -->
+                <p style="font-size:1.4rem; font-weight:700; color:#16a34a;">Success</p>
+                <p style="font-size:1rem; color:#6b7280;">Your changes have been updated successfully</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" class="btn btn-success px-5" data-bs-dismiss="modal" style="background:#16a34a; min-width:100px;">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // ---- PASSWORD VALIDATION MODAL ----
+    const passwordRequirementsModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
+    const newPasswordField = document.querySelector('[name="NewPassword"]');
+
+    // Password validation functions
+    function validatePasswordRequirements(password) {
+        const requirements = {
+            length: password.length >= 8 && password.length <= 15,
+            lowercase: /[a-z]/.test(password),
+            uppercase: /[A-Z]/.test(password),
+            number: /\d/.test(password),
+            // Escape the minus correctly so Razor doesn't get confused
+            special: /[!@@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)
+        };
+
+        return requirements;
+    }
+
+    function updateRequirementDisplay(requirements) {
+        const requirementElements = {
+            length: document.getElementById('req-length'),
+            lowercase: document.getElementById('req-lowercase'),
+            uppercase: document.getElementById('req-uppercase'),
+            number: document.getElementById('req-number'),
+            special: document.getElementById('req-special')
+        };
+
+        Object.keys(requirements).forEach(key => {
+            const element = requirementElements[key];
+            if (element) {
+                const icon = element.querySelector('i');
+                
+                if (requirements[key]) {
+                    element.classList.remove('requirement-not-met');
+                    element.classList.add('requirement-met');
+                    if (icon) icon.className = 'fas fa-check requirement-met';
+                } else {
+                    element.classList.remove('requirement-met');
+                    element.classList.add('requirement-not-met');
+                    if (icon) icon.className = 'fas fa-times requirement-not-met';
+                }
+            }
+        });
+    }
+
+    function isPasswordValid(requirements) {
+        return Object.values(requirements).every(req => req === true);
+    }
+
+    // Real-time password validation (optional - for better UX)
+    if (newPasswordField) {
+        newPasswordField.addEventListener('input', function() {
+            const password = this.value;
+            if (password) {
+                const requirements = validatePasswordRequirements(password);
+                updateRequirementDisplay(requirements);
+            }
+        });
+    }
 
     // ---- PHONE CHANGE FLAG ----
     var newCountryCodeSelect = document.getElementById('newCountryCode');
@@ -833,37 +952,84 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ---- FORM SUBMISSION HANDLING ----
-    // Show all password errors again when form is submitted
-    const form = document.querySelector('form[action*="OVRS_Profiles"]');
-    if (form) {
-        form.addEventListener('submit', function() {
-            // Re-show the password error block if it exists
-            const passwordErrorBlock = document.getElementById('passwordErrorBlock');
-            if (passwordErrorBlock) {
-                passwordErrorBlock.style.display = 'block';
+   // ---- FORM SUBMISSION HANDLING (UPDATED) ----
+const form = document.querySelector('form[action*="OVRS_Profiles"]');
+const saveBtn = document.getElementById('saveBtn');
+const deleteBtn = document.getElementById('showDeleteAccountModalBtn'); // Add this line
+if (form) {
+    form.addEventListener('submit', function(e) {
+        const currentPassword = document.querySelector('[name="CurrentPassword"]')?.value || '';
+        const newPassword = document.querySelector('[name="NewPassword"]')?.value || '';
+        const confirmPassword = document.querySelector('[name="ConfirmPassword"]')?.value || '';
+        
+        // Check if user is trying to change password
+        const changingPassword = currentPassword || newPassword || confirmPassword;
+        
+        if (changingPassword) {
+            // Check if all password fields are filled and passwords match
+            if (currentPassword && newPassword && confirmPassword && newPassword === confirmPassword) {
+                // Check if password meets security requirements
+                const requirements = validatePasswordRequirements(newPassword);
+                updateRequirementDisplay(requirements);
+                
+                if (!isPasswordValid(requirements)) {
+                    e.preventDefault(); // Prevent form submission
+                    passwordRequirementsModal.show();
+                    return false;
+                }
             }
-            
-            // Re-show individual field validation messages
-            passwordFields.forEach(function(fieldName) {
-                const input = document.querySelector(`[name="${fieldName}"]`);
-                if (input) {
-                    const fieldValidationSpan = input.parentElement.querySelector('.text-danger');
-                    if (fieldValidationSpan && fieldValidationSpan.textContent.trim()) {
-                        fieldValidationSpan.style.display = 'block';
-                    }
+        }
+
+        // If submitting (not prevented by password modal), disable the Save and Delete buttons
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            saveBtn.classList.add('btn-disabled-saving');
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.classList.add('btn-disabled-saving');
+        }
+        
+        // Keep existing error display logic
+        const passwordErrorBlock = document.getElementById('passwordErrorBlock');
+        if (passwordErrorBlock) {
+            passwordErrorBlock.style.display = 'block';
+        }
+        
+        // Re-show individual field validation messages
+        passwordFields.forEach(function(fieldName) {
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+                const fieldValidationSpan = input.parentElement.querySelector('.text-danger');
+                if (fieldValidationSpan && fieldValidationSpan.textContent.trim()) {
+                    fieldValidationSpan.style.display = 'block';
                 }
-            });
-            
-            // Re-show general password-related errors
-            const generalErrors = document.querySelectorAll('.text-danger');
-            generalErrors.forEach(function(errorElement) {
-                if (errorElement.textContent && 
-                    errorElement.textContent.toLowerCase().includes('password')) {
-                    errorElement.style.display = 'block';
-                }
-            });
+            }
         });
+        
+        // Re-show general password-related errors
+        const generalErrors = document.querySelectorAll('.text-danger');
+        generalErrors.forEach(function(errorElement) {
+            if (errorElement.textContent && 
+                errorElement.textContent.toLowerCase().includes('password')) {
+                errorElement.style.display = 'block';
+            }
+        });
+    });
+}
+
+    // Initialize requirement display on page load
+    if (document.getElementById('passwordRequirementsModal')) {
+        updateRequirementDisplay(validatePasswordRequirements(''));
+    }
+
+    @if (TempData["ProfileUpdateSuccess"] != null)
+    {
+        <text>
+        var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
+        modal.show();
+        </text>
     }
 
 }); // End DOMContentLoaded
@@ -949,7 +1115,47 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+
 <style>
+
+
+
+    .btn-disabled-saving, .btn[disabled] {
+    pointer-events: none;
+    opacity: 0.7 !important;
+    background-color: #a1a1aa !important;
+    border-color: #a1a1aa !important;
+    color: #fff !important;
+}
+  
+.profile-success-modal {
+    border-radius: 1.25rem !important; /* More rounded than Bootstrap's default */
+    min-width: 400px;
+    max-width: 480px;
+    min-height: 260px;
+height: 320px;
+    margin: 0 auto;
+}
+
+    .requirement-met {
+    color: #28a745 !important;
+}
+.requirement-not-met {
+    color: #dc3545 !important;
+}
+.requirement-item {
+    padding: 8px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+.requirement-item i {
+    width: 20px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+
 .flag-box {
     width: 60px;
     min-width: 60px;
