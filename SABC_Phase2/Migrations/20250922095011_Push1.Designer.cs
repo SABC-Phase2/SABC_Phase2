@@ -12,8 +12,8 @@ using SABC_Phase2.Data;
 namespace SABC_Phase2.Migrations
 {
     [DbContext(typeof(Phase2Context))]
-    [Migration("20250921114734_Push5")]
-    partial class Push5
+    [Migration("20250922095011_Push1")]
+    partial class Push1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,6 +66,9 @@ namespace SABC_Phase2.Migrations
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PasswordLastUpdated")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PendingEmail")
                         .HasColumnType("nvarchar(max)");

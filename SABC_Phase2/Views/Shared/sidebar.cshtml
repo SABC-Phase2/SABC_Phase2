@@ -3,7 +3,7 @@
     var supplierType = User.Identity.IsAuthenticated ? User.FindFirst("SupplierType")?.Value : null;
 }
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="sidebar expanded" id="sidebar">
     <div class="menu-toggle" onclick="toggleSidebar()">

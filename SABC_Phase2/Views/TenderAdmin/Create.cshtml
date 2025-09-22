@@ -1,1212 +1,1257 @@
-﻿
+﻿﻿
 
-﻿@{
-    ViewData["BannerText"] = "Tenders";
-}
+    ﻿@{
+        ViewData["BannerText"] = "Tenders";
+    }
 
-@model SABC_Phase2.Models.Tender.TenderViewModel
+    @model SABC_Phase2.Models.Tender.TenderViewModel
 
-@{
-    ViewBag.Title = "Create Tender";
-}
-<!-- Add these to your <head> section -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-
-<div class="breadcrumb-custom">
-    Dashboard <span class="breadcrumb-arrow">&#x2794;</span> Tenders <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Create Tender</span>
-</div>
-
-<div class="tab-header">
-    <div id="tabDetails" class="tab-btn active" onclick="showTab('details')">Details</div>
-    <div id="tabDocuments" class="tab-btn" onclick="showTab('documents')">Documents</div>
+    @{
+        ViewBag.Title = "Create Tender";
+    }
+    <!-- Add these to your <head> section -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 
-    <div id="tabSubmit" class="tab-btn disabled" onclick="if(!this.classList.contains('disabled')) showTab('submit')">Submit</div>
-</div>
+    <div class="breadcrumb-custom">
+        Dashboard <span class="breadcrumb-arrow">&#x2794;</span> Tenders <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Create Tender</span>
+    </div>
 
-<div class="tab-container">
-    <form asp-action="Create" enctype="multipart/form-data" method="post" autocomplete="off">
-        @if (Model.DraftId != null)
-        {
-            <input type="hidden" name="DraftId" value="@Model.DraftId" />
-        }
-        <div id="details" class="tab-content active">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tender Type <span class="text-danger">*</span></label>
-                    <div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="TenderType" value="RFQ" required
-                                   @(Model.TenderType == "RFQ" ? "checked" : "") />
-                            <label class="form-check-label">RFQ</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="TenderType" value="RFP"
-                                   @(Model.TenderType == "RFP" ? "checked" : "") />
-                            <label class="form-check-label">RFP</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="TenderType" value="RFI"
-                                   @(Model.TenderType == "RFI" ? "checked" : "") />
-                            <label class="form-check-label">RFI</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="TenderType" value="RFO"
-                                   @(Model.TenderType == "RFO" ? "checked" : "") />
-                            <label class="form-check-label">RFO</label>
+    <div class="tab-header">
+        <div id="tabDetails" class="tab-btn active" onclick="showTab('details')">Details</div>
+        <div id="tabDocuments" class="tab-btn" onclick="showTab('documents')">Documents</div>
+
+
+        <div id="tabSubmit" class="tab-btn disabled" onclick="if(!this.classList.contains('disabled')) showTab('submit')">Submit</div>
+    </div>
+
+    <div class="tab-container">
+        <form asp-action="Create" enctype="multipart/form-data" method="post" autocomplete="off">
+            @if (Model.DraftId != null)
+            {
+                <input type="hidden" name="DraftId" value="@Model.DraftId" />
+            }
+            <div id="details" class="tab-content active">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tender Type <span class="text-danger">*</span></label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="TenderType" value="RFQ" required
+                                       @(Model.TenderType == "RFQ" ? "checked" : "") />
+                                <label class="form-check-label">RFQ</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="TenderType" value="RFP"
+                                       @(Model.TenderType == "RFP" ? "checked" : "") />
+                                <label class="form-check-label">RFP</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="TenderType" value="RFI"
+                                       @(Model.TenderType == "RFI" ? "checked" : "") />
+                                <label class="form-check-label">RFI</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="TenderType" value="RFO"
+                                       @(Model.TenderType == "RFO" ? "checked" : "") />
+                                <label class="form-check-label">RFO</label>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label asp-for="TenderNumber">Tender number <span class="text-danger">*</span></label>
+                        <input asp-for="TenderNumber" class="form-control" />
+                        <span asp-validation-for="TenderNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="ClosingDate">Closing Date <span class="text-danger">*</span></label>
+                        <input asp-for="ClosingDate" type="date" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="ClosingDate" class="text-danger"></span>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label asp-for="ClosingTime">Closing Time <span class="text-danger">*</span></label>
+                        <input asp-for="ClosingTime" type="time" class="form-control" />
+                        <span asp-validation-for="ClosingTime" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Status">Status <span class="text-danger">*</span></label>
+                        <select asp-for="Status" class="form-control custom-dropdown" disabled>
+                            <option value="Open Tender" selected>Open Tender</option>
+                        </select>
+                        <input type="hidden" asp-for="Status" value="Open Tender" />
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label asp-for="Title">Tender Title <span class="text-danger">*</span></label>
+                        <input asp-for="Title" class="form-control" maxlength="100" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label asp-for="Description">Tender Description <span class="text-danger">*</span></label>
+                        <textarea asp-for="Description" class="form-control" rows="3" maxlength="200"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+
+
+
                 </div>
-
-                <div class="form-group">
-                    <label asp-for="TenderNumber">Tender number <span class="text-danger">*</span></label>
-                    <input asp-for="TenderNumber" class="form-control" />
-                    <span asp-validation-for="TenderNumber" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="ClosingDate">Closing Date <span class="text-danger">*</span></label>
-                    <input asp-for="ClosingDate" type="date" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                    <span asp-validation-for="ClosingDate" class="text-danger"></span>
-                </div>
-
-
-                <div class="form-group">
-                    <label asp-for="ClosingTime">Closing Time <span class="text-danger">*</span></label>
-                    <input asp-for="ClosingTime" type="time" class="form-control" />
-                    <span asp-validation-for="ClosingTime" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="Status">Status <span class="text-danger">*</span></label>
-                    <select asp-for="Status" class="form-control custom-dropdown" disabled>
-                        <option value="Open Tender" selected>Open Tender</option>
-                    </select>
-                    <input type="hidden" asp-for="Status" value="Open Tender" />
-                    <span asp-validation-for="Status" class="text-danger"></span>
-                </div>
-
-                <div class="form-group full-width">
-                    <label asp-for="Title">Tender Title <span class="text-danger">*</span></label>
-                    <input asp-for="Title" class="form-control" maxlength="100" />
-                    <span asp-validation-for="Title" class="text-danger"></span>
-                </div>
-
-                <div class="form-group full-width">
-                    <label asp-for="Description">Tender Description <span class="text-danger">*</span></label>
-                    <textarea asp-for="Description" class="form-control" rows="3" maxlength="200"></textarea>
-                    <span asp-validation-for="Description" class="text-danger"></span>
-                </div>
-
-
-
-
             </div>
-        </div>
 
-        <!-- Upload Documents Section -->
-        <div id="documents" class="tab-content">
-            <label for="UploadedFiles" class="upload-label">Upload Documents</label>
-            <div class="upload-label-underline"></div>
+            <!-- Upload Documents Section -->
+            <div id="documents" class="tab-content">
+                <label for="UploadedFiles" class="upload-label">Upload Documents</label>
+                <div class="upload-label-underline"></div>
 
-            <div id="uploadedFilesContainer" class="mt-3">
-                @if (Model.ExistingDocuments != null && Model.ExistingDocuments.Any())
-                {
-                    @foreach (var doc in Model.ExistingDocuments)
+                <div id="uploadedFilesContainer" class="mt-3">
+                    @if (Model.ExistingDocuments != null && Model.ExistingDocuments.Any())
                     {
-                        <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light" data-doc-id="@doc.Id">
-                            <div>
-                                <strong>@doc.FileName</strong>
+                        @foreach (var doc in Model.ExistingDocuments)
+                        {
+                            <div class="uploaded-file-entry existing-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light" data-doc-id="@doc.Id">
+                                <div>
+                                    <strong>@doc.FileName</strong>
+                                </div>
+                                <div class="uploaded-file-actions d-flex gap-2">
+                                    <button type="button" class="icon-btn view-upload-btn" title="View" onclick="window.open('@doc.SharePointPath', '_blank')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="icon-btn text-danger delete-upload-btn" title="Delete" data-doc-id="@doc.Id">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                                <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" style="display:none;" />
                             </div>
-                            <div class="uploaded-file-actions d-flex gap-2">
-                                <button type="button" class="icon-btn view-upload-btn" title="View" onclick="window.open('@doc.SharePointPath', '_blank')">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button type="button" class="icon-btn text-danger delete-upload-btn" title="Delete" data-doc-id="@doc.Id">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                            <input type="checkbox" name="DocumentsToDelete" value="@doc.Id" id="delete_doc_@doc.Id" style="display:none;" />
-                        </div>
+                        }
                     }
-                }
-            </div>
+                </div>
 
-            <div id="uploadInputGroup" class="d-flex align-items-center gap-2 mt-3">
-                <label class="supporting-label mb-0"><i class="fas fa-file-pdf text-danger me-1"></i> Supporting Document</label>
-                <label class="btn btn-success btn-sm d-flex align-items-center gap-1 mb-0">
-                    <i class="fas fa-upload"></i> Upload
-                    <input type="file" id="UploadedFiles" name="UploadedFiles" multiple accept=".pdf" hidden />
-                </label>
-            </div>
-        </div>
-
-        <div id="submit" class="tab-content">
-            <!-- Centered Tabs Above Submit Tender -->
-            <div class="submit-tabs-container">
-                <div class="submit-tabs">
-                    <div id="submitTabPublish" class="submit-tab active" onclick="showSubmitTab('publish')">Publish Now</div>
-                    <div id="submitTabSchedule" class="submit-tab" onclick="showSubmitTab('schedule')">Schedule</div>
-                    <div id="submitTabDraft" class="submit-tab" onclick="showSubmitTab('draft')">Save as Draft</div>
+                <div id="uploadInputGroup" class="d-flex align-items-center gap-2 mt-3">
+                    <label class="supporting-label mb-0"><i class="fas fa-file-pdf text-danger me-1"></i> Supporting Document</label>
+                    <label class="btn btn-success btn-sm d-flex align-items-center gap-1 mb-0">
+                        <i class="fas fa-upload"></i> Upload
+                        <input type="file" id="UploadedFiles" name="UploadedFiles" multiple accept=".pdf" hidden />
+                    </label>
                 </div>
             </div>
 
-            <!-- Submit Tab Content Sections -->
-            <div id="submitTabContentPublish" class="submit-tab-content active">
-                <p>Ready to publish your tender immediately.</p>
-            </div>
+            <div id="submit" class="tab-content">
+                <!-- Centered Tabs Above Submit Tender -->
+                <div class="submit-tabs-container">
+                    <div class="submit-tabs">
+                        <div id="submitTabPublish" class="submit-tab active" onclick="showSubmitTab('publish')">Publish Now</div>
+                        <div id="submitTabSchedule" class="submit-tab" onclick="showSubmitTab('schedule')">Schedule</div>
+                        <div id="submitTabDraft" class="submit-tab" onclick="showSubmitTab('draft')">Save as Draft</div>
+                    </div>
+                </div>
+
+                <!-- Submit Tab Content Sections -->
+                <div id="submitTabContentPublish" class="submit-tab-content active">
+                    <p>Ready to publish your tender immediately.</p>
+                </div>
 
 
-            <div id="submitTabContentSchedule" class="submit-tab-content">
-                <p>Set a date and time to schedule your tender publication.</p>
-                <div class="form-group full-width">
-                    <div class="schedule-container">
-                        <div class="schedule-fields show" id="scheduleFields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="ScheduledDate">Scheduled Date</label>
-                                    <div class="selected-date-display" id="selectedDateDisplay">
-                                        No date selected
-                                    </div>
-                                    <div class="always-visible-calendar" id="calendarContainer"></div>
-                                    <input type="hidden" id="ScheduledDate" name="ScheduledDate" />
-                                </div>
-                                <div class="form-group" style="margin-top: 140px;">
-                                    <!-- Added margin-top -->
-                                    <label for="timeInput">Scheduled Time</label>
-                                    <div class="time-input-container" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
-                                        <input type="number" id="hours" min="1" max="12" placeholder="HH" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
-                                        <span style="font-size: 1.5rem;">:</span>
-                                        <input type="number" id="minutes" min="0" max="59" placeholder="MM" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
-                                        <div class="time-period-toggle" style="margin-left: 15px;">
-                                            <button type="button" class="time-period-btn am-btn active" style="padding: 8px 12px; font-size: 0.6rem;">AM</button>
-                                            <button type="button" class="time-period-btn pm-btn" style="padding: 8px 12px; font-size: 0.6rem;">PM</button>
+                <div id="submitTabContentSchedule" class="submit-tab-content">
+                    <p>Set a date and time to schedule your tender publication.</p>
+                    <div class="form-group full-width">
+                        <div class="schedule-container">
+                            <div class="schedule-fields show" id="scheduleFields">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="ScheduledDate">Scheduled Date</label>
+                                        <div class="selected-date-display" id="selectedDateDisplay">
+                                            No date selected
                                         </div>
-                                        <input type="hidden" id="ScheduledTime" name="ScheduledTime">
+                                        <div class="always-visible-calendar" id="calendarContainer"></div>
+                                        <input type="hidden" id="ScheduledDate" name="ScheduledDate" />
+                                    </div>
+                                    <div class="form-group" style="margin-top: 140px;">
+                                        <!-- Added margin-top -->
+                                        <label for="timeInput">Scheduled Time</label>
+                                        <div class="time-input-container" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
+                                            <input type="number" id="hours" min="1" max="12" placeholder="HH" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                            <span style="font-size: 1.5rem;">:</span>
+                                            <input type="number" id="minutes" min="0" max="59" placeholder="MM" class="time-part" style="width: 70px; height: 45px; font-size: 1rem;">
+                                            <div class="time-period-toggle" style="margin-left: 15px;">
+                                                <button type="button" class="time-period-btn am-btn active" style="padding: 8px 12px; font-size: 0.6rem;">AM</button>
+                                                <button type="button" class="time-period-btn pm-btn" style="padding: 8px 12px; font-size: 0.6rem;">PM</button>
+                                            </div>
+                                            <input type="hidden" id="ScheduledTime" name="ScheduledTime">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div id="submitTabContentDraft" class="submit-tab-content">
-                <p>Your tender will be saved as a draft. You can return and edit or publish it later.</p>
-                <!-- Add any additional draft-related form elements or instructions here. -->
-            </div>
-        </div>
-    </form>
-</div>
-
-
-<div class="action-buttons">
-    <button type="button" id="cancelBtn" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
-    <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">
-        <span class="btn-text">Done</span>
-        <span class="arrow-icon"></span>
-        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-    </button>
-    @* <button type="button" id="continueBtn" class="action-btn preview-btn" onclick="goToSubmitTab()">Continue</button> *@
-    <button type="button" id="continueBtn" class="action-btn preview-btn">Continue</button>
-</div>
-
-@* Modal popup for immediate tender creation (Success) *@
-<!-- Modal Popup for Successful Publish -->
-<div id="publishSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="publishSuccessModalLabel" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="publishSuccessModalLabel" style="width:100%;text-align:center;">
-                    <span id="modalTenderNumber" style="font-weight:700; color:#16a34a; font-size:1.5rem;"></span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
-            </div>
-            <div class="modal-body">
-                <!-- Published Successfully in green and bold -->
-                <p style="font-size:1.4rem; font-weight:700; color:#16a34a;">Published Successfully</p>
-            </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="modalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div id="deleteDocModal" class="modal fade" tabindex="-1" aria-labelledby="deleteDocModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center p-0" style="border-radius:12px; overflow:hidden;">
-
-            <!-- Header -->
-            <div class="modal-header border-0 w-100"
-                 style="background:#006400; color:white; display:flex; justify-content:center; align-items:center; border-top-left-radius:12px; border-top-right-radius:12px;">
-                <h4 class="modal-title m-0" id="deleteDocModalLabel">Delete confirmation</h4>
-            </div>
-
-            <!-- Body -->
-            <div class="modal-body">
-                <p style="font-size:1.1rem; margin:20px 0;">Are you sure you want to delete ?</p>
-            </div>
-
-            <!-- Footer -->
-            <div class="modal-footer border-0 d-flex justify-content-center gap-3">
-                <button type="button" id="cancelDeleteDocBtn" class="btn1 btn1-cancel" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="button" id="confirmDeleteDocBtn" class="btn1 btn1-delete">
-                    <span class="btn-text">Yes, Delete</span>
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-
-
-<!-- Modal Popup for Scheduled Tender Success -->
-<div id="scheduledSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="scheduledSuccessModalLabel" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <!-- Tender Number in green and bold -->
-                <h5 class="modal-title w-100" id="scheduledSuccessModalLabel" style="width:100%;text-align:center;">
-                    <span id="scheduledModalTenderNumber" style="font-weight:bold; color:#16a34a; font-size:1.4rem;"></span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
-            </div>
-            <div class="modal-body">
-                <!-- Large green text -->
-                <p style="font-size:1.3rem; font-weight:700; color:#16a34a;">Tender Scheduled Successfully</p>
-                <!-- Small grey text and blue link -->
-                <div style="font-size:0.98rem; color: #888; margin-top:10px;">
-                    Your Tender has been saved to
-                    <a href="#" id="scheduledTendersLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">Scheduled Tenders</a>
+                <div id="submitTabContentDraft" class="submit-tab-content">
+                    <p>Your tender will be saved as a draft. You can return and edit or publish it later.</p>
+                    <!-- Add any additional draft-related form elements or instructions here. -->
                 </div>
             </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="scheduledModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
-            </div>
-        </div>
+        </form>
     </div>
-</div>
 
 
-<!-- Modal Popup for Draft Save Success -->
-<div id="draftSavedModal" class="modal fade" tabindex="-1" aria-labelledby="draftSavedModalLabel" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0">
-                <h5 class="modal-title w-100" id="draftSavedModalLabel" style="width:100%;text-align:center;">
-                    <span id="draftModalTenderNumber" style="font-weight:bold; color:#16a34a;"></span>
-                </h5>
-                <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
-            </div>
-            <div class="modal-body">
-                <p style="font-size:1.25rem; font-weight:600; color:#16a34a;">Draft Saved Succesfully</p>
-                <div style="font-size:0.95rem; color: #888; margin-top:10px;">
-                    Your draft has been saved to
-                    <a href="#" id="draftResponsesLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">draft responses</a>
+    <div class="action-buttons">
+        <button type="button" id="cancelBtn" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
+        <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">
+            <span class="btn-text">Done</span>
+            <span class="arrow-icon"></span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+        @* <button type="button" id="continueBtn" class="action-btn preview-btn" onclick="goToSubmitTab()">Continue</button> *@
+        <button type="button" id="continueBtn" class="action-btn preview-btn">Continue</button>
+    </div>
+
+    @* Modal popup for immediate tender creation (Success) *@
+    <!-- Modal Popup for Successful Publish -->
+    <div id="publishSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="publishSuccessModalLabel" aria-hidden="true" style="display:none;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="text-align:center;">
+                <div class="modal-header d-block border-0">
+                    <h5 class="modal-title w-100" id="publishSuccessModalLabel" style="width:100%;text-align:center;">
+                        <span id="modalTenderNumber" style="font-weight:700; color:#16a34a; font-size:1.5rem;"></span>
+                    </h5>
+                    <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+                </div>
+                <div class="modal-body">
+                    <!-- Published Successfully in green and bold -->
+                    <p style="font-size:1.4rem; font-weight:700; color:#16a34a;">Published Successfully</p>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-center">
+                    <button type="button" id="modalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
                 </div>
             </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <button type="button" id="draftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteDocModal" class="modal fade" tabindex="-1" aria-labelledby="deleteDocModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center p-0" style="border-radius:12px; overflow:hidden;">
+
+                <!-- Header -->
+                <div class="modal-header border-0 w-100"
+                     style="background:#006400; color:white; display:flex; justify-content:center; align-items:center; border-top-left-radius:12px; border-top-right-radius:12px;">
+                    <h4 class="modal-title m-0" id="deleteDocModalLabel">Delete confirmation</h4>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+                    <p style="font-size:1.1rem; margin:20px 0;">Are you sure you want to delete ?</p>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer border-0 d-flex justify-content-center gap-3">
+                    <button type="button" id="cancelDeleteDocBtn" class="btn1 btn1-cancel" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmDeleteDocBtn" class="btn1 btn1-delete">
+                        <span class="btn-text">Yes, Delete</span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal Popup for Empty Draft Validation -->
-<div id="emptyDraftModal" class="modal fade" tabindex="-1" aria-labelledby="emptyDraftModalLabel" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="text-align:center;">
-            <div class="modal-header d-block border-0" style="padding-bottom: 0;">
-                <!-- Removed the title as requested -->
-            </div>
-            <div class="modal-body">
-                <!-- Larger X icon -->
-                <img src="~/lib/Images/X-Box.png" alt="Error" style="width: 80px; height: 80px; margin: 0 auto 20px auto; display: block;" />
 
-                <!-- Larger "Submission Error" text -->
-                <p style="font-size:1.6rem; font-weight:700; color:#e11d48; margin-bottom: 16px;">Submission Error</p>
 
-                <!-- Slightly larger explanatory text -->
-                <p style="font-size:1.15rem; margin-bottom: 0;">Please fill in at least one field before saving as a draft.</p>
-            </div>
-            <div class="modal-footer border-0 d-flex justify-content-center">
-                <!-- Slightly larger button -->
-                <button type="button" id="emptyDraftModalCloseBtn" class="btn btn-primary" style="min-width:110px; font-size:1.05rem; padding:8px 16px;">Close</button>
+
+
+    <!-- Modal Popup for Scheduled Tender Success -->
+    <div id="scheduledSuccessModal" class="modal fade" tabindex="-1" aria-labelledby="scheduledSuccessModalLabel" aria-hidden="true" style="display:none;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="text-align:center;">
+                <div class="modal-header d-block border-0">
+                    <!-- Tender Number in green and bold -->
+                    <h5 class="modal-title w-100" id="scheduledSuccessModalLabel" style="width:100%;text-align:center;">
+                        <span id="scheduledModalTenderNumber" style="font-weight:bold; color:#16a34a; font-size:1.4rem;"></span>
+                    </h5>
+                    <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+                </div>
+                <div class="modal-body">
+                    <!-- Large green text -->
+                    <p style="font-size:1.3rem; font-weight:700; color:#16a34a;">Tender Scheduled Successfully</p>
+                    <!-- Small grey text and blue link -->
+                    <div style="font-size:0.98rem; color: #888; margin-top:10px;">
+                        Your Tender has been saved to
+                        <a href="#" id="scheduledTendersLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">Scheduled Tenders</a>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-center">
+                    <button type="button" id="scheduledModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-@section Scripts {
-    <script>
 
-            // Pass current SA date and time to JavaScript
-        window.currentSaDate = '@ViewBag.CurrentSaDate';
-        window.currentSaDateTime = '@ViewBag.CurrentSaDateTime';
+    <!-- Modal Popup for Draft Save Success -->
+    <div id="draftSavedModal" class="modal fade" tabindex="-1" aria-labelledby="draftSavedModalLabel" aria-hidden="true" style="display:none;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="text-align:center;">
+                <div class="modal-header d-block border-0">
+                    <h5 class="modal-title w-100" id="draftSavedModalLabel" style="width:100%;text-align:center;">
+                        <span id="draftModalTenderNumber" style="font-weight:bold; color:#16a34a;"></span>
+                    </h5>
+                    <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width: 64px; height: 64px; margin: 12px auto 0 auto; display: block;" />
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:1.25rem; font-weight:600; color:#16a34a;">Draft Saved Succesfully</p>
+                    <div style="font-size:0.95rem; color: #888; margin-top:10px;">
+                        Your draft has been saved to
+                        <a href="#" id="draftResponsesLink" style="color:#2563eb; text-decoration:underline; font-weight:500;">draft responses</a>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-center">
+                    <button type="button" id="draftModalCloseBtn" class="btn btn-primary" style="min-width:100px;">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-               document.addEventListener('DOMContentLoaded', function () {
-                         let docIdToDelete = null;
-                        document.querySelectorAll('.delete-upload-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                docIdToDelete = btn.getAttribute('data-doc-id');
-                var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
-                modal.show();
+    <!-- Modal Popup for Empty Draft Validation -->
+    <div id="emptyDraftModal" class="modal fade" tabindex="-1" aria-labelledby="emptyDraftModalLabel" aria-hidden="true" style="display:none;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="text-align:center;">
+                <div class="modal-header d-block border-0" style="padding-bottom: 0;">
+                    <!-- Removed the title as requested -->
+                </div>
+                <div class="modal-body">
+                    <!-- Larger X icon -->
+                    <img src="~/lib/Images/X-Box.png" alt="Error" style="width: 80px; height: 80px; margin: 0 auto 20px auto; display: block;" />
 
-                const deleteBtn = document.getElementById('confirmDeleteDocBtn');
-                const btnText = deleteBtn.querySelector('.btn-text');
-                const spinner = deleteBtn.querySelector('.spinner-border');
+                    <!-- Larger "Submission Error" text -->
+                    <p style="font-size:1.6rem; font-weight:700; color:#e11d48; margin-bottom: 16px;">Submission Error</p>
 
-                // Reset button state when modal opens
-                deleteBtn.disabled = false;
-                btnText.style.display = '';
-                spinner.classList.add('d-none');
+                    <!-- Slightly larger explanatory text -->
+                    <p style="font-size:1.15rem; margin-bottom: 0;">Please fill in at least one field before saving as a draft.</p>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-center">
+                    <!-- Slightly larger button -->
+                    <button type="button" id="emptyDraftModalCloseBtn" class="btn btn-primary" style="min-width:110px; font-size:1.05rem; padding:8px 16px;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                deleteBtn.onclick = function() {
-                    if (!docIdToDelete) return;
-                    deleteBtn.disabled = true;
-                    btnText.style.display = 'none';
-                    spinner.classList.remove('d-none');
+    @section Scripts {
+        <script>
 
-                    fetch('/TenderAdmin/DeleteDraftDocument', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: JSON.stringify({ documentId: docIdToDelete })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.querySelector('[data-doc-id="' + docIdToDelete + '"]').remove();
-                        } else {
-                            alert('Failed to delete document: ' + data.message);
-                        }
-                        docIdToDelete = null;
-                        modal.hide();
-                        // Reset button state
-                        deleteBtn.disabled = false;
-                        btnText.style.display = '';
-                        spinner.classList.add('d-none');
-                    })
-                    .catch(err => {
-                        alert('Error deleting document.');
-                        docIdToDelete = null;
-                        modal.hide();
-                        // Reset button state
-                        deleteBtn.disabled = false;
-                        btnText.style.display = '';
-                        spinner.classList.add('d-none');
-                    });
-                };
+                // Pass current SA date and time to JavaScript
+            window.currentSaDate = '@ViewBag.CurrentSaDate';
+            window.currentSaDateTime = '@ViewBag.CurrentSaDateTime';
 
-                document.getElementById('cancelDeleteDocBtn').onclick = function() {
-                    docIdToDelete = null;
-                    modal.hide();
+                   document.addEventListener('DOMContentLoaded', function () {
+                             let docIdToDelete = null;
+                            document.querySelectorAll('.delete-upload-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    docIdToDelete = btn.getAttribute('data-doc-id');
+                    var modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+                    modal.show();
+
+                    const deleteBtn = document.getElementById('confirmDeleteDocBtn');
+                    const btnText = deleteBtn.querySelector('.btn-text');
+                    const spinner = deleteBtn.querySelector('.spinner-border');
+
+                    // Reset button state when modal opens
                     deleteBtn.disabled = false;
                     btnText.style.display = '';
                     spinner.classList.add('d-none');
-                };
+
+                    deleteBtn.onclick = function() {
+                        if (!docIdToDelete) return;
+                        deleteBtn.disabled = true;
+                        btnText.style.display = 'none';
+                        spinner.classList.remove('d-none');
+
+                        fetch('/TenderAdmin/DeleteDraftDocument', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify({ documentId: docIdToDelete })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.querySelector('[data-doc-id="' + docIdToDelete + '"]').remove();
+                            } else {
+                                alert('Failed to delete document: ' + data.message);
+                            }
+                            docIdToDelete = null;
+                            modal.hide();
+                            // Reset button state
+                            deleteBtn.disabled = false;
+                            btnText.style.display = '';
+                            spinner.classList.add('d-none');
+                        })
+                        .catch(err => {
+                            alert('Error deleting document.');
+                            docIdToDelete = null;
+                            modal.hide();
+                            // Reset button state
+                            deleteBtn.disabled = false;
+                            btnText.style.display = '';
+                            spinner.classList.add('d-none');
+                        });
+                    };
+
+                    document.getElementById('cancelDeleteDocBtn').onclick = function() {
+                        docIdToDelete = null;
+                        modal.hide();
+                        deleteBtn.disabled = false;
+                        btnText.style.display = '';
+                        spinner.classList.add('d-none');
+                    };
+                });
             });
-        });
 
-        const closingDateInput = document.querySelector('input[name="ClosingDate"]');
-        if (closingDateInput) {
-            // Set min attribute on load
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const minDate = `${yyyy}-${mm}-${dd}`;
-            closingDateInput.setAttribute('min', minDate);
+            const closingDateInput = document.querySelector('input[name="ClosingDate"]');
+            if (closingDateInput) {
+                // Set min attribute on load
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                const minDate = `${yyyy}-${mm}-${dd}`;
+                closingDateInput.setAttribute('min', minDate);
 
-            // Validate on change
-            closingDateInput.addEventListener('change', function () {
-                if (this.value < minDate) {
-                    this.value = minDate;
-                    // Optionally show a validation error
-                    alert('Closing date cannot be before today.');
-                }
-            });
-        }
+                // Validate on change
+                closingDateInput.addEventListener('change', function () {
+                    if (this.value < minDate) {
+                        this.value = minDate;
+                        // Optionally show a validation error
+                        alert('Closing date cannot be before today.');
+                    }
+                });
+            }
 
-                            document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var container = btn.closest('[data-doc-id]');
-                    var docId = container.getAttribute('data-doc-id');
-                    if (!docId) return;
-                    if (!confirm('Are you sure you want to delete this document?')) return;
+                                document.querySelectorAll('.btn-link.text-danger').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var container = btn.closest('[data-doc-id]');
+                        var docId = container.getAttribute('data-doc-id');
+                        if (!docId) return;
+                        if (!confirm('Are you sure you want to delete this document?')) return;
 
-                    fetch('/TenderAdmin/DeleteDraftDocument', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: JSON.stringify({ documentId: docId })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            container.remove(); // Instantly remove from UI
-                        } else {
-                            alert('Failed to delete document: ' + data.message);
+                        fetch('/TenderAdmin/DeleteDraftDocument', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                            },
+                            body: JSON.stringify({ documentId: docId })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                container.remove(); // Instantly remove from UI
+                            } else {
+                                alert('Failed to delete document: ' + data.message);
+                            }
+                        })
+                        .catch(err => alert('Error deleting document.'));
+                    });
+                });
+
+
+
+
+
+                // Tab logic...
+                const tabs = ['details', 'documents', 'submit'];
+                let currentTab = 'details';
+
+                const continueBtn = document.getElementById('continueBtn');
+                const doneBtn = document.getElementById('doneBtn');
+                let draftBtn = document.getElementById('draftBtn');
+
+                const submitTabs = ['publish', 'schedule', 'draft'];
+                let currentSubmitSubTab = 'publish';
+
+                // Initialize Flatpickr calendar (always visible)
+                const initCalendar = function() {
+                // Parse the current SA date
+                const currentSaDate = new Date(window.currentSaDate + 'T00:00:00');
+
+                const calendar = flatpickr("#calendarContainer", {
+                    inline: true,
+                    dateFormat: "Y-m-d",
+                    minDate: currentSaDate, // Prevent selecting dates before today (SA time)
+                    onChange: function(selectedDates, dateStr, instance) {
+                        // Additional validation to ensure selected date is not in the past
+                        const selectedDate = new Date(dateStr + 'T00:00:00');
+                        if (selectedDate < currentSaDate) {
+                            alert('You cannot schedule a tender for a date in the past.');
+                            // Reset to minimum date
+                            instance.setDate(currentSaDate);
+                            return;
                         }
-                    })
-                    .catch(err => alert('Error deleting document.'));
-                });
-            });
 
-
-
-
-
-            // Tab logic...
-            const tabs = ['details', 'documents', 'submit'];
-            let currentTab = 'details';
-
-            const continueBtn = document.getElementById('continueBtn');
-            const doneBtn = document.getElementById('doneBtn');
-            let draftBtn = document.getElementById('draftBtn');
-
-            const submitTabs = ['publish', 'schedule', 'draft'];
-            let currentSubmitSubTab = 'publish';
-
-            // Initialize Flatpickr calendar (always visible)
-            const initCalendar = function() {
-            // Parse the current SA date
-            const currentSaDate = new Date(window.currentSaDate + 'T00:00:00');
-
-            const calendar = flatpickr("#calendarContainer", {
-                inline: true,
-                dateFormat: "Y-m-d",
-                minDate: currentSaDate, // Prevent selecting dates before today (SA time)
-                onChange: function(selectedDates, dateStr, instance) {
-                    // Additional validation to ensure selected date is not in the past
-                    const selectedDate = new Date(dateStr + 'T00:00:00');
-                    if (selectedDate < currentSaDate) {
-                        alert('You cannot schedule a tender for a date in the past.');
-                        // Reset to minimum date
-                        instance.setDate(currentSaDate);
-                        return;
+                        document.getElementById('ScheduledDate').value = dateStr;
+                        // Update the selected date display
+                        const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
+                        document.getElementById('selectedDateDisplay').textContent = formattedDate;
                     }
+                });
 
-                    document.getElementById('ScheduledDate').value = dateStr;
-                    // Update the selected date display
-                    const formattedDate = instance.formatDate(selectedDates[0], "F j, Y");
-                    document.getElementById('selectedDateDisplay').textContent = formattedDate;
-                }
-            });
+                // Set current SA date as default (or next day if current time is late)
+                const defaultDate = currentSaDate;
+                calendar.setDate(defaultDate);
+                document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
 
-            // Set current SA date as default (or next day if current time is late)
-            const defaultDate = currentSaDate;
-            calendar.setDate(defaultDate);
-            document.getElementById('ScheduledDate').value = calendar.selectedDates[0].toISOString().split('T')[0];
+                // Format and display the default date
+                const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
+                document.getElementById('selectedDateDisplay').textContent = formattedDate;
+            };
 
-            // Format and display the default date
-            const formattedDate = calendar.formatDate(calendar.selectedDates[0], "F j, Y");
-            document.getElementById('selectedDateDisplay').textContent = formattedDate;
-        };
+                   // --- FIXED TIME INPUT LOGIC START ---
+            const initTimeInput = function() {
+                const hoursInput = document.getElementById('hours');
+                const minutesInput = document.getElementById('minutes');
+                const amBtn = document.querySelector('.am-btn');
+                const pmBtn = document.querySelector('.pm-btn');
+                const timeHiddenInput = document.getElementById('ScheduledTime');
+                let isAM = amBtn && amBtn.classList.contains('active') ? true : false;
 
-               // --- FIXED TIME INPUT LOGIC START ---
-        const initTimeInput = function() {
-            const hoursInput = document.getElementById('hours');
-            const minutesInput = document.getElementById('minutes');
-            const amBtn = document.querySelector('.am-btn');
-            const pmBtn = document.querySelector('.pm-btn');
-            const timeHiddenInput = document.getElementById('ScheduledTime');
-            let isAM = amBtn && amBtn.classList.contains('active') ? true : false;
-
-            // Set initial time value
-            updateHiddenTimeValue();
-
-            function displayHourValue(val) {
-                if (!val) return '';
-                val = String(parseInt(val, 10));
-                return val;
-            }
-
-             function validateHourInput() {
-            hoursInput.addEventListener('input', function(e) {
-                let val = this.value.replace(/\D/g, '');
-                if (val.length > 2) val = val.slice(0, 2);
-                if (val.length === 1 && val === '0') val = '';
-                if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
-                if (val === '00') val = '';
-                // No leading zero for display
-                this.value = val ? String(parseInt(val, 10)) : '';
-                updateHiddenTimeValue(); // This will now only validate when complete
-            });
-
-            // Validate on blur (when user finishes with the field)
-            hoursInput.addEventListener('blur', function() {
-                // Remove leading zero if present and value is 1-9
-                if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
-                    this.value = this.value.substring(1);
-                }
+                // Set initial time value
                 updateHiddenTimeValue();
 
-                // Only validate if both fields have values
-                if (this.value && minutesInput.value) {
-                    validateScheduledDateTime();
+                function displayHourValue(val) {
+                    if (!val) return '';
+                    val = String(parseInt(val, 10));
+                    return val;
                 }
-            });
 
-            hoursInput.addEventListener('keydown', function(e) {
-                let val = parseInt(this.value || '1', 10) || 1;
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    val = val >= 12 ? 1 : val + 1;
-                    this.value = String(val); // No leading zero for display
+                 function validateHourInput() {
+                hoursInput.addEventListener('input', function(e) {
+                    let val = this.value.replace(/\D/g, '');
+                    if (val.length > 2) val = val.slice(0, 2);
+                    if (val.length === 1 && val === '0') val = '';
+                    if (val.length === 2 && parseInt(val, 10) > 12) val = val[0] === '1' ? '12' : '1';
+                    if (val === '00') val = '';
+                    // No leading zero for display
+                    this.value = val ? String(parseInt(val, 10)) : '';
+                    updateHiddenTimeValue(); // This will now only validate when complete
+                });
+
+                // Validate on blur (when user finishes with the field)
+                hoursInput.addEventListener('blur', function() {
+                    // Remove leading zero if present and value is 1-9
+                    if (this.value && this.value.length === 2 && this.value.startsWith('0')) {
+                        this.value = this.value.substring(1);
+                    }
                     updateHiddenTimeValue();
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    val = val <= 1 ? 12 : val - 1;
-                    this.value = String(val); // No leading zero for display
-                    updateHiddenTimeValue();
-                }
-            });
-        }
 
-        function validateMinuteInput() {
-            minutesInput.addEventListener('input', function(e) {
-                let val = this.value.replace(/\D/g, '');
-                if (val.length > 2) val = val.slice(0, 2);
-                if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
-                this.value = val;
-                updateHiddenTimeValue(); // This will now only validate when complete
-            });
+                    // Only validate if both fields have values
+                    if (this.value && minutesInput.value) {
+                        validateScheduledDateTime();
+                    }
+                });
 
-            // Validate on blur (when user finishes with the field)
-            minutesInput.addEventListener('blur', function() {
-                if (this.value) {
-                    this.value = this.value.padStart(2, '0');
-                }
-                updateHiddenTimeValue();
-
-                // Only validate if both fields have values
-                if (hoursInput.value && this.value) {
-                    validateScheduledDateTime();
-                }
-            });
-
-            minutesInput.addEventListener('keydown', function(e) {
-                let val = parseInt(this.value || '0', 10) || 0;
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    val = val >= 59 ? 0 : val + 1;
-                    this.value = String(val).padStart(2, '0');
-                    updateHiddenTimeValue();
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    val = val <= 0 ? 59 : val - 1;
-                    this.value = String(val).padStart(2, '0');
-                    updateHiddenTimeValue();
-                }
-            });
-        }
-
-            // AM/PM toggle
-            if (amBtn) {
-                amBtn.addEventListener('click', function() {
-                    if (!isAM) {
-                        isAM = true;
-                        amBtn.classList.add('active');
-                        pmBtn.classList.remove('active');
+                hoursInput.addEventListener('keydown', function(e) {
+                    let val = parseInt(this.value || '1', 10) || 1;
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        val = val >= 12 ? 1 : val + 1;
+                        this.value = String(val); // No leading zero for display
+                        updateHiddenTimeValue();
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        val = val <= 1 ? 12 : val - 1;
+                        this.value = String(val); // No leading zero for display
                         updateHiddenTimeValue();
                     }
                 });
             }
-            if (pmBtn) {
-                pmBtn.addEventListener('click', function() {
-                    if (isAM) {
-                        isAM = false;
-                        pmBtn.classList.add('active');
-                        amBtn.classList.remove('active');
+
+            function validateMinuteInput() {
+                minutesInput.addEventListener('input', function(e) {
+                    let val = this.value.replace(/\D/g, '');
+                    if (val.length > 2) val = val.slice(0, 2);
+                    if (val.length === 2 && parseInt(val, 10) > 59) val = '59';
+                    this.value = val;
+                    updateHiddenTimeValue(); // This will now only validate when complete
+                });
+
+                // Validate on blur (when user finishes with the field)
+                minutesInput.addEventListener('blur', function() {
+                    if (this.value) {
+                        this.value = this.value.padStart(2, '0');
+                    }
+                    updateHiddenTimeValue();
+
+                    // Only validate if both fields have values
+                    if (hoursInput.value && this.value) {
+                        validateScheduledDateTime();
+                    }
+                });
+
+                minutesInput.addEventListener('keydown', function(e) {
+                    let val = parseInt(this.value || '0', 10) || 0;
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        val = val >= 59 ? 0 : val + 1;
+                        this.value = String(val).padStart(2, '0');
+                        updateHiddenTimeValue();
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        val = val <= 0 ? 59 : val - 1;
+                        this.value = String(val).padStart(2, '0');
                         updateHiddenTimeValue();
                     }
                 });
             }
-            function updateHiddenTimeValue() {
-            let hours = hoursInput.value.padStart(2, '0') || '00';
-            let minutes = minutesInput.value.padStart(2, '0') || '00';
-            let seconds = '00';
 
-            // Convert to 24-hour format
-            let hours24 = parseInt(hours, 10);
-            if (isAM) {
-                if (hours24 === 12) hours24 = 0;
-            } else {
-                if (hours24 !== 12) hours24 += 12;
-            }
-
-            const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
-            timeHiddenInput.value = formattedTime;
-
-            // Only validate if both hours and minutes have meaningful values
-            if (hoursInput.value && hoursInput.value.length > 0 &&
-                minutesInput.value && minutesInput.value.length >= 2) {
-                validateScheduledDateTime();
-            }
-        }
-
-                    function validateScheduledDateTime() {
-            const selectedDate = document.getElementById('ScheduledDate').value;
-            const selectedTime = document.getElementById('ScheduledTime').value;
-
-            if (!selectedDate || !selectedTime) return true;
-
-            // Only validate if we have complete time input (both hours and minutes)
-            const hoursValue = hoursInput.value;
-            const minutesValue = minutesInput.value;
-
-            if (!hoursValue || hoursValue.length === 0 ||
-                !minutesValue || minutesValue.length < 2) {
-                return true; // Don't validate incomplete input
-            }
-
-            // Parse current SA date and time
-            const currentSaDateTime = new Date(window.currentSaDateTime);
-            const selectedDateTime = new Date(selectedDate + 'T' + selectedTime);
-
-            // Check if selected date is today
-            const currentSaDateOnly = new Date(window.currentSaDate + 'T00:00:00');
-            const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
-
-            if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
-                // Same day - check if time is in the future (add 1 minute buffer)
-                const bufferTime = new Date(currentSaDateTime.getTime() + (1 * 60 * 1000)); // 1 minute buffer
-
-                if (selectedDateTime <= bufferTime) {
-                    // Clear the time inputs and show warning
-                    hoursInput.value = '';
-                    minutesInput.value = '';
-                    timeHiddenInput.value = '';
-                    alert('You cannot schedule a tender for a time that has already passed. Please select a future time.');
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-            validateHourInput();
-            validateMinuteInput();
-        };
-        // --- FIXED TIME INPUT LOGIC END ---
-
-            // Call calendar initialization when schedule tab is shown
-            const scheduleTabBtn = document.getElementById('submitTabSchedule');
-            if (scheduleTabBtn) {
-                scheduleTabBtn.addEventListener('click', function() {
-                    setTimeout(initCalendar, 100); // Small delay to ensure DOM is ready
-                    setTimeout(initTimeInput, 100); // Also initialize time input
-                });
-            }
-
-            window.showTab = function(tabName) {
-                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-                document.getElementById(tabName).classList.add('active');
-                document.getElementById('tab' + capitalize(tabName)).classList.add('active');
-                updateActionButtons(tabName);
-                currentTab = tabName;
-
-                // Reinitialize calendar if showing schedule tab
-                if (tabName === 'submit' && currentSubmitSubTab === 'schedule') {
-                    setTimeout(initCalendar, 100);
-                    setTimeout(initTimeInput, 100);
-                }
-            }
-
-            continueBtn.addEventListener('click', function() {
-                let idx = tabs.indexOf(currentTab);
-                if (idx < tabs.length - 1) {
-                    showTab(tabs[idx + 1]);
-                }
-            });
-
-            function attachDraftBtnLogic() {
-                draftBtn = document.getElementById('draftBtn');
-                if (draftBtn) {
-                    draftBtn.addEventListener('click', function() {
-                        showSubmitTab('draft');
+                // AM/PM toggle
+                if (amBtn) {
+                    amBtn.addEventListener('click', function() {
+                        if (!isAM) {
+                            isAM = true;
+                            amBtn.classList.add('active');
+                            pmBtn.classList.remove('active');
+                            updateHiddenTimeValue();
+                        }
                     });
                 }
-            }
+                if (pmBtn) {
+                    pmBtn.addEventListener('click', function() {
+                        if (isAM) {
+                            isAM = false;
+                            pmBtn.classList.add('active');
+                            amBtn.classList.remove('active');
+                            updateHiddenTimeValue();
+                        }
+                    });
+                }
+                function updateHiddenTimeValue() {
+                let hours = hoursInput.value.padStart(2, '0') || '00';
+                let minutes = minutesInput.value.padStart(2, '0') || '00';
+                let seconds = '00';
 
-            function updateActionButtons(tabName) {
-                if (tabName === 'details' || tabName === 'documents') {
-                    continueBtn.style.display = 'inline-block';
-                    doneBtn.style.display = 'none';
-                    if (draftBtn) draftBtn.style.display = 'none';
-                } else if (tabName === 'submit') {
-                    continueBtn.style.display = 'none';
-                    doneBtn.style.display = 'inline-block';
-                    if (draftBtn) draftBtn.style.display = 'inline-block';
+                // Convert to 24-hour format
+                let hours24 = parseInt(hours, 10);
+                if (isAM) {
+                    if (hours24 === 12) hours24 = 0;
+                } else {
+                    if (hours24 !== 12) hours24 += 12;
+                }
+
+                const formattedTime = `${String(hours24).padStart(2, '0')}:${minutes}:${seconds}`;
+                timeHiddenInput.value = formattedTime;
+
+                // Only validate if both hours and minutes have meaningful values
+                if (hoursInput.value && hoursInput.value.length > 0 &&
+                    minutesInput.value && minutesInput.value.length >= 2) {
+                    validateScheduledDateTime();
                 }
             }
 
-            function capitalize(str) {
-                return str.charAt(0).toUpperCase() + str.slice(1);
+                        function validateScheduledDateTime() {
+                const selectedDate = document.getElementById('ScheduledDate').value;
+                const selectedTime = document.getElementById('ScheduledTime').value;
+
+                if (!selectedDate || !selectedTime) return true;
+
+                // Only validate if we have complete time input (both hours and minutes)
+                const hoursValue = hoursInput.value;
+                const minutesValue = minutesInput.value;
+
+                if (!hoursValue || hoursValue.length === 0 ||
+                    !minutesValue || minutesValue.length < 2) {
+                    return true; // Don't validate incomplete input
+                }
+
+                // Parse current SA date and time
+                const currentSaDateTime = new Date(window.currentSaDateTime);
+                const selectedDateTime = new Date(selectedDate + 'T' + selectedTime);
+
+                // Check if selected date is today
+                const currentSaDateOnly = new Date(window.currentSaDate + 'T00:00:00');
+                const selectedDateOnly = new Date(selectedDate + 'T00:00:00');
+
+                if (selectedDateOnly.getTime() === currentSaDateOnly.getTime()) {
+                    // Same day - check if time is in the future (add 1 minute buffer)
+                    const bufferTime = new Date(currentSaDateTime.getTime() + (1 * 60 * 1000)); // 1 minute buffer
+
+                    if (selectedDateTime <= bufferTime) {
+                        // Clear the time inputs and show warning
+                        hoursInput.value = '';
+                        minutesInput.value = '';
+                        timeHiddenInput.value = '';
+                        alert('You cannot schedule a tender for a time that has already passed. Please select a future time.');
+                        return false;
+                    }
+                }
+
+                return true;
             }
 
-            function showSubmitTab(subTabName) {
-                document.querySelectorAll('.submit-tab-content').forEach(stc => stc.classList.remove('active'));
-                document.querySelectorAll('.submit-tab').forEach(stb => stb.classList.remove('active'));
-                document.getElementById('submitTabContent' + capitalize(subTabName)).classList.add('active');
-                document.getElementById('submitTab' + capitalize(subTabName)).classList.add('active');
-                currentSubmitSubTab = subTabName;
+                validateHourInput();
+                validateMinuteInput();
+            };
+            // --- FIXED TIME INPUT LOGIC END ---
 
-                // Reinitialize calendar if showing schedule tab
-                if (subTabName === 'schedule') {
-                    setTimeout(initCalendar, 100);
+                // Call calendar initialization when schedule tab is shown
+                const scheduleTabBtn = document.getElementById('submitTabSchedule');
+                if (scheduleTabBtn) {
+                    scheduleTabBtn.addEventListener('click', function() {
+                        setTimeout(initCalendar, 100); // Small delay to ensure DOM is ready
+                        setTimeout(initTimeInput, 100); // Also initialize time input
+                    });
+                }
+
+                window.showTab = function(tabName) {
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                    document.getElementById(tabName).classList.add('active');
+                    document.getElementById('tab' + capitalize(tabName)).classList.add('active');
+                    updateActionButtons(tabName);
+                    currentTab = tabName;
+
+                    // Reinitialize calendar if showing schedule tab
+                    if (tabName === 'submit' && currentSubmitSubTab === 'schedule') {
+                        setTimeout(initCalendar, 100);
+                        setTimeout(initTimeInput, 100);
+                    }
+                }
+
+                continueBtn.addEventListener('click', function() {
+                    let idx = tabs.indexOf(currentTab);
+                    if (idx < tabs.length - 1) {
+                        showTab(tabs[idx + 1]);
+                    }
+                });
+
+                function attachDraftBtnLogic() {
+                    draftBtn = document.getElementById('draftBtn');
+                    if (draftBtn) {
+                        draftBtn.addEventListener('click', function() {
+                            showSubmitTab('draft');
+                        });
+                    }
+                }
+
+                function updateActionButtons(tabName) {
+                    if (tabName === 'details' || tabName === 'documents') {
+                        continueBtn.style.display = 'inline-block';
+                        doneBtn.style.display = 'none';
+                        if (draftBtn) draftBtn.style.display = 'none';
+                    } else if (tabName === 'submit') {
+                        continueBtn.style.display = 'none';
+                        doneBtn.style.display = 'inline-block';
+                        if (draftBtn) draftBtn.style.display = 'inline-block';
+                    }
+                }
+
+                function capitalize(str) {
+                    return str.charAt(0).toUpperCase() + str.slice(1);
+                }
+
+                function showSubmitTab(subTabName) {
+                    document.querySelectorAll('.submit-tab-content').forEach(stc => stc.classList.remove('active'));
+                    document.querySelectorAll('.submit-tab').forEach(stb => stb.classList.remove('active'));
+                    document.getElementById('submitTabContent' + capitalize(subTabName)).classList.add('active');
+                    document.getElementById('submitTab' + capitalize(subTabName)).classList.add('active');
+                    currentSubmitSubTab = subTabName;
+
+                    // Reinitialize calendar if showing schedule tab
+                    if (subTabName === 'schedule') {
+                        setTimeout(initCalendar, 100);
+                        setTimeout(initTimeInput, 100);
+                    }
+                }
+
+                submitTabs.forEach(function(subTabName) {
+                    const tabBtn = document.getElementById('submitTab' + capitalize(subTabName));
+                    if (tabBtn) {
+                        tabBtn.onclick = function() {
+                            showSubmitTab(subTabName);
+                        };
+                    }
+                });
+
+                showTab(currentTab);
+                if (document.getElementById('submitTabPublish')) {
+                    showSubmitTab('publish');
+                }
+                attachDraftBtnLogic();
+
+                // Initialize time input on page load if on schedule tab
+                if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
                     setTimeout(initTimeInput, 100);
                 }
-            }
 
-            submitTabs.forEach(function(subTabName) {
-                const tabBtn = document.getElementById('submitTab' + capitalize(subTabName));
-                if (tabBtn) {
-                    tabBtn.onclick = function() {
-                        showSubmitTab(subTabName);
-                    };
-                }
-            });
+                        function updateFilesDisplay() {
+                // Remove only the new uploaded file entries (not server-existing ones)
+                document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
 
-            showTab(currentTab);
-            if (document.getElementById('submitTabPublish')) {
-                showSubmitTab('publish');
-            }
-            attachDraftBtnLogic();
+                // Re-render all currently selected new files
+                selectedFiles.forEach(function(file, idx) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
+                    entryDiv.innerHTML = `
+                        <div>
+                            <strong>${file.name}</strong>
+                        </div>
+                        <div class="uploaded-file-actions d-flex gap-2">
+                            <button type="button" class="icon-btn view-upload-btn" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
 
-            // Initialize time input on page load if on schedule tab
-            if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                setTimeout(initTimeInput, 100);
-            }
+                    // View button logic
+                    entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
+                        const fileURL = URL.createObjectURL(file);
+                        window.open(fileURL, '_blank');
+                    });
 
-                    function updateFilesDisplay() {
-            // Remove only the new uploaded file entries (not server-existing ones)
-            document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+                    // Remove button logic
+                    entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
+                        selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                        updateFilesDisplay();
+                    });
 
-            // Re-render all currently selected new files
-            selectedFiles.forEach(function(file, idx) {
-                const entryDiv = document.createElement('div');
-                entryDiv.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-center mb-2 bg-light";
-                entryDiv.innerHTML = `
-                    <div>
-                        <strong>${file.name}</strong>
-                    </div>
-                    <div class="uploaded-file-actions d-flex gap-2">
-                        <button type="button" class="icon-btn view-upload-btn" title="View">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button type="button" class="icon-btn text-danger remove-upload-btn" title="Delete">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                `;
-
-                // View button logic
-                entryDiv.querySelector('.view-upload-btn').addEventListener('click', function () {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, '_blank');
+                    uploadedFilesContainer.appendChild(entryDiv);
                 });
+            }
 
-                // Remove button logic
-                entryDiv.querySelector('.remove-upload-btn').addEventListener('click', function () {
-                    selectedFiles = selectedFiles.filter(f => !(f.name === file.name && f.size === file.size));
+                // ---- PDF upload logic (multi-batch and removable) ----
+                const fileInput = document.getElementById('UploadedFiles');
+                const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
+                let selectedFiles = [];
+
+                fileInput.addEventListener('change', function () {
+                    const files = Array.from(fileInput.files);
+
+                    // Add new files to the selectedFiles array if not already present
+                    files.forEach(file => {
+                        if (file.type !== "application/pdf") {
+                            alert("Only PDF files are allowed.");
+                            return;
+                        }
+                        // Check if already present (by name + size)
+                        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                            selectedFiles.push(file);
+                        }
+                    });
+
                     updateFilesDisplay();
+                    // Reset file input so the same file can be added again if needed
+                    fileInput.value = "";
                 });
 
-                uploadedFilesContainer.appendChild(entryDiv);
-            });
-        }
+                // ---- Validation ----
+                function showFieldError(fieldIdOrName, message, tabName) {
+                    let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
+                    if (field) {
+                        let label = null;
+                        // Try to find the associated label
+                        if (field.id) {
+                            label = document.querySelector(`label[for='${field.id}']`);
+                        }
+                        // Fallback: use the closest .form-group and find label inside it
+                        if (!label) {
+                            let formGroup = field.closest('.form-group');
+                            if (formGroup) {
+                                label = formGroup.querySelector('label');
+                            }
+                        }
+                        // Remove any existing error span near this label
+                        if (label) {
+                            let oldError = label.parentNode.querySelector('.validation-custom-error');
+                            if (oldError) oldError.remove();
 
-            // ---- PDF upload logic (multi-batch and removable) ----
-            const fileInput = document.getElementById('UploadedFiles');
-            const uploadedFilesContainer = document.getElementById('uploadedFilesContainer');
-            let selectedFiles = [];
+                            let errorSpan = document.createElement('span');
+                            errorSpan.className = 'validation-custom-error text-danger';
+                            errorSpan.innerText = message;
+                            errorSpan.style.fontWeight = 'bold';
 
-            fileInput.addEventListener('change', function () {
-                const files = Array.from(fileInput.files);
-
-                // Add new files to the selectedFiles array if not already present
-                files.forEach(file => {
-                    if (file.type !== "application/pdf") {
-                        alert("Only PDF files are allowed.");
-                        return;
+                            if (tabName === 'documents') {
+                                // Insert after label
+                                label.insertAdjacentElement('afterend', errorSpan);
+                            } else {
+                                // Append next to label
+                                errorSpan.classList.add('ms-2');
+                                label.appendChild(errorSpan);
+                            }
+                        }
+                        field.classList.add('field-error-highlight');
+                    } else {
+                        // Fallback error on the whole tab section
+                        let tabContent = document.getElementById(tabName);
+                        if (tabContent) {
+                            let oldError = tabContent.querySelector('.validation-custom-error');
+                            if (oldError) oldError.remove();
+                            let errorSpan = document.createElement('span');
+                            errorSpan.className = 'validation-custom-error text-danger';
+                            errorSpan.innerText = message;
+                            errorSpan.style.display = 'block';
+                            errorSpan.style.fontWeight = 'bold';
+                            errorSpan.style.marginBottom = '10px';
+                            tabContent.prepend(errorSpan);
+                        }
                     }
-                    // Check if already present (by name + size)
-                    if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
-                        selectedFiles.push(file);
-                    }
-                });
+                }
 
-                updateFilesDisplay();
-                // Reset file input so the same file can be added again if needed
-                fileInput.value = "";
-            });
+                function clearAllCustomErrors() {
+                    document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
+                    document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
+                }
 
-            // ---- Validation ----
-            function showFieldError(fieldIdOrName, message, tabName) {
-                let field = document.getElementById(fieldIdOrName) || document.querySelector(`[name='${fieldIdOrName}']`);
-                if (field) {
+                function clearFieldError(e) {
+                    let field = e.target;
                     let label = null;
-                    // Try to find the associated label
                     if (field.id) {
                         label = document.querySelector(`label[for='${field.id}']`);
                     }
-                    // Fallback: use the closest .form-group and find label inside it
                     if (!label) {
                         let formGroup = field.closest('.form-group');
                         if (formGroup) {
                             label = formGroup.querySelector('label');
                         }
                     }
-                    // Remove any existing error span near this label
                     if (label) {
                         let oldError = label.parentNode.querySelector('.validation-custom-error');
                         if (oldError) oldError.remove();
-
-                        let errorSpan = document.createElement('span');
-                        errorSpan.className = 'validation-custom-error text-danger';
-                        errorSpan.innerText = message;
-                        errorSpan.style.fontWeight = 'bold';
-
-                        if (tabName === 'documents') {
-                            // Insert after label
-                            label.insertAdjacentElement('afterend', errorSpan);
-                        } else {
-                            // Append next to label
-                            errorSpan.classList.add('ms-2');
-                            label.appendChild(errorSpan);
-                        }
                     }
-                    field.classList.add('field-error-highlight');
-                } else {
-                    // Fallback error on the whole tab section
-                    let tabContent = document.getElementById(tabName);
-                    if (tabContent) {
-                        let oldError = tabContent.querySelector('.validation-custom-error');
-                        if (oldError) oldError.remove();
-                        let errorSpan = document.createElement('span');
-                        errorSpan.className = 'validation-custom-error text-danger';
-                        errorSpan.innerText = message;
-                        errorSpan.style.display = 'block';
-                        errorSpan.style.fontWeight = 'bold';
-                        errorSpan.style.marginBottom = '10px';
-                        tabContent.prepend(errorSpan);
-                    }
-                }
-            }
-
-            function clearAllCustomErrors() {
-                document.querySelectorAll('.validation-custom-error').forEach(e => e.remove());
-                document.querySelectorAll('.field-error-highlight').forEach(e => e.classList.remove('field-error-highlight'));
-            }
-
-            function clearFieldError(e) {
-                let field = e.target;
-                let label = null;
-                if (field.id) {
-                    label = document.querySelector(`label[for='${field.id}']`);
-                }
-                if (!label) {
-                    let formGroup = field.closest('.form-group');
-                    if (formGroup) {
-                        label = formGroup.querySelector('label');
-                    }
-                }
-                if (label) {
-                    let oldError = label.parentNode.querySelector('.validation-custom-error');
-                    if (oldError) oldError.remove();
-                }
-                field.classList.remove('field-error-highlight');
-            }
-
-            document.querySelectorAll('input, textarea').forEach(e => {
-                e.addEventListener('input', clearFieldError);
-                e.addEventListener('change', clearFieldError);
-            });
-
-        // ---- Form AJAX submit logic ----
-        doneBtn.addEventListener('click', function() {
-                if (doneBtn.classList.contains('loading')) {
-            return;
-        }
-
-        // In your submitForm() or doneBtn click handler:
-        doneBtn.classList.add('loading');
-        doneBtn.querySelector('.btn-text').textContent = 'Submitting';
-        doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.remove('d-none');
-        doneBtn.disabled = true;
-
-        clearAllCustomErrors();
-
-        // VALIDATION SECTION (unchanged)
-        let errors = [];
-        let errorFields = [];
-        let errorTabs = [];
-
-            // Only validate for publish and schedule, skip validation for draft
-            if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
-                let tenderType = document.querySelector('input[name="TenderType"]:checked');
-                let tenderNumber = document.querySelector('input[name="TenderNumber"]');
-                let closingDate = document.querySelector('input[name="ClosingDate"]');
-                let closingTime = document.querySelector('input[name="ClosingTime"]');
-                let title = document.querySelector('input[name="Title"]');
-                let description = document.querySelector('textarea[name="Description"]');
-
-                if (!tenderType) {
-                    errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
-                    errorFields.push('TenderType'); errorTabs.push('details');
-                }
-                if (!tenderNumber.value.trim()) {
-                    errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
-                    errorFields.push('TenderNumber'); errorTabs.push('details');
-                }
-                if (!closingDate.value.trim()) {
-                    errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
-                    errorFields.push('ClosingDate'); errorTabs.push('details');
-                }
-                if (!closingTime.value.trim()) {
-                    errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
-                    errorFields.push('ClosingTime'); errorTabs.push('details');
-                }
-                if (!title.value.trim()) {
-                    errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
-                    errorFields.push('Title'); errorTabs.push('details');
-                }
-                if (!description.value.trim()) {
-                    errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
-                    errorFields.push('Description'); errorTabs.push('details');
-                }
-                // Check for at least one PDF: either new uploads or existing server PDFs
-                const existingDocs = document.querySelectorAll('.uploaded-file-entry.existing-doc');
-                if (selectedFiles.length === 0 && existingDocs.length === 0) {
-                    errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
-                    errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                    field.classList.remove('field-error-highlight');
                 }
 
-                // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
-                      // Add this validation in your form submission where you check for schedule validation
-        if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-            let scheduledDate = document.getElementById('ScheduledDate').value;
-            let scheduledTime = document.getElementById('ScheduledTime').value;
-
-            if (!scheduledDate.trim()) {
-                errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
-                errorFields.push('ScheduledDate'); errorTabs.push('submit');
-            }
-            if (!scheduledTime.trim()) {
-                errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
-                errorFields.push('ScheduledTime'); errorTabs.push('submit');
-            }
-
-            // Validate against SA time
-            if (scheduledDate && scheduledTime) {
-                const currentSaDateTime = new Date(window.currentSaDateTime);
-                const selectedDateTime = new Date(scheduledDate + 'T' + scheduledTime);
-
-                if (selectedDateTime <= currentSaDateTime) {
-                    errors.push({field: 'ScheduledDate', message: 'Cannot schedule for a past date/time (South African time)', tab: 'submit'});
-                    errorFields.push('ScheduledDate'); errorTabs.push('submit');
-                }
-            }
-        }
-
-                // Show all errors next to their fields
-                if (errors.length > 0) {
-
-                    // Remove loading state if validation fails
-                   doneBtn.classList.remove('loading');
-
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-
-                    doneBtn.disabled = false;
-
-                            errors.forEach(function(err) {
-                        showFieldError(err.field, err.message, err.tab);
-                    });
-                    // Switch to first errored tab and focus field
-                    showTab(errors[0].tab);
-                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                    if (firstField) {
-                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                        firstField.focus();
-                    }
-                    return;
-                }
-            }
-
-            // Check for empty draft
-            if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-                const hasContent = [
-                    document.querySelector('input[name="TenderType"]:checked'),
-                    document.querySelector('input[name="TenderNumber"]')?.value.trim(),
-                    document.querySelector('input[name="ClosingDate"]')?.value.trim(),
-                    document.querySelector('input[name="ClosingTime"]')?.value.trim(),
-                    document.querySelector('input[name="Title"]')?.value.trim(),
-                    document.querySelector('textarea[name="Description"]')?.value.trim(),
-                    selectedFiles.length > 0
-                ].some(value => value);
-
-                if (!hasContent) {
-           // When loading is done (after response/error):
-
-        doneBtn.classList.remove('loading');
-
-        doneBtn.querySelector('.btn-text').textContent = 'Done';
-
-        doneBtn.querySelector('.arrow-icon').style.display = '';
-
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-
-        doneBtn.disabled = false;
-
-
-                            var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
-                    modal.show();
-                    document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
-                        modal.hide();
-                    }
-                    return;
-                }
-            }
-
-                    // No errors (or draft): submit form
-            var form = document.querySelector('form[asp-action="Create"]');
-            if (!form) form = document.querySelector('form[action*="Create"]');
-            if (!form) {
-                alert("Form not found!");
-                                // Remove loading state if form not found
-
-                doneBtn.classList.remove('loading');
-
-                doneBtn.querySelector('.btn-text').textContent = 'Done';
-
-                        doneBtn.querySelector('.arrow-icon').style.display = 'none';
-
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-
-                doneBtn.disabled = false;
-
-                        return;
-            }
-            var formData = new FormData(form);
-
-            // Remove any existing files from input (so we don't send duplicates)
-            formData.delete('UploadedFiles');
-            selectedFiles.forEach(function(file) {
-                formData.append('UploadedFiles', file, file.name);
-            });
-
-            // --- Inline Validation Re-render Helper ---
-            function handleHtmlValidationResponse(html) {
-                // Replace the entire form in .tab-container with the new form
-                // This ensures all validation spans (incl. server-side) are visible
-                let tempDiv = document.createElement("div");
-                tempDiv.innerHTML = html;
-                let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
-                if (!newForm) newForm = tempDiv.querySelector("form");
-                if (newForm) {
-                    document.querySelector('.tab-container').innerHTML = "";
-                    document.querySelector('.tab-container').appendChild(newForm);
-
-                    // Always switch back to details tab, since validation errors are most likely there
-                    if (typeof showTab === "function") showTab('details');
-                    // Optionally, autofocus the first field with error
-                    setTimeout(function() {
-                        let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
-                        if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }, 10);
-                } else {
-                    alert("Validation error: Could not update form.");
-                }
-                doneBtn.classList.remove('loading');
-                doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
-                doneBtn.disabled = false;
-            }
-
-            // --- SCHEDULE LOGIC ---
-            if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
-                let scheduledDate = document.getElementById('ScheduledDate').value;
-                let scheduledTime = document.getElementById('ScheduledTime').value;
-                formData.append('IsScheduled', 'true');
-                formData.append('ScheduledDate', scheduledDate);
-                formData.append('ScheduledTime', scheduledTime);
-
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(async response => {
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
-                        const data = await response.json();
-                    // Remove loading state after response
-
-                    doneBtn.classList.remove('loading');
-
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-
-                    doneBtn.disabled = false;
-
-
-                                if (data.success) {
-                            document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
-                            var scheduledLink = document.getElementById('scheduledTendersLink');
-                            if (scheduledLink && data.scheduledTendersUrl) {
-                                scheduledLink.href = data.scheduledTendersUrl;
-                            } else if (scheduledLink) {
-                                scheduledLink.href = "/TenderAdmin/ScheduledIndex";
-                            }
-                            var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
-                            modal.show();
-                            document.getElementById('scheduledModalCloseBtn').onclick = function() {
-                                window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
-                            }
-                        } else {
-                            alert(data.error || "Failed to schedule tender.");
-                        }
-                    } else {
-                        const html = await response.text();
-                        handleHtmlValidationResponse(html);
-                    }
-                })
-                .catch(error => {
-                                  // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
-                    alert("An error occurred while scheduling.");
+                document.querySelectorAll('input, textarea').forEach(e => {
+                    e.addEventListener('input', clearFieldError);
+                    e.addEventListener('change', clearFieldError);
                 });
+
+            // ---- Form AJAX submit logic ----
+            doneBtn.addEventListener('click', function() {
+                    if (doneBtn.classList.contains('loading')) {
                 return;
             }
 
-            // --- PUBLISH LOGIC ---
-            if (currentTab === 'submit' && currentSubmitSubTab === 'publish') {
-                fetch(form.action, {
+            // In your submitForm() or doneBtn click handler:
+            doneBtn.classList.add('loading');
+            doneBtn.querySelector('.btn-text').textContent = 'Submitting';
+            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.remove('d-none');
+            doneBtn.disabled = true;
+
+            clearAllCustomErrors();
+
+            // VALIDATION SECTION (unchanged)
+            let errors = [];
+            let errorFields = [];
+            let errorTabs = [];
+
+                // Only validate for publish and schedule, skip validation for draft
+                if (!(currentTab === 'submit' && currentSubmitSubTab === 'draft')) {
+                    let tenderType = document.querySelector('input[name="TenderType"]:checked');
+                    let tenderNumber = document.querySelector('input[name="TenderNumber"]');
+                    let closingDate = document.querySelector('input[name="ClosingDate"]');
+                    let closingTime = document.querySelector('input[name="ClosingTime"]');
+                    let title = document.querySelector('input[name="Title"]');
+                    let description = document.querySelector('textarea[name="Description"]');
+
+                    if (!tenderType) {
+                        errors.push({field: 'TenderType', message: 'Please select a Tender Type', tab: 'details'});
+                        errorFields.push('TenderType'); errorTabs.push('details');
+                    }
+                    if (!tenderNumber.value.trim()) {
+                        errors.push({field: 'TenderNumber', message: 'Tender Number is required', tab: 'details'});
+                        errorFields.push('TenderNumber'); errorTabs.push('details');
+                    }
+                    if (!closingDate.value.trim()) {
+                        errors.push({field: 'ClosingDate', message: 'Closing Date is required', tab: 'details'});
+                        errorFields.push('ClosingDate'); errorTabs.push('details');
+                    }
+                    if (!closingTime.value.trim()) {
+                        errors.push({field: 'ClosingTime', message: 'Closing Time is required', tab: 'details'});
+                        errorFields.push('ClosingTime'); errorTabs.push('details');
+                    }
+                    if (!title.value.trim()) {
+                        errors.push({field: 'Title', message: 'Tender Title is required', tab: 'details'});
+                        errorFields.push('Title'); errorTabs.push('details');
+                    }
+                    if (!description.value.trim()) {
+                        errors.push({field: 'Description', message: 'Tender Description is required', tab: 'details'});
+                        errorFields.push('Description'); errorTabs.push('details');
+                    }
+                    // Check for at least one PDF: either new uploads or existing server PDFs
+                    const existingDocs = document.querySelectorAll('.uploaded-file-entry.existing-doc');
+                    if (selectedFiles.length === 0 && existingDocs.length === 0) {
+                        errors.push({field: 'UploadedFiles', message: 'You must upload at least one PDF document.', tab: 'documents'});
+                        errorFields.push('UploadedFiles'); errorTabs.push('documents');
+                    }
+
+                    // If "Schedule" is selected, also require ScheduledDate and ScheduledTime
+                          // Add this validation in your form submission where you check for schedule validation
+            if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                let scheduledDate = document.getElementById('ScheduledDate').value;
+                let scheduledTime = document.getElementById('ScheduledTime').value;
+
+                if (!scheduledDate.trim()) {
+                    errors.push({field: 'ScheduledDate', message: 'Scheduled Date is required', tab: 'submit'});
+                    errorFields.push('ScheduledDate'); errorTabs.push('submit');
+                }
+                if (!scheduledTime.trim()) {
+                    errors.push({field: 'ScheduledTime', message: 'Scheduled Time is required', tab: 'submit'});
+                    errorFields.push('ScheduledTime'); errorTabs.push('submit');
+                }
+
+                // Validate against SA time
+                if (scheduledDate && scheduledTime) {
+                    const currentSaDateTime = new Date(window.currentSaDateTime);
+                    const selectedDateTime = new Date(scheduledDate + 'T' + scheduledTime);
+
+                    if (selectedDateTime <= currentSaDateTime) {
+                        errors.push({field: 'ScheduledDate', message: 'Cannot schedule for a past date/time (South African time)', tab: 'submit'});
+                        errorFields.push('ScheduledDate'); errorTabs.push('submit');
+                    }
+                }
+            }
+
+                    // Show all errors next to their fields
+                    if (errors.length > 0) {
+
+                        // Remove loading state if validation fails
+                       doneBtn.classList.remove('loading');
+
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                        doneBtn.disabled = false;
+
+                                errors.forEach(function(err) {
+                            showFieldError(err.field, err.message, err.tab);
+                        });
+                        // Switch to first errored tab and focus field
+                        showTab(errors[0].tab);
+                        let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                        if (firstField) {
+                            firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                            firstField.focus();
+                        }
+                        return;
+                    }
+                }
+
+                // Check for empty draft
+                if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+                    const hasContent = [
+                        document.querySelector('input[name="TenderType"]:checked'),
+                        document.querySelector('input[name="TenderNumber"]')?.value.trim(),
+                        document.querySelector('input[name="ClosingDate"]')?.value.trim(),
+                        document.querySelector('input[name="ClosingTime"]')?.value.trim(),
+                        document.querySelector('input[name="Title"]')?.value.trim(),
+                        document.querySelector('textarea[name="Description"]')?.value.trim(),
+                        selectedFiles.length > 0
+                    ].some(value => value);
+
+                    if (!hasContent) {
+               // When loading is done (after response/error):
+
+            doneBtn.classList.remove('loading');
+
+            doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+            doneBtn.querySelector('.arrow-icon').style.display = '';
+
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+            doneBtn.disabled = false;
+
+
+                                var modal = new bootstrap.Modal(document.getElementById('emptyDraftModal'));
+                        modal.show();
+                        document.getElementById('emptyDraftModalCloseBtn').onclick = function() {
+                            modal.hide();
+                        }
+                        return;
+                    }
+                }
+
+                        // No errors (or draft): submit form
+                var form = document.querySelector('form[asp-action="Create"]');
+                if (!form) form = document.querySelector('form[action*="Create"]');
+                if (!form) {
+                    alert("Form not found!");
+                                    // Remove loading state if form not found
+
+                    doneBtn.classList.remove('loading');
+
+                    doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                    doneBtn.disabled = false;
+
+                            return;
+                }
+                var formData = new FormData(form);
+
+                // Remove any existing files from input (so we don't send duplicates)
+                formData.delete('UploadedFiles');
+                selectedFiles.forEach(function(file) {
+                    formData.append('UploadedFiles', file, file.name);
+                });
+
+                // --- Inline Validation Re-render Helper ---
+                function handleHtmlValidationResponse(html) {
+                    // Replace the entire form in .tab-container with the new form
+                    // This ensures all validation spans (incl. server-side) are visible
+                    let tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = html;
+                    let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                    if (!newForm) newForm = tempDiv.querySelector("form");
+                    if (newForm) {
+                        document.querySelector('.tab-container').innerHTML = "";
+                        document.querySelector('.tab-container').appendChild(newForm);
+
+                        // Always switch back to details tab, since validation errors are most likely there
+                        if (typeof showTab === "function") showTab('details');
+                        // Optionally, autofocus the first field with error
+                        setTimeout(function() {
+                            let err = document.querySelector('.input-validation-error, .validation-custom-error, .text-danger');
+                            if (err) err.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }, 10);
+                    } else {
+                        alert("Validation error: Could not update form.");
+                    }
+                    doneBtn.classList.remove('loading');
+                    doneBtn.innerHTML = 'Done <span class="arrow-icon"></span>';
+                    doneBtn.disabled = false;
+                }
+
+                // --- SCHEDULE LOGIC ---
+                if (currentTab === 'submit' && currentSubmitSubTab === 'schedule') {
+                    let scheduledDate = document.getElementById('ScheduledDate').value;
+                    let scheduledTime = document.getElementById('ScheduledTime').value;
+                    formData.append('IsScheduled', 'true');
+                    formData.append('ScheduledDate', scheduledDate);
+                    formData.append('ScheduledTime', scheduledTime);
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(async response => {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const data = await response.json();
+                        // Remove loading state after response
+
+                        doneBtn.classList.remove('loading');
+
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+
+                        doneBtn.disabled = false;
+
+
+                                    if (data.success) {
+                                document.getElementById('scheduledModalTenderNumber').textContent = data.tenderNumber || '';
+                                var scheduledLink = document.getElementById('scheduledTendersLink');
+                                if (scheduledLink && data.scheduledTendersUrl) {
+                                    scheduledLink.href = data.scheduledTendersUrl;
+                                } else if (scheduledLink) {
+                                    scheduledLink.href = "/TenderAdmin/ScheduledIndex";
+                                }
+                                var modal = new bootstrap.Modal(document.getElementById('scheduledSuccessModal'));
+                                modal.show();
+                                document.getElementById('scheduledModalCloseBtn').onclick = function() {
+                                    window.location.href = data.scheduledTendersUrl || "/TenderAdmin/ScheduledIndex";
+                                }
+                            } else {
+                                alert(data.error || "Failed to schedule tender.");
+                            }
+                        } else {
+                            const html = await response.text();
+                            handleHtmlValidationResponse(html);
+                        }
+                    })
+                    .catch(error => {
+                                      // Remove loading state after response
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
+                        alert("An error occurred while scheduling.");
+                    });
+                    return;
+                }
+
+                // --- PUBLISH LOGIC ---
+                if (currentTab === 'submit' && currentSubmitSubTab === 'publish') {
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(async response => {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const data = await response.json();
+                                          // Remove loading state after response
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
+
+                            if (data.success) {
+                                document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
+                                var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
+                                modal.show();
+                                document.getElementById('modalCloseBtn').onclick = function() {
+                                    window.location.href = "/TenderAdmin/Index";
+                                }
+                            } else {
+                                alert(data.error || "Failed to publish tender.");
+                            }
+                        } else {
+                            const html = await response.text();
+                            handleHtmlValidationResponse(html);
+                        }
+                    })
+                    .catch(error => {
+                                     // Remove loading state after response
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
+                        alert("An error occurred while publishing.");
+                    });
+                    return;
+                }
+
+            // --- DRAFT LOGIC ---
+            if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
+                var draftUrl = '/TenderAdmin/SaveDraft';
+                fetch(draftUrl, {
                     method: 'POST',
                     body: formData
                 })
@@ -1215,903 +1260,858 @@
                     if (contentType && contentType.includes("application/json")) {
                         const data = await response.json();
                                       // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
 
                         if (data.success) {
-                            document.getElementById('modalTenderNumber').textContent = data.tenderNumber || '';
-                            var modal = new bootstrap.Modal(document.getElementById('publishSuccessModal'));
+                            document.getElementById('draftModalTenderNumber').textContent = data.tenderNumber || '';
+                            var draftLink = document.getElementById('draftResponsesLink');
+                            if (draftLink && data.draftIndexUrl) {
+                                draftLink.href = data.draftIndexUrl;
+                            } else if (draftLink) {
+                                draftLink.href = "/TenderAdmin/DraftIndex";
+                            }
+                            var modal = new bootstrap.Modal(document.getElementById('draftSavedModal'));
                             modal.show();
-                            document.getElementById('modalCloseBtn').onclick = function() {
-                                window.location.href = "/TenderAdmin/Index";
+                            document.getElementById('draftModalCloseBtn').onclick = function() {
+                                window.location.href = data.draftIndexUrl || "/TenderAdmin/DraftIndex";
                             }
                         } else {
-                            alert(data.error || "Failed to publish tender.");
+                            alert(data.message || "Failed to save draft.");
                         }
                     } else {
+                        // Handle HTML validation response (tender number uniqueness errors)
                         const html = await response.text();
-                        handleHtmlValidationResponse(html);
+                        let tempDiv = document.createElement("div");
+                        tempDiv.innerHTML = html;
+
+                        // Find the form in the returned HTML
+                        let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
+                        if (!newForm) newForm = tempDiv.querySelector("form");
+
+                        // Replace the .tab-container contents with the new form
+                        if (newForm) {
+                            document.querySelector('.tab-container').innerHTML = "";
+                            document.querySelector('.tab-container').appendChild(newForm);
+
+                            // Reinitialize any event handlers that were lost
+                            initializeFormHandlers();
+                        } else {
+                            document.querySelector('.tab-container').innerHTML = html;
+                        }
+
+                        // Always switch to details tab since tender number error is there
+                        if (typeof showTab === "function") showTab('details');
+
+                        // Focus the tender number field with error
+                        setTimeout(function() {
+                            let tenderNumberField = document.querySelector('input[name="TenderNumber"]');
+                            if (tenderNumberField) {
+                                tenderNumberField.scrollIntoView({ behavior: "smooth", block: "center" });
+                                tenderNumberField.focus();
+                            }
+                        }, 10);
+
+                                     // Remove loading state after response
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
                     }
                 })
-                .catch(error => {
-                                 // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
-                    alert("An error occurred while publishing.");
-                });
+            .catch(error => {
+                              // Remove loading state after response
+                        doneBtn.classList.remove('loading');
+                        doneBtn.querySelector('.btn-text').textContent = 'Done';
+                                doneBtn.querySelector('.arrow-icon').style.display = 'none';
+            doneBtn.querySelector('.spinner-border').classList.add('d-none');
+                        doneBtn.disabled = false;
+                console.error('Draft save error:', error);
+                // Optionally: show a non-intrusive toast instead of alert
+            });
+
                 return;
             }
-
-        // --- DRAFT LOGIC ---
-        if (currentTab === 'submit' && currentSubmitSubTab === 'draft') {
-            var draftUrl = '/TenderAdmin/SaveDraft';
-            fetch(draftUrl, {
-                method: 'POST',
-                body: formData
-            })
-            .then(async response => {
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    const data = await response.json();
-                                  // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
-
-                    if (data.success) {
-                        document.getElementById('draftModalTenderNumber').textContent = data.tenderNumber || '';
-                        var draftLink = document.getElementById('draftResponsesLink');
-                        if (draftLink && data.draftIndexUrl) {
-                            draftLink.href = data.draftIndexUrl;
-                        } else if (draftLink) {
-                            draftLink.href = "/TenderAdmin/DraftIndex";
-                        }
-                        var modal = new bootstrap.Modal(document.getElementById('draftSavedModal'));
-                        modal.show();
-                        document.getElementById('draftModalCloseBtn').onclick = function() {
-                            window.location.href = data.draftIndexUrl || "/TenderAdmin/DraftIndex";
-                        }
-                    } else {
-                        alert(data.message || "Failed to save draft.");
-                    }
-                } else {
-                    // Handle HTML validation response (tender number uniqueness errors)
-                    const html = await response.text();
-                    let tempDiv = document.createElement("div");
-                    tempDiv.innerHTML = html;
-
-                    // Find the form in the returned HTML
-                    let newForm = tempDiv.querySelector("form[asp-action='Create'], form[action*='Create']");
-                    if (!newForm) newForm = tempDiv.querySelector("form");
-
-                    // Replace the .tab-container contents with the new form
-                    if (newForm) {
-                        document.querySelector('.tab-container').innerHTML = "";
-                        document.querySelector('.tab-container').appendChild(newForm);
-
-                        // Reinitialize any event handlers that were lost
-                        initializeFormHandlers();
-                    } else {
-                        document.querySelector('.tab-container').innerHTML = html;
-                    }
-
-                    // Always switch to details tab since tender number error is there
-                    if (typeof showTab === "function") showTab('details');
-
-                    // Focus the tender number field with error
-                    setTimeout(function() {
-                        let tenderNumberField = document.querySelector('input[name="TenderNumber"]');
-                        if (tenderNumberField) {
-                            tenderNumberField.scrollIntoView({ behavior: "smooth", block: "center" });
-                            tenderNumberField.focus();
-                        }
-                    }, 10);
-
-                                 // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
-                }
-            })
-        .catch(error => {
-                          // Remove loading state after response
-                    doneBtn.classList.remove('loading');
-                    doneBtn.querySelector('.btn-text').textContent = 'Done';
-                            doneBtn.querySelector('.arrow-icon').style.display = 'none';
-        doneBtn.querySelector('.spinner-border').classList.add('d-none');
-                    doneBtn.disabled = false;
-            console.error('Draft save error:', error);
-            // Optionally: show a non-intrusive toast instead of alert
-        });
-
-            return;
-        }
-        });
-        });
-    </script>
-}
-
-<style>
-
-    #successModalTenderNumber {
-        max-width: 260px; /* Adjust as needed for your modal */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: inline-block;
-        vertical-align: middle;
+            });
+            });
+        </script>
     }
 
-    .spinner-border-sm {
-        width: 1rem;
-        height: 1rem;
-        border-width: 0.15em;
-        vertical-align: middle;
-        margin-left: 8px;
-    }
-    /* Disabled state */
-    .btn1:disabled {
-        background: #ccc !important;
-        color: #666 !important;
-        box-shadow: none !important;
-        cursor: not-allowed;
-    }
+    <style>
 
-    .btn1 {
-        min-width: 120px;
-        font-weight: 500;
-        border-radius: 6px;
-        padding: 8px 16px;
-        border: none;
-        color: white;
-        transition: all 0.2s ease-in-out;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.25); /* 3D pressed look */
-    }
-
-    /* Cancel button */
-    .btn1-cancel {
-        background: #006400;
-    }
-
-        .btn1-cancel:hover {
-            background: #008000;
-            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+        #successModalTenderNumber {
+            max-width: 260px; /* Adjust as needed for your modal */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
         }
 
-    /* Delete button */
-    .btn1-delete {
-        background: #d11a2a;
-    }
-
-        .btn1-delete:hover {
-            background: #e60000;
-            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+            vertical-align: middle;
+            margin-left: 8px;
         }
-    /* Time Input Styles */
-    .time-input-container {
-        margin: 15px auto 0 auto; /* Added top margin */
-        max-width: 450px;
-    }
-
-    .time-part {
-        text-align: center;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 12px;
-        background: #f9fafb;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-        .time-part:focus {
-            border-color: #1a7f37;
-            box-shadow: 0 0 0 2px #d1fae5;
-            background: #fff;
-            outline: none;
+        /* Disabled state */
+        .btn1:disabled {
+            background: #ccc !important;
+            color: #666 !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
         }
 
-    .time-period-toggle {
-        display: flex;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #d1d5db;
-    }
-
-    .time-period-btn {
-        border: none;
-        background: #f3f4f6;
-        color: #4b5563;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .time-period-btn.active {
-            background: #1a7f37;
+        .btn1 {
+            min-width: 120px;
+            font-weight: 500;
+            border-radius: 6px;
+            padding: 8px 16px;
+            border: none;
             color: white;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.25); /* 3D pressed look */
         }
 
-        .time-period-btn:first-child {
-            border-right: 1px solid #d1d5db;
+        /* Cancel button */
+        .btn1-cancel {
+            background: #006400;
         }
 
-    /* Remove default time picker arrows */
-    input[type="time"]::-webkit-calendar-picker-indicator {
-        display: none;
-    }
-    /* Calendar Styles */
-    .always-visible-calendar {
-        width: 100%;
-        margin-top: 10px;
-        margin-right: 45px
-    }
+            .btn1-cancel:hover {
+                background: #008000;
+                box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+            }
 
-    .flatpickr-calendar.inline {
-        width: 100%;
-        max-width: 300px;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        background: transparent;
-        margin-left: 35px
-    }
-
-    .flatpickr-innerContainer {
-        border: none;
-        box-shadow: none;
-    }
-
-    .flatpickr-days {
-        border: none;
-    }
-
-    .flatpickr-day {
-        border-radius: 4px;
-        height: 32px;
-        line-height: 32px;
-        margin: 2px;
-    }
-
-        .flatpickr-day.selected {
-            background: #1a7f37;
-            border-color: #1a7f37;
-            color: white;
+        /* Delete button */
+        .btn1-delete {
+            background: #d11a2a;
         }
 
-        .flatpickr-day.today {
-            border-color: #1a7f37;
+            .btn1-delete:hover {
+                background: #e60000;
+                box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+            }
+        /* Time Input Styles */
+        .time-input-container {
+            margin: 15px auto 0 auto; /* Added top margin */
+            max-width: 450px;
         }
 
-            .flatpickr-day.today:hover {
-                background: #e2f3e5;
+        .time-part {
+            text-align: center;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px;
+            background: #f9fafb;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+            .time-part:focus {
+                border-color: #1a7f37;
+                box-shadow: 0 0 0 2px #d1fae5;
+                background: #fff;
+                outline: none;
+            }
+
+        .time-period-toggle {
+            display: flex;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #d1d5db;
+        }
+
+        .time-period-btn {
+            border: none;
+            background: #f3f4f6;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+            .time-period-btn.active {
+                background: #1a7f37;
+                color: white;
+            }
+
+            .time-period-btn:first-child {
+                border-right: 1px solid #d1d5db;
+            }
+
+        /* Remove default time picker arrows */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+        /* Calendar Styles */
+        .always-visible-calendar {
+            width: 100%;
+            margin-top: 10px;
+            margin-right: 45px
+        }
+
+        .flatpickr-calendar.inline {
+            width: 100%;
+            max-width: 300px;
+            box-shadow: none;
+            border: none;
+            padding: 0;
+            background: transparent;
+            margin-left: 35px
+        }
+
+        .flatpickr-innerContainer {
+            border: none;
+            box-shadow: none;
+        }
+
+        .flatpickr-days {
+            border: none;
+        }
+
+        .flatpickr-day {
+            border-radius: 4px;
+            height: 32px;
+            line-height: 32px;
+            margin: 2px;
+        }
+
+            .flatpickr-day.selected {
+                background: #1a7f37;
+                border-color: #1a7f37;
+                color: white;
+            }
+
+            .flatpickr-day.today {
                 border-color: #1a7f37;
             }
 
-    .flatpickr-months {
-        margin-bottom: 8px;
-    }
+                .flatpickr-day.today:hover {
+                    background: #e2f3e5;
+                    border-color: #1a7f37;
+                }
 
-    .flatpickr-month {
-        height: 36px;
-    }
-
-    .flatpickr-current-month {
-        padding-top: 4px;
-    }
-
-    .flatpickr-prev-month, .flatpickr-next-month {
-        top: 6px;
-    }
-
-    /* Selected Date Display */
-    .selected-date-display {
-        font-size: 1rem;
-        font-weight: 500;
-        color: #1a7f37;
-        background: #f0fdf4;
-        padding: 8px 12px;
-        border-radius: 6px;
-        margin-bottom: 8px;
-        display: inline-block;
-        min-width: 150px;
-        text-align: center;
-    }
-
-
-    /* X-circle icon styling */
-    .fa-times-circle {
-        color: #e11d48; /* Red color for error */
-        margin-bottom: 16px;
-        animation: pulse 1s ease-in-out;
-    }
-
-    @@keyframes pulse {
-        0% {
-            transform: scale(1);
+        .flatpickr-months {
+            margin-bottom: 8px;
         }
 
-        50% {
-            transform: scale(1.1);
+        .flatpickr-month {
+            height: 36px;
         }
 
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .custom-dropdown {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background: #f9fafb url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 20 20' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z'/></svg>") no-repeat right 1rem center/1.2em 1.2em;
-        padding-right: 2.5em;
-        cursor: pointer;
-        border-radius: 8px;
-        border: 1px solid #d1d5db;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-        .custom-dropdown:focus {
-            border-color: #1a7f37;
-            box-shadow: 0 0 0 2px #d1fae5;
-            background-color: #fff;
+        .flatpickr-current-month {
+            padding-top: 4px;
         }
 
-        .custom-dropdown option[disabled] {
-            color: #aaa;
-            font-style: italic;
+        .flatpickr-prev-month, .flatpickr-next-month {
+            top: 6px;
         }
 
-    .tab-header {
-        display: flex;
-        justify-content: left;
-        gap: 5px;
-        margin-left: 178px;
-        margin-bottom: 0;
-        margin-top: 40px;
-        position: relative;
-        z-index: 2;
-    }
-
-    .tab-container {
-        background: #fff;
-        border-radius: 0 0 16px 16px;
-        box-shadow: 0 4px 32px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
-        padding: 52px 32px 24px 32px;
-        max-width: 900px;
-        margin: 0 auto 80px auto;
-        margin-top: 0;
-        transition: box-shadow 0.2s;
-        position: relative;
-        z-index: 1;
-    }
-
-    .tab-btn {
-        padding: 18px 48px 18px 48px;
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: #fff;
-        background: #1a7f37;
-        border: none;
-        border-radius: 16px 16px 0 0;
-        cursor: pointer;
-        transition: background 0.2s, color 0.2s;
-        margin-right: 2px;
-        position: relative;
-        z-index: 2;
-        box-shadow: 0 2px 8px rgba(34,197,94,0.08);
-    }
-
-        .tab-btn.active {
-            background: #fff;
+        /* Selected Date Display */
+        .selected-date-display {
+            font-size: 1rem;
+            font-weight: 500;
             color: #1a7f37;
-            border-bottom: 2px solid #fff;
-            z-index: 3;
+            background: #f0fdf4;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: inline-block;
+            min-width: 150px;
+            text-align: center;
         }
 
-        .tab-btn:not(.active) {
-            background: #1a7f37;
+
+        /* X-circle icon styling */
+        .fa-times-circle {
+            color: #e11d48; /* Red color for error */
+            margin-bottom: 16px;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @@keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .custom-dropdown {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: #f9fafb url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 20 20' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z'/></svg>") no-repeat right 1rem center/1.2em 1.2em;
+            padding-right: 2.5em;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+            .custom-dropdown:focus {
+                border-color: #1a7f37;
+                box-shadow: 0 0 0 2px #d1fae5;
+                background-color: #fff;
+            }
+
+            .custom-dropdown option[disabled] {
+                color: #aaa;
+                font-style: italic;
+            }
+
+        .tab-header {
+            display: flex;
+            justify-content: left;
+            gap: 5px;
+            margin-left: 178px;
+            margin-bottom: 0;
+            margin-top: 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .tab-container {
+            background: #fff;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
+            padding: 52px 32px 24px 32px;
+            max-width: 900px;
+            margin: 0 auto 80px auto;
+            margin-top: 0;
+            transition: box-shadow 0.2s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab-btn {
+            padding: 18px 48px 18px 48px;
+            font-weight: 600;
+            font-size: 1.1rem;
             color: #fff;
+            background: #1a7f37;
+            border: none;
+            border-radius: 16px 16px 0 0;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin-right: 2px;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(34,197,94,0.08);
         }
 
-    .tab-header div {
-        padding: 12px 32px;
-        cursor: pointer;
-        font-weight: 600;
-        color: #888;
-        border-radius: 12px 12px 0 0;
-        transition: background 0.2s, color 0.2s;
-        background: transparent;
-    }
+            .tab-btn.active {
+                background: #fff;
+                color: #1a7f37;
+                border-bottom: 2px solid #fff;
+                z-index: 3;
+            }
 
-    .tab-header .active {
-        color: #1a7f37;
-        background: #fff;
-    }
+            .tab-btn:not(.active) {
+                background: #1a7f37;
+                color: #fff;
+            }
 
-    .tab-content {
-        display: none;
-        animation: fadeIn 0.3s;
-    }
+        .tab-header div {
+            padding: 12px 32px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #888;
+            border-radius: 12px 12px 0 0;
+            transition: background 0.2s, color 0.2s;
+            background: transparent;
+        }
 
-        .tab-content.active {
+        .tab-header .active {
+            color: #1a7f37;
+            background: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .form-group {
+            flex: 1 1 45%;
+            margin-bottom: 18px;
+            min-width: 220px;
+        }
+
+            .form-group.full-width {
+                flex: 1 1 100%;
+            }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #222;
             display: block;
         }
 
-    .form-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 24px;
-    }
-
-    .form-group {
-        flex: 1 1 45%;
-        margin-bottom: 18px;
-        min-width: 220px;
-    }
-
-        .form-group.full-width {
-            flex: 1 1 100%;
+        .form-control, select.form-control {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            padding: 10px 14px;
+            font-size: 1rem;
+            background: #f9fafb;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-    label {
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: #222;
-        display: block;
-    }
+            .form-control:focus, select.form-control:focus {
+                border-color: #1a7f37;
+                box-shadow: 0 0 0 2px #d1fae5;
+                background: #fff;
+            }
 
-    .form-control, select.form-control {
-        border-radius: 8px;
-        border: 1px solid #d1d5db;
-        padding: 10px 14px;
-        font-size: 1rem;
-        background: #f9fafb;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-        .form-control:focus, select.form-control:focus {
-            border-color: #1a7f37;
-            box-shadow: 0 0 0 2px #d1fae5;
-            background: #fff;
+        .form-check-input[type="radio"] {
+            width: 1.2em;
+            height: 1.2em;
+            margin-top: 0.2em;
+            accent-color: #1a7f37;
         }
 
-    .form-check-input[type="radio"] {
-        width: 1.2em;
-        height: 1.2em;
-        margin-top: 0.2em;
-        accent-color: #1a7f37;
-    }
-
-    .form-check-label {
-        margin-left: 0.4em;
-        margin-right: 1.2em;
-        font-weight: 500;
-        color: #444;
-    }
-
-    .text-danger {
-        color: #e11d48;
-    }
-
-    textarea.form-control {
-        resize: vertical;
-        min-height: 80px;
-        max-height: 200px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(90deg, #1a7f37 60%, #22c55e 100%);
-        border: none;
-        border-radius: 8px;
-        padding: 12px 36px;
-        font-size: 1.1rem;
-        font-weight: 600;
-        letter-spacing: 1px;
-        box-shadow: 0 2px 8px rgba(34,197,94,0.08);
-        transition: background 0.2s, box-shadow 0.2s;
-    }
-
-        .btn-primary:hover, .btn-primary:focus {
-            background: linear-gradient(90deg, #15803d 60%, #16a34a 100%);
-            box-shadow: 0 4px 16px rgba(34,197,94,0.16);
+        .form-check-label {
+            margin-left: 0.4em;
+            margin-right: 1.2em;
+            font-weight: 500;
+            color: #444;
         }
 
-    .action-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 30px;
-        margin-bottom: 60px;
-    }
-
-    .action-btn {
-        padding: 12px 36px;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 6px 18px -4px rgba(34,197,94,0.25), 0 2px 4px rgba(0,0,0,0.08);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        position: relative;
-    }
-
-    .cancel-btn {
-        background-color: white;
-        color: #1a7f37;
-        border: 1.5px solid #1a7f37;
-        box-shadow: 0 8px 24px -6px rgba(34,197,94,0.18), 0 2px 8px rgba(0,0,0,0.10);
-    }
-
-        .cancel-btn:hover {
-            background-color: #f6fff8;
-            color: #15803d;
-            box-shadow: 0 12px 32px -8px rgba(34,197,94,0.22), 0 4px 12px rgba(0,0,0,0.12);
+        .text-danger {
+            color: #e11d48;
         }
 
-    .continue-btn {
-        background-color: #1a7f37;
-        color: white;
-        border: 1.5px solid #1a7f37;
-        box-shadow: 0 10px 28px -6px rgba(34,197,94,0.28), 0 4px 12px rgba(0,0,0,0.12);
-        min-width: 180px; /* Ensures width stays fixed during loading */
-        height: 52px;
-        line-height: 24px;
-    }
-
-        .continue-btn:hover {
-            background-color: #166534;
-            box-shadow: 0 16px 40px -8px rgba(34,197,94,0.32), 0 6px 16px rgba(0,0,0,0.16);
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+            max-height: 200px;
         }
 
-        .continue-btn .spinner-border {
-            margin-left: 8px;
-            color: #fff;
-            width: 1.2rem;
-            height: 1.2rem;
-            vertical-align: middle;
+        .btn-primary {
+            background: linear-gradient(90deg, #1a7f37 60%, #22c55e 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 36px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 8px rgba(34,197,94,0.08);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+            .btn-primary:hover, .btn-primary:focus {
+                background: linear-gradient(90deg, #15803d 60%, #16a34a 100%);
+                box-shadow: 0 4px 16px rgba(34,197,94,0.16);
+            }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            margin-bottom: 60px;
+        }
+
+        .action-btn {
+            padding: 12px 36px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 18px -4px rgba(34,197,94,0.25), 0 2px 4px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .cancel-btn {
+            background-color: white;
+            color: #1a7f37;
+            border: 1.5px solid #1a7f37;
+            box-shadow: 0 8px 24px -6px rgba(34,197,94,0.18), 0 2px 8px rgba(0,0,0,0.10);
+        }
+
+            .cancel-btn:hover {
+                background-color: #f6fff8;
+                color: #15803d;
+                box-shadow: 0 12px 32px -8px rgba(34,197,94,0.22), 0 4px 12px rgba(0,0,0,0.12);
+            }
+
+        .continue-btn {
+            background-color: #1a7f37;
+            color: white;
+            border: 1.5px solid #1a7f37;
+            box-shadow: 0 10px 28px -6px rgba(34,197,94,0.28), 0 4px 12px rgba(0,0,0,0.12);
+            min-width: 180px; /* Ensures width stays fixed during loading */
+            height: 52px;
+            line-height: 24px;
+        }
+
+            .continue-btn:hover {
+                background-color: #166534;
+                box-shadow: 0 16px 40px -8px rgba(34,197,94,0.32), 0 6px 16px rgba(0,0,0,0.16);
+            }
+
+            .continue-btn .spinner-border {
+                margin-left: 8px;
+                color: #fff;
+                width: 1.2rem;
+                height: 1.2rem;
+                vertical-align: middle;
+                display: inline-block;
+            }
+
+            .continue-btn.loading {
+                background-color: #9ca3af !important;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+
+                .continue-btn.loading .arrow-icon {
+                    display: none;
+                }
+
+                .continue-btn.loading .spinner-border {
+                    display: inline-block;
+                }
+
+        .arrow-icon {
             display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-top: 3px solid white;
+            border-right: 3px solid white;
+            transform: rotate(45deg);
+            margin-left: 5px;
         }
 
-        .continue-btn.loading {
+        .breadcrumb-custom {
+            color: #888;
+            font-size: 1.05rem;
+            font-weight: 500;
+            margin-left: 0;
+            margin-bottom: 18px;
+            margin-top: 32px;
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.2em;
+        }
+
+            .breadcrumb-custom .breadcrumb-arrow {
+                margin: 0 0.5em;
+                font-size: 1.25em;
+                vertical-align: middle;
+                color: #bbb;
+                font-weight: 400;
+                user-select: none;
+            }
+
+            .breadcrumb-custom .breadcrumb-active {
+                color: #1a7f37;
+                font-weight: 600;
+            }
+
+        .upload-label {
+            font-size: 2.55rem;
+            color: #1a7f37;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2.25rem;
+        }
+
+        .upload-label-underline {
+            width: 100%;
+            height: 2px;
+            background: #1a7f37;
+            margin-bottom: 16px;
+            border-radius: 2px;
+        }
+
+        .supporting-label {
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-right: auto;
+        }
+
+        #uploadInputGroup {
+            justify-content: space-between;
+        }
+
+        .uploaded-file-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 0.6rem;
+        }
+
+            .uploaded-file-entry:nth-child(odd) {
+                background-color: #f2f2f2;
+            }
+
+            .uploaded-file-entry:nth-child(even) {
+                background-color: #e0e0e0;
+            }
+
+        .uploaded-file-actions button {
+            margin-left: 0.5rem;
+        }
+
+        .bg-secondary.text-white {
+            background-color: #e9ecef !important;
+            color: #333 !important;
+        }
+
+        .uploaded-file-entry .text-muted {
+            color: #6c757d !important;
+        }
+
+        /* Schedule Tender Styles */
+        .schedule-container {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+
+        .schedule-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .schedule-toggle-text {
+            margin-left: 10px;
+            font-weight: 500;
+        }
+
+        .schedule-fields {
+            margin-top: 15px;
+            display: none;
+        }
+
+            .schedule-fields.show {
+                display: block;
+            }
+
+
+        @*New css*@
+        .tab-btn.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .submit-tabs-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .submit-tabs {
+            display: flex;
+            gap: 24px;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 2px 8px rgba(34,197,94,0.08);
+            padding: 0 24px;
+        }
+
+        .submit-tab {
+            padding: 14px 36px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #333;
+            background: transparent;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+            .submit-tab.active {
+                background: #333;
+                color: #fff;
+            }
+
+        .submit-tab-content {
+            display: none;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+            .submit-tab-content.active {
+                display: block;
+            }
+        @*---------------------------------------------------------------------------------*@
+        @*Modal popup*@
+        <!-- Modal popup for publish now tender-- >
+        /* Simple modal styling (if not using Bootstrap modal JS) */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 1050;
+            display: none;
+        }
+
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        @*---------------------------------------------------------------------------------*@
+
+        /* Add this to your existing styles */
+        .validation-custom-error {
+            font-size: 0.75rem !important; /* Smaller font size */
+        }
+
+        .field-error-highlight {
+            border-color: #dc2626 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        /* Add this to your existing styles */
+        .action-btn.loading {
             background-color: #9ca3af !important;
             cursor: not-allowed;
             pointer-events: none;
         }
 
-            .continue-btn.loading .arrow-icon {
+            .action-btn.loading .arrow-icon {
                 display: none;
             }
 
-            .continue-btn.loading .spinner-border {
-                display: inline-block;
-            }
-
-    .arrow-icon {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border-top: 3px solid white;
-        border-right: 3px solid white;
-        transform: rotate(45deg);
-        margin-left: 5px;
-    }
-
-    .breadcrumb-custom {
-        color: #888;
-        font-size: 1.05rem;
-        font-weight: 500;
-        margin-left: 0;
-        margin-bottom: 18px;
-        margin-top: 32px;
-        letter-spacing: 0.01em;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.2em;
-    }
-
-        .breadcrumb-custom .breadcrumb-arrow {
-            margin: 0 0.5em;
-            font-size: 1.25em;
-            vertical-align: middle;
-            color: #bbb;
-            font-weight: 400;
-            user-select: none;
+        .loading-dots {
+            display: inline-block;
+            margin-left: 8px;
         }
 
-        .breadcrumb-custom .breadcrumb-active {
+            .loading-dots::after {
+                content: '.';
+                animation: dots 1.5s steps(5, end) infinite;
+            }
+
+        @@keyframes dots {
+            0%, 20% {
+                content: '.';
+            }
+
+            40% {
+                content: '..';
+            }
+
+            60% {
+                content: '...';
+            }
+
+            80%, 100% {
+                content: '';
+            }
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 6px 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
             color: #1a7f37;
-            font-weight: 600;
+            transition: color 0.2s, background 0.2s;
+            border-radius: 4px;
+            outline: none;
         }
 
-    .upload-label {
-        font-size: 2.55rem;
-        color: #1a7f37;
-        font-weight: 600;
-        display: block;
-        margin-bottom: 2.25rem;
-    }
-
-    .upload-label-underline {
-        width: 100%;
-        height: 2px;
-        background: #1a7f37;
-        margin-bottom: 16px;
-        border-radius: 2px;
-    }
-
-    .supporting-label {
-        font-weight: 500;
-        font-size: 0.95rem;
-        margin-right: auto;
-    }
-
-    #uploadInputGroup {
-        justify-content: space-between;
-    }
-
-    .uploaded-file-entry {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.6rem 1rem;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        margin-bottom: 0.6rem;
-    }
-
-        .uploaded-file-entry:nth-child(odd) {
-            background-color: #f2f2f2;
-        }
-
-        .uploaded-file-entry:nth-child(even) {
-            background-color: #e0e0e0;
-        }
-
-    .uploaded-file-actions button {
-        margin-left: 0.5rem;
-    }
-
-    .bg-secondary.text-white {
-        background-color: #e9ecef !important;
-        color: #333 !important;
-    }
-
-    .uploaded-file-entry .text-muted {
-        color: #6c757d !important;
-    }
-
-    /* Schedule Tender Styles */
-    .schedule-container {
-        margin-top: 20px;
-        padding: 15px;
-        border-radius: 8px;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-
-    .schedule-toggle {
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-    }
-
-    .schedule-toggle-text {
-        margin-left: 10px;
-        font-weight: 500;
-    }
-
-    .schedule-fields {
-        margin-top: 15px;
-        display: none;
-    }
-
-        .schedule-fields.show {
-            display: block;
-        }
-
-
-    @*New css*@
-    .tab-btn.disabled {
-        pointer-events: none;
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .submit-tabs-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 24px;
-    }
-
-    .submit-tabs {
-        display: flex;
-        gap: 24px;
-        background: #f8f9fa;
-        border-radius: 8px 8px 0 0;
-        box-shadow: 0 2px 8px rgba(34,197,94,0.08);
-        padding: 0 24px;
-    }
-
-    .submit-tab {
-        padding: 14px 36px;
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: #333;
-        background: transparent;
-        border: none;
-        border-radius: 8px 8px 0 0;
-        cursor: pointer;
-        transition: background 0.2s, color 0.2s;
-    }
-
-        .submit-tab.active {
-            background: #333;
-            color: #fff;
-        }
-
-    .submit-tab-content {
-        display: none;
-        text-align: center;
-        margin-bottom: 24px;
-    }
-
-        .submit-tab-content.active {
-            display: block;
-        }
-    @*---------------------------------------------------------------------------------*@
-    @*Modal popup*@
-    <!-- Modal popup for publish now tender-- >
-    /* Simple modal styling (if not using Bootstrap modal JS) */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0,0,0,0.5);
-        z-index: 1050;
-        display: none;
-    }
-
-    .modal.show {
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .modal-content {
-        border-radius: 8px;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-        border-radius: 12px;
-    }
-
-    @*---------------------------------------------------------------------------------*@
-
-    /* Add this to your existing styles */
-    .validation-custom-error {
-        font-size: 0.75rem !important; /* Smaller font size */
-    }
-
-    .field-error-highlight {
-        border-color: #dc2626 !important;
-        background-color: #fef2f2 !important;
-    }
-
-    /* Add this to your existing styles */
-    .action-btn.loading {
-        background-color: #9ca3af !important;
-        cursor: not-allowed;
-        pointer-events: none;
-    }
-
-        .action-btn.loading .arrow-icon {
-            display: none;
-        }
-
-    .loading-dots {
-        display: inline-block;
-        margin-left: 8px;
-    }
-
-        .loading-dots::after {
-            content: '.';
-            animation: dots 1.5s steps(5, end) infinite;
-        }
-
-    @@keyframes dots {
-        0%, 20% {
-            content: '.';
-        }
-
-        40% {
-            content: '..';
-        }
-
-        60% {
-            content: '...';
-        }
-
-        80%, 100% {
-            content: '';
-        }
-    }
-
-    .icon-btn {
-        background: none;
-        border: none;
-        padding: 6px 10px;
-        font-size: 1.2rem;
-        cursor: pointer;
-        color: #1a7f37;
-        transition: color 0.2s, background 0.2s;
-        border-radius: 4px;
-        outline: none;
-    }
-
-        .icon-btn:focus, .icon-btn:hover {
-            background: #e2f3e5;
-            color: #15803d;
-        }
-
-        .icon-btn.text-danger {
-            color: #e11d48;
-        }
-
-            .icon-btn.text-danger:focus, .icon-btn.text-danger:hover {
-                background: #fef2f2;
-                color: #b91c1c;
+            .icon-btn:focus, .icon-btn:hover {
+                background: #e2f3e5;
+                color: #15803d;
             }
 
-    .uploaded-file-entry {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+            .icon-btn.text-danger {
+                color: #e11d48;
+            }
 
-    .uploaded-file-actions {
-        display: flex;
-        gap: 8px;
-    }
+                .icon-btn.text-danger:focus, .icon-btn.text-danger:hover {
+                    background: #fef2f2;
+                    color: #b91c1c;
+                }
 
-    #publishSuccessModal .modal-dialog {
-        max-width: 350px; /* Increase as needed, e.g., 700px or 800px */
-        width: 90%; /* Optional: makes it responsive */
-    }
+        .uploaded-file-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    /* Consistent modal size for all popups */
-    .modal-dialog {
-        max-width: 400px;
-        min-width: 320px;
-        width: 90%;
-        margin: auto;
-    }
+        .uploaded-file-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-    .modal-content {
-        padding: 24px 18px;
-        box-sizing: border-box;
-        word-break: break-word;
-        border-radius: 12px;
-    }
+        #publishSuccessModal .modal-dialog {
+            max-width: 350px; /* Increase as needed, e.g., 700px or 800px */
+            width: 90%; /* Optional: makes it responsive */
+        }
 
-    .modal-title,
-    .modal-body p,
-    .modal-footer button {
-        white-space: normal;
-        word-break: break-word;
-        font-size: 1.1rem;
-    }
-</style>
+        /* Consistent modal size for all popups */
+        .modal-dialog {
+            max-width: 400px;
+            min-width: 320px;
+            width: 90%;
+            margin: auto;
+        }
+
+        .modal-content {
+            padding: 24px 18px;
+            box-sizing: border-box;
+            word-break: break-word;
+            border-radius: 12px;
+        }
+
+        .modal-title,
+        .modal-body p,
+        .modal-footer button {
+            white-space: normal;
+            word-break: break-word;
+            font-size: 1.1rem;
+        }
+    </style>

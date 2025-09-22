@@ -23,11 +23,35 @@ namespace SABC_Phase2.Migrations
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    AccountStatus = table.Column<int>(type: "int", nullable: false)
+                    AccountStatus = table.Column<int>(type: "int", nullable: false),
+                    OtpCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OtpExpiration = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PendingEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OtpType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastOtpRequestTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PasswordLastUpdated = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Administrators", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AuditLogs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AdminId = table.Column<int>(type: "int", nullable: false),
+                    AdminEmail = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AdminFullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ActionType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuditLogs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -379,6 +403,9 @@ namespace SABC_Phase2.Migrations
 
             migrationBuilder.DropTable(
                 name: "ApplicationDocuments");
+
+            migrationBuilder.DropTable(
+                name: "AuditLogs");
 
             migrationBuilder.DropTable(
                 name: "ScheduledTendersDocuments");
