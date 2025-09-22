@@ -28,7 +28,7 @@
                    style="padding-left: 38px;" />
         </span>
         <select name="type" class="filter-dropdown" id="scheduledTenderTypeDropdown">
-            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">Tender Type</option>
+            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL</option>
             <option value="rfq" selected="@(typeFilter == "rfq" ? "selected" : null)">RFQ</option>
             <option value="rfp" selected="@(typeFilter == "rfp" ? "selected" : null)">RFP</option>
             <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>

@@ -145,7 +145,7 @@ namespace SABC_Phase2.Services
                                     table.Cell().Element(CellStyle(even)).Text(g.LocalSuppliers.ToString());
                                     table.Cell().Element(CellStyle(even)).Text(g.ForeignSuppliers.ToString());
                                     table.Cell().Element(CellStyle(even)).Text(g.TotalApplicants.ToString());
-                                    table.Cell().Element(CellStyle(even)).Text($"{g.AvgApplicants:0.0}%");
+                                    table.Cell().Element(CellStyle(even)).Text($"{g.AvgApplicants:0.0}");
                                 }
                             });
                         });
@@ -172,7 +172,7 @@ namespace SABC_Phase2.Services
                                     row.RelativeColumn().Text(totalLocal.ToString()).Bold().FontSize(13).AlignCenter();
                                     row.RelativeColumn().Text(totalForeign.ToString()).Bold().FontSize(13).AlignCenter();
                                     row.RelativeColumn().Text(totalApplicants.ToString()).Bold().FontSize(13).AlignCenter();
-                                    row.RelativeColumn().Text($"{avgApplicants:0.0}%").Bold().FontSize(13).AlignCenter();
+                                    row.RelativeColumn().Text($"{avgApplicants:0.0}").Bold().FontSize(13).AlignCenter();
                                 });
 
                                 // Bottom dashed line

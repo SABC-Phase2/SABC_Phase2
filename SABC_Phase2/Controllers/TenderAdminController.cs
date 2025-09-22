@@ -83,7 +83,6 @@ namespace SABC_Phase2.Controllers
             return (adminId, email, fullName);
         }
 
-
         [HttpGet]
         public IActionResult Create()
         {
@@ -94,12 +93,12 @@ namespace SABC_Phase2.Controllers
             return View(new TenderViewModel());
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Tender_Administrator")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
-            if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrator"))
+            if (!User.Identity.IsAuthenticated || !User.IsInRole("Tender_Administrator"))
                 return Forbid();
 
             // --- Get Admin Info ONCE for audit logging ---
@@ -325,6 +324,9 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("Index", "TenderAdmin")
             });
         }
+       
+        
+        
         public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
 
         {

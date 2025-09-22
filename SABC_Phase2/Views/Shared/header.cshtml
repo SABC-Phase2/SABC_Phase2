@@ -1,5 +1,4 @@
-﻿
-<style>
+﻿<style>
 
     .sabc_header {
         width: 100%;
@@ -31,12 +30,14 @@
                 width: 100%;
                 margin-bottom: 0px;
                 margin-top: 6px;
+                font-size: 12px;
             }
 
                 .sabc_header .top_bar ul li {
                     color: #fff;
                     display: inline-block;
                     margin-right: 30px;
+                    font-size: 12px;
                 }
 
             .sabc_header .top_bar .whatsapp {
@@ -57,10 +58,12 @@
                     border: 0px;
                     background-color: #555;
                     color: #fff;
+                    font-size: 12px;
                 }
 
                     .sabc_header .top_bar .search input::placeholder {
                         color: #fff;
+                        font-size: 12px;
                     }
 
                 .sabc_header .top_bar .search button {
@@ -100,26 +103,27 @@
                     text-align: center;
                     margin: 0;
                     position: relative;
+                    font-size: 12px;
                     /* Remove flex: 1 1 0; to avoid stretching */
                 }
                     /* Nav links: no underline by default, underline on hover */
                     .sabc_header .menu_bar ul.nav-menu li.menu-item a.menu-link {
                         line-height: 45px;
                         color: #fff;
-                        font-size: 14px;
+                        font-size: 12px;
                         letter-spacing: -1px;
                         text-decoration: none;
                         transition: color 0.2s, text-decoration 0.2s;
                         display: inline-block;
                         position: relative;
                         text-transform: uppercase; /* Make text uppercase */
-                        padding: 0 6px; 
+                        padding: 0 6px;
                     }
 
                     .sabc_header .menu_bar ul.nav-menu li.menu-item a {
                         line-height: 45px;
                         color: #fff;
-                        font-size: 14px;
+                        font-size: 12px;
                         letter-spacing: -1px;
                     }
 
@@ -198,32 +202,32 @@
                 text-decoration: none;
             }
 
-        /* Remove any existing arrow styles */
-.sabc_header .menu_bar ul.nav-menu li.menu-item > a.menu-link::after {
-    content: none;
-}
+            /* Remove any existing arrow styles */
+            .sabc_header .menu_bar ul.nav-menu li.menu-item > a.menu-link::after {
+                content: none;
+            }
 
-/* Style the Font Awesome angle-down icons */
-.sabc_header .menu_bar ul.nav-menu li.menu-item.has-children .fa-angle-down {
-    font-size: 0.9em;
-    margin-left: 4px;
-    color: #e79d19;
-    transition: transform 0.3s ease;
-}
+            /* Style the Font Awesome angle-down icons */
+            .sabc_header .menu_bar ul.nav-menu li.menu-item.has-children .fa-angle-down {
+                font-size: 0.7em;
+                margin-left: 4px;
+                color: #e79d19;
+                transition: transform 0.3s ease;
+            }
 
-/* Rotate the icon when menu is open (optional) */
-.sabc_header .menu_bar ul.nav-menu li.menu-item.has-children:hover .fa-angle-down {
-    transform: rotate(180deg);
-}
+            /* Rotate the icon when menu is open (optional) */
+            .sabc_header .menu_bar ul.nav-menu li.menu-item.has-children:hover .fa-angle-down {
+                transform: rotate(180deg);
+            }
 
-/* Style for submenu items with angle-right icons */
-.sabc_header .menu_bar ul.sub-menu li.menu-item.has-children .fa-angle-right {
-    font-size: 0.9em;
-    margin-left: 4px;
-    color: #e79d19;
-    position: absolute;
-    right: 10px;
-}
+            /* Style for submenu items with angle-right icons */
+            .sabc_header .menu_bar ul.sub-menu li.menu-item.has-children .fa-angle-right {
+                font-size: 0.7em;
+                margin-left: 4px;
+                color: #e79d19;
+                position: absolute;
+                right: 10px;
+            }
 
             /* Remove arrow for sub-sub-menus */
             .sabc_header .menu_bar ul.sub-menu li.menu-item > a.menu-link::after,
@@ -232,10 +236,128 @@
             }
 
     .sabclogo {
-        width: 10px; /* Smaller fixed width */
-        height: 10px;
+        width: auto; /* let it size naturally */
+        height: auto;
+        display: flex;
+        align-items: center; /* vertically center the image */
     }
 
+        /* Keep the logo image height consistent */
+        .sabclogo img {
+            height: 41px;
+        }
+
+    /* ---------------- MOBILE STYLES ONLY ---------------- */
+    @@media (max-width: 991px) {
+        /* Top bar stacks */
+        .sabc_header .top_bar .row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .sabc_header .top_bar ul {
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .sabc_header .top_bar .search {
+            width: 100%;
+            margin: 10px 0 0 0;
+        }
+        /* Menu bar compact layout */
+        .sabc_header .menu_bar .row {
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        .sabc_header .menu-toggle {
+            margin-left: 12px;
+        }
+        /* Hamburger visible */
+        .sabc_header .menu-toggle {
+            display: block;
+            font-size: 22px;
+            color: #fff;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        /* Hide nav by default */
+        .sabc_header .nav-menu {
+            display: none !important;
+            flex-direction: column;
+            align-items: flex-start;
+            background: #111;
+            width: 100vw;
+            position: fixed;
+            left: 0;
+            z-index: 10000;
+            /* Remove static top, will set via JS */
+            padding: 10px 0;
+        }
+
+            .sabc_header .nav-menu.show {
+                display: flex !important;
+            }
+
+            .sabc_header .nav-menu .menu-item {
+                width: 100%;
+                border-top: 1px solid #222;
+            }
+
+                .sabc_header .nav-menu .menu-item a {
+                    width: 100%;
+                    padding: 10px 15px;
+                }
+    }
+    /* MOBILE + TABLET (up to 1280px) */
+    @@media (max-width: 1280px) {
+        .sabc_header .menu-toggle {
+            display: block;
+            font-size: 22px;
+            color: #fff;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        /* Hide nav by default */
+        .sabc_header .nav-menu {
+            display: none !important;
+            flex-direction: column;
+            align-items: flex-start;
+            background: #111;
+            width: 100vw;
+            position: fixed;
+            left: 0;
+            z-index: 10000;
+            padding: 10px 0;
+        }
+
+            .sabc_header .nav-menu.show {
+                display: flex !important;
+            }
+
+            .sabc_header .nav-menu .menu-item {
+                width: 100%;
+                border-top: 1px solid #222;
+            }
+
+                .sabc_header .nav-menu .menu-item a {
+                    width: 100%;
+                    padding: 10px 15px;
+                }
+    }
+
+    /* DESKTOP (above 1280px) */
+    @@media (min-width: 1281px) {
+        .sabc_header .menu-toggle {
+            display: none !important;
+        }
+
+        .sabc_header .nav-menu {
+            display: flex !important;
+        }
+    }
 
 </style>
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
@@ -260,20 +382,23 @@
             </div>
         </div>
     </div>
+
     <div class="menu_bar">
         <div class="container">
-            <div class="row">
-                <div class="col-md-2">
+            <div class="row align-items-center">
+                <!-- Logo -->
+                <div class="col-auto d-flex align-items-center p-0">
                     <div class="sabclogo">
                         <a href="http://www.sabc.co.za/sabc/" title="SABC Portal Home">
                             <img src="~/lib/Images/logo.png" alt="SABC Logo">
                         </a>
                     </div>
                 </div>
-                <div class="col-md-10">
+                <!-- Menu items -->
+                <div class="col d-flex justify-content-end align-items-center">
                     <ul class="nav-menu" id="sabc_menu">
                         <li class="menu-item"><a href="https://www.sabc.co.za/sabc/" aria-current="page" class="menu-link">Home</a></li>
-                        
+
                         <li class="menu-item">
                             <a href="#" class="menu-link">About <i class="fa fa-angle-down"></i></a>
                             <ul class="sub-menu">
@@ -336,9 +461,9 @@
                                 <li class="menu-item"><a href="https://www.sabc.co.za/sabc/bccsa-code-of-conduct/" class="menu-link">BCCSA Code Of Conduct</a></li>
                             </ul>
                         </li>
-                       
+
                         <li class="menu-item"><a href="https://www.sabc.co.za/sabc/tender-search/" class="menu-link">e-Tenders</a></li>
-                       
+
 
                         <li class="menu-item">
                             <a href="#" class="menu-link">Contact Us <i class="fa fa-angle-down"></i></a>
@@ -351,11 +476,60 @@
                                 <li class="menu-item"><a target="_blank" rel="noopener" href="http://www.youtube.com/sabc" class="menu-link">YouTube</a></li>
                             </ul>
                         </li>
-                       
+
                     </ul>
+                </div>
+
+                <!-- Hamburger: far right -->
+                <div class="col-auto d-flex justify-content-end p-0">
+                    <div class="menu-toggle"><i class="fa fa-bars"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
 </header>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggle = document.querySelector(".menu-toggle");
+        const menu = document.getElementById("sabc_menu");
+
+        // Toggle open/close on hamburger click
+        toggle.addEventListener("click", function (e) {
+            e.stopPropagation(); // prevent the click from bubbling up
+            menu.classList.toggle("show");
+        });
+
+        // Close when clicking outside
+        document.addEventListener("click", function (e) {
+            const isClickInsideMenu = menu.contains(e.target);
+            const isClickOnToggle = toggle.contains(e.target);
+
+            if (!isClickInsideMenu && !isClickOnToggle) {
+                menu.classList.remove("show");
+            }
+        });
+    function setMobileMenuTop() {
+        var menuBar = document.querySelector('.sabc_header .menu_bar');
+        var topBar = document.querySelector('.sabc_header .top_bar');
+        var navMenu = document.getElementById('sabc_menu');
+        if (window.innerWidth <= 991 && menuBar && navMenu && topBar) {
+            var totalHeight = menuBar.offsetHeight + topBar.offsetHeight;
+            navMenu.style.top = totalHeight + 'px';
+        } else if (navMenu) {
+            navMenu.style.top = '';
+        }
+    }
+         window.addEventListener('DOMContentLoaded', setMobileMenuTop);
+    window.addEventListener('resize', setMobileMenuTop);
+                // Optional: close menu when clicking a menu item on mobile
+        menu.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", () => {
+                if (window.innerWidth <= 991) {
+                    menu.classList.remove("show");
+                }
+            });
+        });
+    });
+</script>
