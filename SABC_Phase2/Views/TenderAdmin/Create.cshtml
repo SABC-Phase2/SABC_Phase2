@@ -1,4 +1,4 @@
-﻿﻿﻿    ﻿@{
+﻿﻿﻿﻿    ﻿@{
 ViewData["BannerText"] = "Tenders";
     }
 
@@ -1191,22 +1191,30 @@ ViewData["BannerText"] = "Tenders";
                 }
 
                 // Show all errors next to their fields
-                if (errors.length > 0) {
-                    resetLoadingState(doneBtn);
 
-                    errors.forEach(function(err) {
-                        showFieldError(err.field, err.message, err.tab);
-                    });
+        if (errors.length > 0) {
+            resetLoadingState(doneBtn);
 
-                    // Switch to first errored tab and focus field
-                    showTab(errors[0].tab);
-                    let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
-                    if (firstField) {
-                        firstField.scrollIntoView({behavior: "smooth", block: "center"});
-                        firstField.focus();
-                    }
-                    return;
+            // Switch to first errored tab first
+            showTab(errors[0].tab);
+
+            // Wait for the tab to become active, then show errors
+            setTimeout(function() {
+                errors.forEach(function(err) {
+                    showFieldError(err.field, err.message, err.tab);
+                });
+
+                // Focus the first errored field
+                let firstField = document.getElementById(errors[0].field) || document.querySelector(`[name='${errors[0].field}']`);
+                if (firstField) {
+                    firstField.scrollIntoView({behavior: "smooth", block: "center"});
+                    firstField.focus();
                 }
+            }, 100);
+
+            return;
+        }
+
             }
 
             // Check for empty draft
