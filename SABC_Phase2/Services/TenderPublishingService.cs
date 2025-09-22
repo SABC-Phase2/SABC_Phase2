@@ -29,7 +29,6 @@ namespace SABC_Phase2.Services
             _sharePointService = new SharePointService(configuration);
         }
 
-
         /// <summary>
         /// Main method to publish tenders that were scheduled for publishing.
         /// - Migrates from ScheduledTenders to Tenders table.
@@ -47,67 +46,70 @@ namespace SABC_Phase2.Services
 
             foreach (var scheduledTender in tendersToPublish)
             {
-                // Check for duplicate TenderNumber
-                var existingTender = await _context.Tenders
-                    .FirstOrDefaultAsync(t => t.TenderNumber == scheduledTender.TenderNumber);
-
-                if (existingTender != null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    // Already published: just clean up the scheduled tender
-                    _context.ScheduledTenders.Remove(scheduledTender);
-                    await _context.SaveChangesAsync();
-                    continue;
-                }
+                    // Check for duplicate TenderNumber
+                    var existingTender = await _context.Tenders
+                        .FirstOrDefaultAsync(t => t.TenderNumber == scheduledTender.TenderNumber);
 
-                // Create the main tender
-                var tender = new Tender
-                {
-                    TenderType = scheduledTender.TenderType,
-                    TenderNumber = scheduledTender.TenderNumber,
-                    ClosingDate = scheduledTender.ClosingDate,
-                    ClosingTime = scheduledTender.ClosingTime,
-                    Status = "Open Tender",
-                    Title = scheduledTender.Title,
-                    Description = scheduledTender.Description,
-                    DatePublished = scheduledTender.ScheduledPublishDateTime,
-                    Documents = new List<TenderDocument>()
-                };
-
-                _context.Tenders.Add(tender);
-                await _context.SaveChangesAsync(); // Save first to generate ID
-
-                // Copy documents from ScheduledTenderDocuments to TenderDocuments and upload to SharePoint
-                foreach (var scheduledDoc in scheduledTender.Documents)
-                {
-                    // Download the file from its original FilePath (Blob or SharePoint), upload to new SharePoint path
-                    // You may need to implement a helper in SharePointService to copy from old to new if not already present
-                    // For now, assume FilePath is a URL or local path that can be streamed
-
-                    // Replace this with a migration to SharePoint (if not already there)
-                    string sharePointUrl;
-                    using (var fileStream = await _sharePointService.GetFileStreamAsync(scheduledDoc.SharePointPath)) // You must implement this method if needed
+                    if (existingTender != null)
                     {
-                        sharePointUrl = await _sharePointService.UploadDocumentAsync(
-                            scheduledTender.TenderNumber,
-                            fileStream,
-                            scheduledDoc.FileName);
+                        // Already published: just clean up the scheduled tender
+                        _context.ScheduledTenders.Remove(scheduledTender);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                        continue;
                     }
 
-                    var tenderDoc = new TenderDocument
+                    // Create the main tender
+                    var tender = new Tender
                     {
-                        FileName = scheduledDoc.FileName,
-                        SharePointPath = sharePointUrl,
-                        TenderId = tender.Id
+                        TenderType = scheduledTender.TenderType,
+                        TenderNumber = scheduledTender.TenderNumber,
+                        ClosingDate = scheduledTender.ClosingDate,
+                        ClosingTime = scheduledTender.ClosingTime,
+                        Status = "Open Tender",
+                        Title = scheduledTender.Title,
+                        Description = scheduledTender.Description,
+                        DatePublished = scheduledTender.ScheduledPublishDateTime,
+                        Documents = new List<TenderDocument>()
                     };
 
-                    _context.TenderDocuments.Add(tenderDoc);
+                    _context.Tenders.Add(tender);
+                    await _context.SaveChangesAsync(); // Save first to generate ID
+
+                    // Copy documents from ScheduledTenderDocuments to TenderDocuments
+                    // Since documents are already in SharePoint, we just need to copy the references
+                    foreach (var scheduledDoc in scheduledTender.Documents)
+                    {
+                        var tenderDoc = new TenderDocument
+                        {
+                            FileName = scheduledDoc.FileName,
+                            SharePointPath = scheduledDoc.SharePointPath, // Simply copy the existing SharePoint path
+                            TenderId = tender.Id
+                        };
+
+                        _context.TenderDocuments.Add(tenderDoc);
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    // Remove the scheduled tender (this will cascade delete the ScheduledTenderDocuments)
+                    _context.ScheduledTenders.Remove(scheduledTender);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
                 }
-
-                await _context.SaveChangesAsync();
-
-                // Remove the scheduled tender
-                _context.ScheduledTenders.Remove(scheduledTender);
-                await _context.SaveChangesAsync();
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    // Log the error (you might want to use ILogger here)
+                    Console.WriteLine($"Error publishing tender {scheduledTender.TenderNumber}: {ex.Message}");
+                    // Consider whether you want to continue with other tenders or throw
+                    // For now, we'll continue with the next tender
+                    continue;
+                }
             }
         }
     }
