@@ -9,14 +9,15 @@
     string search = ViewBag.Search as string ?? "";
     string typeFilter = ViewBag.Type as string ?? "";
 }
+
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
-<!-- Unified Color Delete Confirmation Modal -->
+<!-- Redesigned Delete Confirmation Modal (header full width) -->
 <div id="deleteDraftModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
     <div class="modal-content" style="background-color: #fff; margin: 10% auto; width: 410px; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); position: relative; text-align: center; overflow: hidden;">
 
-        <!-- Unified Dark Green header with centered title, full width -->
-        <div style="background: #14532d; border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 18px 0 14px 0; text-align: center; width: 100%;">
+        <!-- Green header with centered title, full width -->
+        <div style="background: #006400; border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 18px 0 14px 0; text-align: center; width: 100%;">
             <h2 style="margin: 0; color: #fff; font-weight: 600; font-size: 1.3rem; letter-spacing: 0.5px;">Delete Confirmation</h2>
         </div>
 
@@ -29,21 +30,21 @@
 
             <!-- Loading indicator (initially hidden) -->
             <div id="deleteLoading" style="display: none; text-align: center; margin: 20px 0 10px 0;">
-                <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #991b1b; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #d9534f; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                 <p style="margin: 12px 0 0 0; color: #666; font-size: 14px;">Deleting draft...</p>
             </div>
 
             <!-- Buttons centered below message -->
             <div id="modalButtons" style="display: flex; justify-content: center; gap: 22px; margin-top: 28px;">
-                <button id="cancelDelete" class="cancel-btn" style="min-width: 110px; padding: 10px 0; background: #14532d; color: #fff; border: none; border-radius: 5px; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Cancel</button>
-                <button id="confirmDelete" class="confirm-btn" style="min-width: 110px; padding: 10px 0; background: #991b1b; color: #fff; border: none; border-radius: 5px; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Yes, Delete</button>
+                <button id="cancelDelete" class="cancel-btn" style="min-width: 110px; padding: 10px 0; background: #006400; color: #fff; border: none; border-radius: 5px; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Cancel</button>
+                <button id="confirmDelete" class="confirm-btn" style="min-width: 110px; padding: 10px 0; background: #d9534f; color: #fff; border: none; border-radius: 5px; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Yes, Delete</button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="breadcrumb-custom">
-    Dashboard <span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Drafts</span>
+    Dashboard <span class="breadcrumb-arrow">&gt;</span> <span class="breadcrumb-active">Drafts</span>
 </div>
 
 <div class="tender-action-bar">
@@ -57,16 +58,15 @@
                    style="padding-left: 38px;" />
         </span>
         <select name="type" class="filter-dropdown" id="draftTypeDropdown">
-            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL</option>
+            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL TENDER TYPES</option>
             <option value="rfq" selected="@(typeFilter == "rfq" ? "selected" : null)">RFQ</option>
             <option value="rfp" selected="@(typeFilter == "rfp" ? "selected" : null)">RFP</option>
             <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>
             <option value="rfo" selected="@(typeFilter == "rfo" ? "selected" : null)">RFO</option>
         </select>
 
-        <button type="submit" class="refresh-btn"
-                title="Clear search and filters"
-                formaction="@Url.Action("DraftIndex", new { page = 1, pageSize = pageSize, search = "", type = "" })"
+        <button type="button" class="refresh-btn"
+                title="Refresh table"
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
         </button>
@@ -111,6 +111,7 @@
             document.querySelector('.search-input').value = params.get('search') ?? '';
             hookDraftPaginationLinks();
             hookDeleteButtons(); // Reattach event handlers after table refresh
+            hookSortIcon();
         });
     }
 
@@ -132,6 +133,7 @@
                     document.querySelector('.search-input').value = params.get('search') ?? '';
                     hookDraftPaginationLinks();
                     hookDeleteButtons(); // Reattach event handlers after table refresh
+                    hookSortIcon();
                 });
             };
         });
@@ -197,20 +199,59 @@
             });
         });
     }
+        function hookSortIcon() {
+        const table = document.querySelector('.tender-table');
+        if (!table) return;
+
+        // Find the header with "Draft Date"
+        const sortTh = [...table.querySelectorAll('th')]
+            .find(th => th.textContent.toLowerCase().includes('draft date'));
+        if (!sortTh) return;
+
+        const sortIcon = sortTh.querySelector('i.fas');
+        if (!sortIcon) return;
+
+        let asc = true; // default direction
+        sortIcon.style.cursor = "pointer";
+        sortIcon.title = "Sort by draft date";
+
+        sortIcon.onclick = function () {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+                .filter(row => row.querySelector('td') && row.cells[3]); // 4th column
+
+            rows.sort((a, b) => {
+                const dateA = new Date(a.cells[3].innerText.trim());
+                const dateB = new Date(b.cells[3].innerText.trim());
+                return asc ? dateA - dateB : dateB - dateA;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Toggle direction + update icon
+            asc = !asc;
+            sortIcon.className = asc ? "fas fa-sort-up" : "fas fa-sort-down";
+        };
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelector('.search-input').addEventListener('input', debouncedDraftSubmit);
         document.querySelector('#draftTypeDropdown').addEventListener('change', () => submitDraftForm(false));
-        document.querySelector('.refresh-btn').addEventListener('click', function(e) {
-            e.preventDefault();
-            submitDraftForm(true);
-        });
+          document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        // Optionally clear filters:
+        document.querySelector('.search-input').value = '';
+        document.querySelector('#draftTypeDropdown').value = '';
+        submitDraftForm(true);
+    });
 
         // Hook up delete buttons
         hookDeleteButtons();
 
         // Hook up pagination links
         hookDraftPaginationLinks();
+
+        hookSortIcon();
 
         // Modal event handlers
         document.getElementById('cancelDelete').addEventListener('click', function() {
@@ -234,6 +275,8 @@
 </script>
 
 <style>
+
+
     .delete-draft-btn {
         background-color: #fff;
         border: 1px solid #d9534f;
@@ -313,10 +356,12 @@
 
             .tender-table thead th:nth-child(3) {
                 white-space: nowrap;
+                background-color: #f5c012;
             }
 
             .tender-table thead th:nth-child(4) {
                 white-space: nowrap;
+                background-color: #333;
             }
 
             /* Specific column background overrides */
@@ -335,7 +380,7 @@
 
             .tender-table thead th:last-child {
                 border-top-right-radius: 6px;
-                background-color: #333;
+                background-color: #f5c012;
             }
 
         .tender-table tbody tr {
@@ -655,4 +700,168 @@
         100% {
             transform: rotate(360deg);
         }
-    }</style>
+    }
+
+    /* ========== MOBILE RESPONSIVE FIXES ========== */
+    @@media (max-width: 992px) {
+        /* Action bar */
+        .tender-action-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .filter-dropdown {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .refresh-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        /* Table container scroll padding */
+        .table-container {
+            padding: 15px;
+        }
+
+        .table-scroll-container {
+            overflow-x: auto;
+        }
+        /* Responsive table: stack cells */
+        .tender-table thead {
+            display: none; /* hide header */
+        }
+
+        .tender-table,
+        .tender-table tbody,
+        .tender-table tr,
+        .tender-table td {
+            display: block;
+            width: 100%;
+        }
+
+            .tender-table tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 12px;
+                background: #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            }
+
+            .tender-table td {
+                text-align: left;
+                padding: 8px 0;
+                border: none !important;
+            }
+
+                .tender-table td:before {
+                    content: attr(data-label);
+                    display: block;
+                    font-weight: bold;
+                    color: #555;
+                    margin-bottom: 4px;
+                }
+
+        .tender-thumbnail {
+            width: 40px;
+            height: 40px;
+        }
+
+        .tender-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        /* Pagination */
+        .custom-pagination {
+            margin-top: 20px;
+        }
+
+        .pagination-list {
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .page-link {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .tender-table tr {
+            padding: 10px;
+        }
+
+        .tender-table td {
+            font-size: 0.85rem;
+        }
+
+        .tender-title {
+            font-size: 0.9rem;
+        }
+
+        .search-input,
+        .filter-dropdown,
+        .refresh-btn {
+            font-size: 0.9rem;
+            padding: 10px;
+        }
+    }
+    /* Fix for sidebar overlap on smaller screens */
+    @@media (max-width: 1024px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 50px; /* push content right */
+            margin-right: 10px; /* add breathing room */
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 55px; /* push more on mobile */
+            margin-right: 15px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .tender-title-block {
+            max-width: 98vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+
+        .tender-number,
+        .tender-title {
+            max-width: 48vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    }
+
+
+
+    @@media (max-width: 768px) {
+        /* On mobile, let it wrap instead of ellipsis */
+        .tender-title-text {
+            max-width: none;
+            white-space: normal;
+            text-overflow: unset;
+        }
+    }
+
+</style>

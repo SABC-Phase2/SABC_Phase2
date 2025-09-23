@@ -18,10 +18,11 @@
             <span id="sast-clock-label">South African Time</span>
             <span id="sast-clock-sidebar">--:--</span>
         </div>
-       
     }
     <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
-        <i class="fas fa-user-circle fa-2x"></i>
+        <a href="@Url.Action("Administrator_Profiles", "TenderAdmin")" class="icon-link" title="Profile">
+            <i class="fas fa-user-circle fa-2x"></i>
+        </a>
         <div class="info">
             @if (User.Identity.IsAuthenticated)
             {
@@ -45,14 +46,12 @@
             <div class="profile-dropdown-menu" id="profileDropdownMenu">
                 @if (User.IsInRole("IT_Admin") || User.IsInRole("Tender_Administrator") || User.IsInRole("Vendor_Administrator"))
                 {
-                    // All admin types go to Administrator_Profiles in TenderAdmin
                     <a href="@Url.Action("Administrator_Profiles", "TenderAdmin")" class="dropdown-item">
                         <i class="fas fa-id-badge fa-2x"></i> View Profile
                     </a>
                 }
                 else
                 {
-                    // OVRS_User and others go to OVRS_Profiles in OVRS_User
                     <a href="@Url.Action("OVRS_Profiles", "OVRS_User")" class="dropdown-item">
                         <i class="fas fa-id-badge fa-2x"></i> View Profile
                     </a>
@@ -67,20 +66,22 @@
         }
     </div>
 
-
     <div class="menu">
         @if (User.Identity.IsAuthenticated && User.IsInRole("IT_Admin"))
         {
-            @* IT_Admin MENU: Only Users and Help *@
             <div class="menu-section">
-                <i class="fas fa-user-shield fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="Users_Management" class="icon-link" title="Users">
+                    <i class="fas fa-user-shield fa-2x"></i>
+                </a>
                 <a asp-controller="TenderAdmin" asp-action="Users_Management" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Users
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-question fa-2x"></i>
+                <a asp-controller="Home" asp-action="Help" class="icon-link" title="Help">
+                    <i class="fas fa-question fa-2x"></i>
+                </a>
                 <a asp-controller="Home" asp-action="Help" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Help
@@ -89,9 +90,10 @@
         }
         else if (User.Identity.IsAuthenticated && User.IsInRole("Tender_Administrator"))
         {
-            @* Tender_Administrator MENU: Tender Panel, Scheduled Tenders, Drafts, Reports, Help *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
-                <i class="fas fa-users fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="Index" class="icon-link" title="Tenders Panel">
+                    <i class="fas fa-users fa-2x"></i>
+                </a>
                 <a asp-controller="TenderAdmin" asp-action="Index"
                    class="label main-link"
                    style="color:inherit; text-decoration:none; flex: 1;">
@@ -103,7 +105,9 @@
             </div>
             <div class="submenu visible">
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="open" class="icon-link" title="Open Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="open"
                        class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
@@ -111,7 +115,9 @@
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="closed" class="icon-link" title="Closed Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="closed"
                        class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
@@ -119,7 +125,9 @@
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="cancelled" class="icon-link" title="Cancelled Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="cancelled"
                        class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
@@ -127,7 +135,9 @@
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="awarded" class="icon-link" title="Awarded Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="TenderAdmin" asp-action="Index" asp-route-status="awarded"
                        class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
@@ -136,28 +146,36 @@
                 </div>
             </div>
             <div class="menu-section">
-                <i class="fas fa-file-alt fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="icon-link" title="Scheduled Tenders">
+                    <i class="fas fa-file-alt fa-2x"></i>
+                </a>
                 <a asp-controller="TenderAdmin" asp-action="ScheduledIndex" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Scheduled Tenders
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-times fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="icon-link" title="Drafts">
+                    <i class="fas fa-times fa-2x"></i>
+                </a>
                 <a asp-controller="TenderAdmin" asp-action="DraftIndex" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Drafts
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-download fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="icon-link" title="Reports">
+                    <i class="fas fa-download fa-2x"></i>
+                </a>
                 <a asp-controller="TenderAdmin" asp-action="Reports_Index" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Reports
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-question fa-2x"></i>
+                <a asp-controller="Home" asp-action="Help" class="icon-link" title="Help">
+                    <i class="fas fa-question fa-2x"></i>
+                </a>
                 <a asp-controller="Home" asp-action="Help" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Help
@@ -166,9 +184,12 @@
         }
         else if (User.Identity.IsAuthenticated && User.IsInRole("Vendor_Administrator"))
         {
-            @* Vendor_Administrator MENU: *@
             <div class="menu-section">
-                <i class="fas fa-handshake fa-2x" style="color: white;"></i>
+                <a href="https://etender.sabc.co.za/login.aspx"
+                   target="_blank"
+                   class="icon-link" title="Registered Suppliers">
+                    <i class="fas fa-handshake fa-2x" style="color: white;"></i>
+                </a>
                 <a href="https://etender.sabc.co.za/login.aspx"
                    target="_blank"
                    class="label"
@@ -176,21 +197,22 @@
                     Registered Suppliers
                 </a>
             </div>
-           
             <div class="menu-section">
-                <i class="fas fa-question fa-2x"></i>
+                <a asp-controller="Home" asp-action="Help" class="icon-link" title="Help">
+                    <i class="fas fa-question fa-2x"></i>
+                </a>
                 <a asp-controller="Home" asp-action="Help" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Help
                 </a>
             </div>
-          
         }
         else if (User.Identity.IsAuthenticated && User.IsInRole("OVRS_User"))
         {
-            @* OVRS_USER MENU *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
-                <i class="fas fa-users fa-2x"></i>
+                <a asp-controller="OVRS_User" asp-action="AllTenders" class="icon-link" title="Tenders">
+                    <i class="fas fa-users fa-2x"></i>
+                </a>
                 <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
                     Tenders
                 </a>
@@ -200,28 +222,36 @@
             </div>
             <div class="submenu visible">
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="icon-link" title="Open Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Open Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="icon-link" title="Closed Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Closed Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="icon-link" title="Cancelled Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Cancelled Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="icon-link" title="Awarded Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Awarded Tenders
@@ -229,7 +259,11 @@
                 </div>
             </div>
             <div class="menu-section">
-                <i class="fas fa-handshake fa-2x" style="color: white;"></i>
+                <a href="https://etender.sabc.co.za/login.aspx"
+                   target="_blank"
+                   class="icon-link" title="Company Details">
+                    <i class="fas fa-handshake fa-2x" style="color: white;"></i>
+                </a>
                 <a href="https://etender.sabc.co.za/login.aspx"
                    target="_blank"
                    class="label"
@@ -238,23 +272,29 @@
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-file-alt fa-2x" style="color: white;"></i>
+                <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="icon-link" title="My Documents">
+                    <i class="fas fa-file-alt fa-2x" style="color: white;"></i>
+                </a>
                 <a asp-controller="OVRS_User" asp-action="OVRS_Documents" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     My Documents
                 </a>
             </div>
             <div class="menu-section">
-                <i class="fas fa-question fa-2x"></i>
-                <a asp-controller="Home" asp-action="Help" class="label" style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                <a asp-controller="Home" asp-action="Help" class="icon-link" title="Help">
+                    <i class="fas fa-question fa-2x"></i>
+                </a>
+                <a asp-controller="Home" asp-action="Help" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                     Help
                 </a>
             </div>
         }
         else
         {
-            @* Unauthenticated or other menu *@
             <div class="menu-section has-submenu" onclick="toggleSubmenu(event, this)">
-                <i class="fas fa-users fa-2x"></i>
+                <a asp-controller="OVRS_User" asp-action="AllTenders" class="icon-link" title="Tenders">
+                    <i class="fas fa-users fa-2x"></i>
+                </a>
                 <a asp-controller="OVRS_User" asp-action="AllTenders" class="label main-link" style="color:inherit; text-decoration:none; flex: 1;">
                     Tenders
                 </a>
@@ -264,28 +304,36 @@
             </div>
             <div class="submenu visible">
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="icon-link" title="Open Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="open" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Open Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="icon-link" title="Closed Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="closed" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Closed Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="icon-link" title="Cancelled Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="cancelled" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Cancelled Tenders
                     </a>
                 </div>
                 <div class="menu-section sub-item">
-                    <i class="fas fa-circle-dot green"></i>
+                    <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="icon-link" title="Awarded Tenders">
+                        <i class="fas fa-circle-dot green"></i>
+                    </a>
                     <a asp-controller="OVRS_User" asp-action="Index" asp-route-status="awarded" class="label"
                        style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
                         Awarded Tenders
@@ -463,12 +511,18 @@
     }
 
     // Initialize on DOM load
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function()  {
         manageSubmenus();
 
         const sidebar = document.getElementById("sidebar");
         const chevrons = document.querySelectorAll('.chevron-toggle');
 
+        // Automatically collapse sidebar on mobile screens
+        if (window.innerWidth <= 768) { // mobile breakpoint
+            sidebar.classList.add("collapsed");
+        }
+
+        // Set chevron visibility based on sidebar state
         if (sidebar.classList.contains("collapsed")) {
             chevrons.forEach(chevron => {
                 chevron.style.display = "none";
@@ -479,6 +533,7 @@
             });
         }
     });
+
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(event) {
@@ -491,6 +546,17 @@
                 document.getElementById('profileDropdownMenu').style.display = 'none';
             }
         }
+
+            // Automatically collapse sidebar on mobile screens
+    function collapseSidebarOnMobile() {
+        const sidebar = document.getElementById("sidebar");
+        if (window.innerWidth <= 768) { // Adjust breakpoint as needed
+            sidebar.classList.add("collapsed");
+        } else {
+            sidebar.classList.remove("collapsed");
+        }
+    }
+
 
         // Auto-close submenus when clicking elsewhere
         if (!event.target.closest('.has-submenu') && !event.target.closest('.submenu')) {
@@ -523,7 +589,22 @@
 
 <style>
     /* --------------------------------- */
+    .icon-link {
+        display: inline-block;
+        color: inherit;
+        text-decoration: none;
+        min-width: 50px;
+        text-align: center;
+        vertical-align: middle;
+    }
 
+    .sidebar.collapsed .label {
+        display: none !important;
+    }
+
+    .sidebar.collapsed .icon-link {
+        display: inline-block !important;
+    }
     /* Clock Styles - Compact */
     .sast-clock-box {
         width: 100%;
@@ -545,23 +626,7 @@
         margin-bottom: 1px;
     }
 
-    #sast-clock-header {
-        font-size: 1.1em;
-        font-weight: 400;
-        color: #fbbd08;
-        letter-spacing: 1px;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-
     #sast-clock {
-        font-size: 1.1em;
-        font-weight: 400;
-        color: #fbbd08;
-        letter-spacing: 1px;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-
-    #sast-clock-sidebar {
         font-size: 1.1em;
         font-weight: 400;
         color: #fbbd08;
@@ -834,8 +899,8 @@
     }
 
     /*     .sidebar.collapsed .submenu-icon {
-                display: none !important;
-            } */
+                            display: none !important;
+                        } */
 
     @*---------------------------------------------
 
@@ -943,4 +1008,61 @@
     .profile-dropdown.open .profile-dropdown-menu {
         display: flex;
     }
+
+    @@media (max-width: 768px) {
+        .sidebar {
+            top: 190px; /* Adjust this value to match your mobile header height */
+            /* Remove the fixed height here! */
+            height: auto;
+            max-height: none;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 190px; /* Adjust to match your mobile header height */
+            width: 100vw;
+            max-width: 320px;
+            /* Calculate height so it never covers the footer */
+            height: calc(100vh - 190px - 1px); /* 60px = estimated footer height, adjust as needed */
+            max-height: calc(100vh - 190px - 1px);
+            overflow-y: auto;
+            z-index: 9998;
+            background: #333;
+        }
+    }
+
+    /* Ensure footer is always above sidebar */
+    @@media (max-width: 768px) {
+        footer {
+            position: relative;
+            z-index: 10000;
+        }
+    }
+
+    @@media (min-width: 769px) and (max-width: 1280px) {
+        .sidebar {
+            top: 170px; /* Adjust this value to match your header height on tablets */
+            height: calc(100vh - 170px);
+            max-height: calc(100vh - 170px);
+        }
+    }
+
+    /* SABC_Phase2\Views\Shared\sidebar.cshtml */
+    .sidebar,
+    .sidebar .menu-section,
+    .sidebar .menu-section .label,
+    .sidebar .profile .name,
+    .sidebar .profile .supplier-type,
+    .sidebar .profile .role,
+    .sidebar .profile-dropdown-menu .dropdown-item {
+        font-size: 0.92rem !important;
+    }
+
+        .sidebar .menu-section.sub-item,
+        .sidebar .submenu .label {
+            font-size: 0.85rem !important;
+        }
 </style>

@@ -18,7 +18,7 @@
             <thead>
                 <tr>
                     <th>THUMBNAIL</th>
-                    <th>Tender Number</th>
+                    <th>Tender Title</th>
                     <th>TENDER TYPE</th>
                     <th>DRAFT DATE <i class="fas fa-sort"></i></th>
                     <th>ACTION</th>
@@ -29,30 +29,34 @@
                 {
                     foreach (var draft in Model)
                     {
+                        var tenderText = !string.IsNullOrWhiteSpace(draft.TenderNumber)
+                        ? draft.TenderNumber + (string.IsNullOrWhiteSpace(draft.Title) ? "" : ": " + draft.Title)
+                        : "(No Tender Number)" + (string.IsNullOrWhiteSpace(draft.Title) ? "" : ": " + draft.Title);
+
                         <tr>
                             <td>
                                 <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                             </td>
                             <td class="tender-title">
-                                @if (!string.IsNullOrWhiteSpace(draft.TenderNumber))
-                                {
-                                    <strong>@draft.TenderNumber</strong>
-                                    @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                <span class="truncate-text" title="@tenderText">
+                                    @if (!string.IsNullOrWhiteSpace(draft.TenderNumber))
                                     {
-                                        @(": " + draft.Title)
+                                        <strong>@draft.TenderNumber</strong>
+                                        @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                        {
+                                            @(": " + draft.Title)
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    <strong>(No Tender Number)</strong>
-                                    @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                    else
                                     {
-                                        @(": " + draft.Title)
+                                        <strong>(No Tender Number)</strong>
+                                        @if (!string.IsNullOrWhiteSpace(draft.Title))
+                                        {
+                                            @(": " + draft.Title)
+                                        }
                                     }
-                                }
+                                </span>
                             </td>
-
-
                             <td class="tender-type">@draft.TenderType</td>
                             <td class="tender-date">@draft.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>
@@ -135,3 +139,18 @@
         </ul>
     </div>
 }
+
+<style>
+    .truncate-text {
+        display: inline-block;
+        max-width: 220px; /* adjust width as needed */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+    }
+
+    .tender-title {
+        max-width: 240px;
+    }
+</style>

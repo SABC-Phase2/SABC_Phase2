@@ -1,138 +1,213 @@
 ﻿
 <style>
-/* MASTER FOOTER */
-#SABCMasterFooter {
+    /* MASTER FOOTER */
+    #SABCMasterFooter {
         background: #000000;
         color: #FFFFFF;
-        min-height: 90px;
+        min-height: 60px;
         font-size: 0.8em;
         font-family: Arial, Helvetica, sans-serif;
         width: 100%;
         display: block;
-}
+    }
 
-#SABCMasterFooter a:link,
-#SABCMasterFooter a:active,
-#SABCMasterFooter a:visited {
-    color: #FFFFFF;
-    text-decoration: none;
-}
+        #SABCMasterFooter a:link,
+        #SABCMasterFooter a:active,
+        #SABCMasterFooter a:visited {
+            color: #FFFFFF;
+            text-decoration: none;
+        }
 
-#SABCMasterFooter a:hover {
-    text-decoration: underline;
-}
+        #SABCMasterFooter a:hover {
+            text-decoration: underline;
+        }
 
     .rowSABC {
         display: flex;
         flex-wrap: wrap;
         align-items: center; /* Changed from flex-start to center */
         justify-content: space-between;
-        padding: 30px 106px;
+        padding: 15px 50px;
     }
 
     .sabclogo {
         width: 150px; /* Smaller fixed width */
-        padding-top: 20px; /* Remove extra top padding */
+        padding-top: 10px; /* Remove extra top padding */
         display: flex;
         align-items: center; /* Vertically center logo with buttons */
     }
 
         .sabclogo img {
             max-width: 100%;
-            max-height: 50px; /* Limit logo height */
+            max-height: 40px; /* Limit logo height */
             height: auto;
         }
 
 
-.leftmainfooterBtns {
-    padding-top: 40px;
-    display: flex;
-    gap: 5px;
-    width: auto;
-}
+    .leftmainfooterBtns {
+        padding-top: 10px;
+        display: flex;
+        gap: 5px;
+        width: auto;
+    }
 
-.buttonmainfooter1,
-.buttonmainfooter1:link,
-.buttonmainfooter1:active,
-.buttonmainfooter1:visited {
-    width: 26px;
-    height: 26px;
-    border: 2px solid #FFFFFF;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-    color: #fff !important;
-    cursor: pointer;
-}
+    .buttonmainfooter1,
+    .buttonmainfooter1:link,
+    .buttonmainfooter1:active,
+    .buttonmainfooter1:visited {
+        width: 26px;
+        height: 26px;
+        border: 2px solid #FFFFFF;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+        color: #fff !important;
+        cursor: pointer;
+    }
 
-.buttonmainfooter1 span {
-    display: inline-block;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    width: 20px;
-    height: 20px;
-}
+        .buttonmainfooter1 span {
+            display: inline-block;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 20px;
+            height: 20px;
+        }
 
-.twitter {
-    background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-twitter-small.png);
-}
+    .twitter {
+        background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-twitter-small.png);
+    }
 
-.facebook {
-    background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-facebook-small.png);
-}
+    .facebook {
+        background-image: url(https://www.sabc.co.za/sabc/wp-content/themes/sabcsport/images/buttonsocial-icon-facebook-small.png);
+    }
 
-.youtube {
-    background-image: url(https://www.sabc.co.za/sabc/wp-content/uploads/2024/04/yt_icon_rgb-1.png);
-}
+    .youtube {
+        background-image: url(https://www.sabc.co.za/sabc/wp-content/uploads/2024/04/yt_icon_rgb-1.png);
+    }
 
-.bccsalogo {
-    width: 50%; /* Reduced size */
-    text-align: right;
-    padding-top: 10px;
-    margin-top: -50px;
-}
+    .bccsalogo {
+        width: 50%;
+        text-align: right;
+        padding-top: 0; /* Removed extra padding */
+        margin-top: -30px; /* Adjusted */
+    }
 
-.bccsalogo img {
-    max-width: 80%;
-}
+        .bccsalogo img {
+            max-width: 80%;
+        }
 
-.dmma {
-    width: 12%;
-    text-align: right;
-    padding-top: 8px;
-    order: 5; /* Ensures it’s pushed to the far right */
-}
+    .dmma {
+        width: 12%;
+        text-align: right;
+        padding-top: 5px;
+    }
 
-.dmma img {
-    max-width: 100%;
-}
+        .dmma img {
+            max-width: 100%;
+        }
 
-.nav {
-    width: 50%;
-    padding-top: 40px;
-    margin-left: auto;
-    margin-right: auto;
-}
+    .nav {
+        width: 50%;
+        padding-top: 10px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 
-.nav ul {
-    display: table;
-    list-style-type: none;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-}
+        .nav ul {
+            display: table;
+            list-style-type: none;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
 
-.nav li {
-    display: table-cell;
-    width: 25%;
-    padding-bottom: 10px;
-}
-</style>
+        .nav li {
+            display: table-cell;
+            width: 25%;
+            padding-bottom: 10px;
+        }
 
-    <div id="SABCMasterFooter">
+    /* MOBILE RESPONSIVE FOOTER */
+    /* MOBILE RESPONSIVE FOOTER */
+    @@media (max-width: 768px) {
+        .rowSABC {
+            flex-direction: column;
+            align-items: center;
+            padding: 5px 10px; /* minimal padding */
+        }
+        /* Top row: SABC logo + social icons inline */
+        .sabclogo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            margin-bottom: 5px;
+        }
+
+            .sabclogo img {
+                max-height: 30px; /* smaller logo */
+                margin-right: 10px;
+            }
+
+        .leftmainfooterBtns {
+            display: flex;
+            gap: 5px;
+            padding: 0;
+            margin: 0;
+        }
+
+        .buttonmainfooter1 {
+            width: 22px;
+            height: 22px;
+        }
+
+            .buttonmainfooter1 span {
+                width: 16px;
+                height: 16px;
+            }
+        /* Middle row: DMMA + BCCSA logos side by side */
+        .dmma, .bccsalogo {
+            width: 15%;
+            text-align: center;
+            margin: 0 2.5%;
+            padding: 0;
+            order: 2;
+        }
+
+            .dmma img, .bccsalogo img {
+                max-height: 25px; /* smaller logos */
+            }
+        /* Bottom row: Links split into 4 columns x 2 rows */
+        .nav {
+            width: 100%;
+            padding-top: 5px;
+            order: 3;
+        }
+
+            .nav ul {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                margin: 0;
+                padding: 0;
+            }
+
+            .nav li {
+                display: inline-block;
+                width: 25%; /* 4 columns */
+                text-align: center;
+                padding: 2px 0; /* tight vertical spacing */
+            }
+        /* Reduce font size slightly */
+        #SABCMasterFooter {
+            font-size: 0.75em;
+        }
+    }</style>
+
+<div id="SABCMasterFooter">
     <div class="rowSABC">
         <div class="sabclogo">
             <a href="http://www.sabc.co.za/sabc/" title="SABC Portal Home">

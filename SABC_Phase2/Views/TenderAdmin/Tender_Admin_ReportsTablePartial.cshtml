@@ -64,10 +64,8 @@
                                             <img src="~/lib/Images/logoblack.png" class="tender-block-thumbnail" alt="SABC Logo" />
                                         </div>
                                         <div class="tender-block-content">
-                                            <div class="tender-block-number">@tender.TenderNumber</div>
-                                            <div class="tender-block-title">
-                                                @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
-                                            </div>
+                                            <div class="tender-block-number" title="@tender.TenderNumber">@tender.TenderNumber</div>
+                                            <div class="tender-block-title" title="@tender.Title">@tender.Title</div>
                                             <div class="tender-block-closing">
                                                 CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
                                                 TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>
@@ -97,10 +95,8 @@
                                 <span class="tender-block-status">CLOSED</span>
                             </div>
                             <div class="tender-block-content">
-                                <div class="tender-block-number">@tender.TenderNumber</div>
-                                <div class="tender-block-title">
-                                    @(tender.Title?.Length > 60 ? tender.Title.Substring(0, 57) + "..." : tender.Title)
-                                </div>
+                                <div class="tender-block-number" title="@tender.TenderNumber">@tender.TenderNumber</div>
+                                <div class="tender-block-title" title="@tender.Title">@tender.Title</div>
                                 <div class="tender-block-closing">
                                     CLOSING DATE: <span class="closing-red">@tender.ClosingDate.ToString("dd MMM yyyy")</span>
                                     TIME: <span class="closing-red">@tender.ClosingTime?.ToString(@"hh\:mm")</span>

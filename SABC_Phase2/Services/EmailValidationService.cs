@@ -200,10 +200,7 @@ namespace SABC_Phase2.Services
                 @"@com$",                                // missing dot
                 @"\.comm$",                              // .com typo
                 @"\.cmo$",                               // .com typo
-                // Specific patterns for suspicious emails like "blahuewd3@gmail.com"
-               // Remove patterns that match legit emails!
-              // @"^[a-z]+[a-z0-9]*[0-9]{2,}@gmail\.com$",     // suspicious gmail pattern
-              // @"^blah[a-z0-9]+@gmail\.com$",               // starts with "blah"
+               
                 @"^(test|fake|dummy|invalid|temp|spam)[a-z0-9]*@.*$",  // obvious fake patterns
             };
 

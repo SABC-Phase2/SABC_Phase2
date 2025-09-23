@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
-<div style="margin: 30px 0 0 0;">
+<div class="page-wrapper">
     <!-- Breadcrumb navigation -->
     <div style="font-size: 0.95rem; color: #888; margin-bottom: 8px;">
         <span style="color: #222;">Dashboard</span> &gt; <span style="color: #00a651;">Reports</span>
@@ -15,13 +15,12 @@
             <a href="javascript:history.back()" style="color: #00a651; font-size: 2rem; text-decoration: none;">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h2 style="color: #00a651; font-weight: 600; font-size: 2rem; margin: 0; letter-spacing: 0.01em; border-bottom: 3px solid #00a651; padding-bottom: 6px;">
-                <h2>@Model.Tender.TenderNumber</h2>
-            </h2>
+            <h2 class="report-title">@Model.Tender.TenderNumber</h2>
+
         </div>
 
         <!-- Table section -->
-        <div style="display: flex; justify-content: center; margin-top: 40px;">
+        <div class="table-wrapper" style="display: flex; justify-content: center; margin-top: 40px;">
             <table class="report-table">
                 <thead>
                     <tr>
@@ -47,7 +46,6 @@
         </div>
     </div>
 </div>
-
 <!-- PDF generation button -->
 <div style="display: flex; justify-content: center; margin-top: 48px;">
     <button id="generatePdfBtn" style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
@@ -91,64 +89,132 @@
 
 <style>
 
-    /* Table styles */
+    .report-title {
+        color: #00a651;
+        font-weight: 600;
+        font-size: 2rem;
+        margin: 0;
+        letter-spacing: 0.01em;
+        border-bottom: 3px solid #00a651;
+        padding-bottom: 6px;
+        max-width: 100%;
+        white-space: nowrap; /* single line */
+        overflow: hidden; /* hide overflow */
+        text-overflow: ellipsis; /* show ... */
+    }
 
     .report-table {
-        min-width: 400px;
-        max-width: 480px;
+        width: 100%; /* take available width */
         border-collapse: separate;
         border-spacing: 0;
         font-family: 'Segoe UI', sans-serif;
         margin: 0 auto;
         box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+        max-width: 480px; /* limit on large screens */
     }
 
-        .report-table th {
-            background: #00a651;
-            color: #fff;
-            font-weight: 600;
-            font-size: 1.1rem;
-            padding: 12px 24px;
-            text-align: left;
-            border-bottom: 3px solid #fff;
+    /* Scrollable wrapper for table */
+    .table-wrapper {
+        overflow-x: auto; /* allow horizontal scroll if needed */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .report-table th {
+        background: #00a651;
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.1rem;
+        padding: 12px 24px;
+        text-align: left;
+        border-bottom: 3px solid #fff;
+    }
+
+        .report-table th:first-child {
+            border-radius: 6px 0 0 0;
         }
 
-            .report-table th:first-child {
-                border-radius: 6px 0 0 0;
-            }
-
-            .report-table th:last-child {
-                border-radius: 0 6px 0 0;
-                text-align: center;
-            }
-
-        .report-table td {
-            padding: 12px 24px;
-            font-size: 1rem;
-        }
-
-        .report-table tr:nth-child(even) td {
-            background: #f5f5f5;
-        }
-
-        .report-table tr:nth-child(odd) td {
-            background: #ededed;
-        }
-
-        .report-table td:last-child {
+        .report-table th:last-child {
+            border-radius: 0 6px 0 0;
             text-align: center;
-            font-weight: 600;
-            color: #444;
         }
 
-        .report-table td:first-child {
-            color: #888;
-            font-weight: 500;
+    .report-table td {
+        padding: 12px 24px;
+        font-size: 1rem;
+    }
+
+    .report-table tr:nth-child(even) td {
+        background: #f5f5f5;
+    }
+
+    .report-table tr:nth-child(odd) td {
+        background: #ededed;
+    }
+
+    .report-table td:last-child {
+        text-align: center;
+        font-weight: 600;
+        color: #444;
+    }
+
+    .report-table td:first-child {
+        color: #888;
+        font-weight: 500;
+    }
+
+    .report-table tr:last-child td:first-child {
+        font-weight: 700;
+    }
+
+    /* Mobile responsiveness */
+    @@media (max-width: 600px) {
+        .report-card {
+            padding: 24px 12px;
+            margin: 0 12px; /* keep spacing from screen edges */
         }
 
-        .report-table tr:last-child td:first-child {
-            font-weight: 700;
+        .report-header {
+            margin-left: 0; /* remove forced left margin */
         }
-</style>
+
+        .report-title {
+            font-size: 1.4rem;
+            white-space: normal; /* allow wrapping instead of pushing left */
+        }
+
+        .table-wrapper {
+            margin: 0 -8px; /* avoid card overflow */
+        }
+
+        .report-table {
+            max-width: 90%; /* let it shrink */
+            min-width: unset; /* remove 400px restriction */
+        }
+
+        .pdf-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    /* Fix sidebar overlap on mobile */
+    @@media (max-width: 768px) {
+        .page-wrapper {
+            margin-left: 60px; /* push everything right */
+        }
+
+        .report-header {
+            margin-left: 0; /* don’t double-shift header */
+        }
+
+        .report-title {
+            font-size: 1.4rem;
+            white-space: normal; /* allow wrapping */
+        }
+
+        .pdf-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }</style>
 
 

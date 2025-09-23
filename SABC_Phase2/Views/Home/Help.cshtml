@@ -7,11 +7,11 @@
 
     if (User.IsInRole("OVRS_User")) // role name must match your setup
     {
-        guidePath = Url.Content("~/lib/Images/SABC_Supplier_Registration_User Guide_v2.pdf");
+        guidePath = Url.Content("~/lib/Images/SABC_OVRS_ARCHITECTURE.pdf");
     }
     else
     {
-        guidePath = Url.Content("~/lib/Images/SABC_Supplier_Registration_User Guide_v2.pdf");
+        guidePath = Url.Content("~/lib/Images/OVRS_Phase 2_FDS_v1.pdf");
     }
 
 
@@ -35,7 +35,7 @@
 <div class="container-fluid" style="margin-top:10px;">
     <div class="row">
         <div class="col-12">
-            <a href="@Url.Action("Index", "Home")" class="breadcrumb-link">Home</a>
+            <a class="breadcrumb-link">Home</a>
             <span class="breadcrumb-separator"> &gt; </span>
             <a href="#" class="breadcrumb-link active">Help</a>
         </div>
@@ -217,4 +217,78 @@
     .breadcrumb-separator {
         color: #888;
     }
-</style>
+
+
+    /* 📱 Mobile responsiveness */
+    @@media (max-width: 768px) {
+        .guide-card {
+            padding: 20px;
+            margin: 12px auto 24px auto;
+        }
+
+        .guide-title {
+            font-size: 22px;
+            text-align: center;
+        }
+
+        .disclaimer {
+            font-size: 13px;
+            text-align: justify;
+        }
+
+        .attachments-heading {
+            font-size: 16px;
+        }
+
+        .attachment-box {
+            flex-direction: column; /* stack info + actions */
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .attachment-info {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .file-name {
+            font-size: 14px;
+            word-break: break-word; /* prevent cutoff of long names */
+        }
+
+        .attachment-actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column; /* stack buttons */
+            gap: 8px;
+        }
+
+        .btn-view, .btn-download {
+            width: 100%; /* full width buttons */
+            justify-content: center;
+        }
+    }
+
+    /* 📱 Even smaller screens (<=480px) */
+    @@media (max-width: 480px) {
+        .guide-title {
+            font-size: 20px;
+        }
+
+        .pdf-icon-wrap {
+            width: 48px;
+            height: 48px;
+        }
+
+        .pdf-icon {
+            font-size: 24px;
+        }
+    }
+    /* 📱 Fix sidebar overlap on mobile */
+    @@media (max-width: 768px) {
+        .guide-card, .container-fluid {
+            margin-left: 50px; /* remove desktop offset */
+            padding-left: 15px; /* normal mobile padding */
+            padding-right: 15px;
+        }
+    }</style>

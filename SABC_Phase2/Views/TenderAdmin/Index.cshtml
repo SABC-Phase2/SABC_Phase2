@@ -11,6 +11,7 @@
     string search = ViewBag.Search as string ?? "";
 }
 
+
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="breadcrumb-custom">
@@ -20,6 +21,7 @@
 <div class="tender-action-bar">
     <form method="get" id="filterForm" style="display: flex; align-items: center; gap: 16px;">
         <input type="hidden" name="status" value="@statusFilter" />
+        <input type="hidden" name="sortOrder" id="sortOrderInput" value="@ViewBag.SortOrder ?? " date_desc"" />
         <span class="search-wrapper" style="position: relative; display: flex; align-items: center;">
             <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
             <input type="text" name="search" class="search-input"
@@ -29,16 +31,15 @@
                    style="padding-left: 38px;" />
         </span>
         <select name="type" class="filter-dropdown" id="tenderTypeDropdown">
-            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL</option>
+            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL TENDER TYPES</option>
             <option value="rfq" selected="@(typeFilter == "rfq" ? "selected" : null)">RFQ</option>
             <option value="rfp" selected="@(typeFilter == "rfp" ? "selected" : null)">RFP</option>
             <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>
             <option value="rfo" selected="@(typeFilter == "rfo" ? "selected" : null)">RFO</option>
         </select>
 
-        <button type="submit" class="refresh-btn"
+        <button type="button" class="refresh-btn"
                 title="Clear search and filters"
-                formaction="@Url.Action("Index", new { page = 1, pageSize = pageSize, search = "", status = statusFilter, type = "" })"
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
         </button>
@@ -81,6 +82,7 @@
             document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
             document.querySelector('.search-input').value = params.get('search') ?? '';
             hookPaginationLinks();
+            hookSortIcon(); // Re-attach after AJAX update
         });
     }
 
@@ -101,19 +103,58 @@
                     document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
                     document.querySelector('.search-input').value = params.get('search') ?? '';
                     hookPaginationLinks();
+                    hookSortIcon(); // Re-attach after AJAX update
                 });
             };
         });
     }
+
+    function hookSortIcon() {
+        const table = document.querySelector('.tender-table');
+        if (!table) return;
+
+        const sortTh = [...table.querySelectorAll('th')]
+            .find(th => th.textContent.toLowerCase().includes('date published'));
+        if (!sortTh) return;
+
+        const sortIcon = sortTh.querySelector('i.fas');
+        if (!sortIcon) return;
+
+        let asc = true; // default direction
+        sortIcon.style.cursor = "pointer";
+        sortIcon.title = "Sort by date";
+
+        sortIcon.onclick = function () {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+                .filter(row => row.querySelector('td') && row.cells[3]); // skip filler rows
+
+            rows.sort((a, b) => {
+                const dateA = new Date(a.cells[3].innerText.trim());
+                const dateB = new Date(b.cells[3].innerText.trim());
+                return asc ? dateA - dateB : dateB - dateA;
+            });
+
+            rows.forEach(row => tbody.appendChild(row)); // re-append sorted rows
+
+            // toggle direction + update icon
+            asc = !asc;
+            sortIcon.className = asc ? "fas fa-sort-up" : "fas fa-sort-down";
+        };
+    }
+
 
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelector('.search-input').addEventListener('input', debouncedSubmit);
         document.querySelector('#tenderTypeDropdown').addEventListener('change', () => submitForm(false));
         document.querySelector('.refresh-btn').addEventListener('click', function(e) {
             e.preventDefault();
+            document.querySelector('.search-input').value = '';
+            document.querySelector('#tenderTypeDropdown').value = '';
             submitForm(true);
         });
         hookPaginationLinks();
+        hookSortIcon();
     });
 </script>
 
@@ -529,4 +570,155 @@
             background: #555;
         }
 
+
+    /* ========== MOBILE RESPONSIVE FIXES ========== */
+    @@media (max-width: 992px) {
+        /* Action bar */
+        .tender-action-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .filter-dropdown {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .refresh-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        /* Table container scroll padding */
+        .table-container {
+            padding: 15px;
+        }
+
+        .table-scroll-container {
+            overflow-x: auto;
+        }
+        /* Responsive table: stack cells */
+        .tender-table thead {
+            display: none; /* hide header */
+        }
+
+        .tender-table,
+        .tender-table tbody,
+        .tender-table tr,
+        .tender-table td {
+            display: block;
+            width: 100%;
+        }
+
+            .tender-table tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 12px;
+                background: #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            }
+
+            .tender-table td {
+                text-align: left;
+                padding: 8px 0;
+                border: none !important;
+            }
+
+                .tender-table td:before {
+                    content: attr(data-label);
+                    display: block;
+                    font-weight: bold;
+                    color: #555;
+                    margin-bottom: 4px;
+                }
+
+        .tender-thumbnail {
+            width: 40px;
+            height: 40px;
+        }
+
+        .tender-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        /* Pagination */
+        .custom-pagination {
+            margin-top: 20px;
+        }
+
+        .pagination-list {
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .page-link {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .tender-table tr {
+            padding: 10px;
+        }
+
+        .tender-table td {
+            font-size: 0.85rem;
+        }
+
+        .tender-title {
+            font-size: 0.9rem;
+        }
+
+        .search-input,
+        .filter-dropdown,
+        .refresh-btn {
+            font-size: 0.9rem;
+            padding: 10px;
+        }
+    }
+    /* Fix for sidebar overlap on smaller screens */
+    @@media (max-width: 1024px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 50px; /* push content right */
+            margin-right: 10px; /* add breathing room */
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 55px; /* push more on mobile */
+            margin-right: 15px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .tender-title-block {
+            max-width: 98vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+
+        .tender-number,
+        .tender-title {
+            max-width: 48vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    }
 </style>

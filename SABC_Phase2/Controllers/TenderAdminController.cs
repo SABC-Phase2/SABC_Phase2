@@ -2220,6 +2220,8 @@ namespace SABC_Phase2.Controllers
             public string Type { get; set; } // "Administrator" or "OVRS_User"
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteUser([FromBody] DeleteUserModel model)
