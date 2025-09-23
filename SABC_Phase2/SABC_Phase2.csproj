@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.16.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.1" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Hangfire" Version="1.8.20" />
@@ -18,8 +19,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Graph" Version="5.88.0" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.74.1" />
+    <PackageReference Include="Microsoft.Graph" Version="5.93.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.77.0" />
     <PackageReference Include="NodaTime" Version="3.2.2" />
     <PackageReference Include="QuestPDF" Version="2025.5.1" />
   </ItemGroup>

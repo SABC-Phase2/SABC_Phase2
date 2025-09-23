@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 using SABC_Phase2.Data;
 using SABC_Phase2.Models;
 using SABC_Phase2.Models.Administrator;
@@ -9,6 +10,7 @@ using SABC_Phase2.Models.Tender;
 using SABC_Phase2.Services;
 using System.Globalization;
 using System.Security.Claims;
+using Azure.Identity;
 
 
 namespace SABC_Phase2.Controllers
@@ -324,9 +326,9 @@ namespace SABC_Phase2.Controllers
                 redirectUrl = Url.Action("Index", "TenderAdmin")
             });
         }
-       
-        
-        
+
+
+
         public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
 
         {
@@ -2150,6 +2152,62 @@ namespace SABC_Phase2.Controllers
             }
 
             return View(users);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchAzureAdUsers(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 3)
+            {
+                return Json(new { success = false, message = "Search term must be at least 3 characters" });
+            }
+
+            try
+            {
+                var graphServiceClient = GetGraphServiceClient();
+
+                // Updated syntax for Microsoft Graph SDK v5
+                var users = await graphServiceClient.Users
+                    .GetAsync((requestConfiguration) =>
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"startswith(displayName,'{searchTerm}') or startswith(givenName,'{searchTerm}') or startswith(surname,'{searchTerm}') or startswith(mail,'{searchTerm}')";
+                        requestConfiguration.QueryParameters.Select = new string[] { "id", "displayName", "givenName", "surname", "mail" };
+                        requestConfiguration.QueryParameters.Top = 10;
+                    });
+
+                var userList = users.Value.Select(u => new
+                {
+                    Id = u.Id,
+                    DisplayName = u.DisplayName,
+                    FirstName = u.GivenName,
+                    LastName = u.Surname,
+                    Email = u.Mail
+                }).ToList();
+
+                return Json(new { success = true, users = userList });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error searching Azure AD users: " + ex.Message });
+            }
+        }
+
+        private GraphServiceClient GetGraphServiceClient()
+        {
+            // Using the current Azure.Identity package instead of deprecated Microsoft.Graph.Auth
+            var options = new ClientSecretCredentialOptions
+            {
+                AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
+            };
+
+            var clientSecretCredential = new ClientSecretCredential(
+                _configuration["AzureAd:TenantId"],
+                _configuration["AzureAd:ClientId"],
+                _configuration["AzureAd:ClientSecret"],
+                options
+            );
+
+            return new GraphServiceClient(clientSecretCredential);
         }
 
 

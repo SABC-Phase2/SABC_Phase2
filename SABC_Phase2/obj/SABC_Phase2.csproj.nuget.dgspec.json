@@ -51,6 +51,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Azure.Identity": {
+              "target": "Package",
+              "version": "[1.16.0, )"
+            },
             "Azure.Storage.Blobs": {
               "target": "Package",
               "version": "[12.24.1, )"
@@ -87,11 +91,11 @@
             },
             "Microsoft.Graph": {
               "target": "Package",
-              "version": "[5.88.0, )"
+              "version": "[5.93.0, )"
             },
             "Microsoft.Identity.Client": {
               "target": "Package",
-              "version": "[4.74.1, )"
+              "version": "[4.77.0, )"
             },
             "NodaTime": {
               "target": "Package",

@@ -87,9 +87,7 @@
                                         <i class="fas fa-ellipsis-h" style="color: #222;"></i>
                                     </button>
                                     <div class="action-dropdown">
-                                        <button class="action-dropdown-item view-user-btn" data-user-id="@user.Id">
-                                            <i class="fas fa-eye"></i> View User
-                                        </button>
+
                                         @if (user.Status == "Active")
                                         {
                                             <button class="action-dropdown-item delete-user-btn delete-option"
@@ -117,18 +115,300 @@
     </div>
 </div>
 
+
+<!-- New User Modal -->
+<div id="newUserModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div class="modal-content" style="background:#fff; border-radius:8px; padding:32px 24px; min-width:350px; max-width:95vw; margin:auto; position:relative;">
+        <span class="close-modal" style="position:absolute; right:18px; top:10px; font-size:2rem; font-weight:bold; color:#333; cursor:pointer;">&times;</span>
+        <h2 style="margin-bottom: 24px;">Add New User</h2>
+        <form id="newUserForm">
+            <!-- Search Bar with Dropdown -->
+            <div style="margin-bottom:24px; position: relative;">
+                <input type="text" id="adUserSearch" placeholder="Search Azure AD users..."
+                       class="form-control"
+                       style="width:100%; padding:10px 12px; border-radius:6px; border:1px solid #ccc;" />
+                <div id="searchResults" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 6px 6px; max-height:200px; overflow-y:auto; z-index:1000;">
+                    <!-- Search results will be populated here -->
+                </div>
+                <div id="searchSpinner" style="display:none; position:absolute; right:12px; top:12px;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+
+            <!-- First Name & Last Name -->
+            <div style="display:flex; gap:16px; margin-bottom:20px;">
+                <div style="flex:1;">
+                    <label for="firstName" style="font-weight:500;">First Name</label>
+                    <input id="firstName" name="firstName" type="text" class="form-control"
+                           style="width:100%;" required />
+                </div>
+                <div style="flex:1;">
+                    <label for="lastName" style="font-weight:500;">Last Name</label>
+                    <input id="lastName" name="lastName" type="text" class="form-control"
+                           style="width:100%;" required />
+                </div>
+            </div>
+
+            <!-- Email & Role -->
+            <div style="display:flex; gap:16px; margin-bottom:28px;">
+                <div style="flex:1;">
+                    <label for="email" style="font-weight:500;">Email Address</label>
+                    <input id="email" name="email" type="email" class="form-control"
+                           style="width:100%;" required />
+                </div>
+                <div style="flex:1;">
+                    <label for="role" style="font-weight:500;">User Role</label>
+                    <select id="role" name="role" class="form-control" style="width:100%;" required>
+                        <option value="">Select Role</option>
+                        <option value="IT ADMIN">IT ADMIN</option>
+                        <option value="TENDER ADMIN">TENDER ADMIN</option>
+                        <option value="VENDOR ADMIN">VENDOR ADMIN</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Create Account Button -->
+            <div style="display:flex; justify-content:center; margin-top: 24px;">
+                <button type="submit" class="btn"
+                        style="background:#28a745; color:#fff; font-weight:bold; border:none; border-radius:6px; padding:12px 36px; font-size:1.1rem; cursor:pointer;">
+                    Create Account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+        let searchTimeout;
+        let selectedAdUser = null;
 
-              document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Modal elements
+            const newUserBtn = document.querySelector('.big-newuser-btn');
+            const modal = document.getElementById('newUserModal');
+            const closeModal = modal.querySelector('.close-modal');
+            const newUserForm = document.getElementById('newUserForm');
+            const adUserSearch = document.getElementById('adUserSearch');
+            const searchResults = document.getElementById('searchResults');
+            const searchSpinner = document.getElementById('searchSpinner');
+
+            // Show modal
+            newUserBtn.addEventListener('click', function () {
+                modal.style.display = 'flex';
+                resetForm();
+            });
+
+            // Close modal on X
+            closeModal.addEventListener('click', function () {
+                modal.style.display = 'none';
+                resetForm();
+            });
+
+            // Close modal when clicking outside modal-content
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    resetForm();
+                }
+            });
+
+            // Azure AD User Search
+            adUserSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.trim();
+
+                clearTimeout(searchTimeout);
+
+                if (searchTerm.length < 3) {
+                    hideSearchResults();
+                    clearUserFields();
+                    return;
+                }
+
+                searchSpinner.style.display = 'block';
+
+                searchTimeout = setTimeout(function() {
+                    searchAzureAdUsers(searchTerm);
+                }, 500);
+            });
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#adUserSearch') && !e.target.closest('#searchResults')) {
+                    hideSearchResults();
+                }
+            });
+
+            // Form submit handler
+            newUserForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                if (!selectedAdUser) {
+                    alert('Please search and select a user from Azure AD first.');
+                    return;
+                }
+
+                // Here you would normally submit the form data to your server
+                const formData = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    email: document.getElementById('email').value,
+                    role: document.getElementById('role').value,
+                    azureAdId: selectedAdUser.Id
+                };
+
+                console.log('Form data:', formData);
+                alert('User created! (Demo - implement actual submission)');
+                modal.style.display = 'none';
+                resetForm();
+            });
+
+            // Search Azure AD Users function
+            function searchAzureAdUsers(searchTerm) {
+                fetch('@Url.Action("SearchAzureAdUsers")' + '?searchTerm=' + encodeURIComponent(searchTerm))
+                    .then(response => response.json())
+                    .then(data => {
+                        searchSpinner.style.display = 'none';
+
+                        if (data.success && data.users && data.users.length > 0) {
+                            displaySearchResults(data.users);
+                        } else {
+                            displayNoResults(data.message || 'No users found');
+                        }
+                    })
+                    .catch(error => {
+                        searchSpinner.style.display = 'none';
+                        console.error('Error searching AD users:', error);
+                        displayNoResults('Error searching users. Please try again.');
+                    });
+            }
+
+            // Display search results
+            function displaySearchResults(users) {
+                let resultsHtml = '';
+
+                users.forEach(user => {
+                    resultsHtml += `
+                        <div class="search-result-item" data-user='${JSON.stringify(user)}'
+                             style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+                            <div style="font-weight:bold;">${user.DisplayName}</div>
+                            <div style="font-size:0.9em; color:#666;">${user.Email || 'No email'}</div>
+                        </div>
+                    `;
+                });
+
+                searchResults.innerHTML = resultsHtml;
+                searchResults.style.display = 'block';
+
+                // Add click handlers to result items
+                document.querySelectorAll('.search-result-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const userData = JSON.parse(this.getAttribute('data-user'));
+                        selectUser(userData);
+                    });
+
+                    item.addEventListener('mouseenter', function() {
+                        this.style.backgroundColor = '#f5f5f5';
+                    });
+
+                    item.addEventListener('mouseleave', function() {
+                        this.style.backgroundColor = 'white';
+                    });
+                });
+            }
+
+            // Display no results message
+            function displayNoResults(message) {
+                searchResults.innerHTML = `
+                    <div style="padding:10px; color:#666; text-align:center;">
+                        ${message}
+                    </div>
+                `;
+                searchResults.style.display = 'block';
+            }
+
+            // Hide search results
+            function hideSearchResults() {
+                searchResults.style.display = 'none';
+                searchSpinner.style.display = 'none';
+            }
+
+            // Select user and populate fields
+            function selectUser(user) {
+                selectedAdUser = user;
+
+                // Update search input to show selected user
+                adUserSearch.value = user.DisplayName;
+
+                // Populate form fields and make them read-only
+                document.getElementById('firstName').value = user.FirstName || '';
+                document.getElementById('firstName').readOnly = true;
+                document.getElementById('firstName').style.backgroundColor = '#f8f9fa';
+
+                document.getElementById('lastName').value = user.LastName || '';
+                document.getElementById('lastName').readOnly = true;
+                document.getElementById('lastName').style.backgroundColor = '#f8f9fa';
+
+                document.getElementById('email').value = user.Email || '';
+                document.getElementById('email').readOnly = true;
+                document.getElementById('email').style.backgroundColor = '#f8f9fa';
+
+                hideSearchResults();
+            }
+
+            // Clear user fields
+            function clearUserFields() {
+                selectedAdUser = null;
+
+                const fields = ['firstName', 'lastName', 'email'];
+                fields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    field.value = '';
+                    field.readOnly = false;
+                    field.style.backgroundColor = '';
+                });
+            }
+
+            // Reset form
+            function resetForm() {
+                newUserForm.reset();
+                adUserSearch.value = '';
+                clearUserFields();
+                hideSearchResults();
+                document.getElementById('role').value = '';
+            }
+
+            // Existing handlers...
+            document.querySelector('.search-input').addEventListener('input', debouncedUserSubmit);
+            document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
+                dd.addEventListener('change', () => submitUserForm(false));
+            });
+            document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                submitUserForm(true);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.action-menu-container')) {
+                    closeAllDropdowns();
+                }
+            });
+
+            hookDeleteBtns();
+            initActionMenus();
+        });
+
+        // Rest of your existing JavaScript functions remain the same...
+        // (keeping the existing delete, reactivate, and other functions)
+
+        document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
             e.preventDefault();
 
-            // Collect all checked user IDs
-               const selected = Array.from(document.querySelectorAll('input[name="selectedUserIds"]:checked'))
-        .map(cb => ({
-            id: parseInt(cb.value),
-            type: cb.getAttribute('data-role')
-        }));
+            const selected = Array.from(document.querySelectorAll('input[name="selectedUserIds"]:checked'))
+                .map(cb => ({
+                    id: parseInt(cb.value),
+                    type: cb.getAttribute('data-role')
+                }));
 
             if (selected.length === 0) {
                 alert("Please select at least one user to delete.");
@@ -148,19 +428,16 @@
                 body: JSON.stringify(selected)
             })
             .then(resp => resp.json())
-              .then(data => {
-            if (data.success) {
-                alert(data.message);
-                // Refresh the table via AJAX to sync front and backend
-                submitUserForm(true);
-            } else {
-                alert("Delete failed: " + (data.message || "Unknown error"));
-            }
-        });
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    submitUserForm(true);
+                } else {
+                    alert("Delete failed: " + (data.message || "Unknown error"));
+                }
+            });
         });
 
-
-        // Same JS as before for AJAX/refresh and delete
         function debounce(fn, delay) {
             let timer = null;
             return function(...args) {
@@ -183,12 +460,12 @@
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             })
             .then(resp => resp.text())
-                  .then(html => {
-            document.querySelector('.table-container').innerHTML = html;
-            hookDeleteBtns();
-            hookReactivateBtns(); // <-- add this
-            initActionMenus();
-        });
+            .then(html => {
+                document.querySelector('.table-container').innerHTML = html;
+                hookDeleteBtns();
+                hookReactivateBtns();
+                initActionMenus();
+            });
         }
 
         const debouncedUserSubmit = debounce(() => submitUserForm(false), 300);
@@ -213,20 +490,18 @@
                         .then(data => {
                             if(data.success) {
                                 alert(data.message);
-                                // Refresh the table via AJAX
                                 submitUserForm(true);
                             } else {
                                 alert('Delete failed: ' + (data.message || 'Unknown error'));
                             }
                         });
                     }
-                    // Close dropdown after action
                     closeAllDropdowns();
                 };
             });
         }
 
-                function hookReactivateBtns() {
+        function hookReactivateBtns() {
             document.querySelectorAll('.reactivate-user-btn').forEach(function(btn) {
                 btn.onclick = function(e) {
                     e.preventDefault();
@@ -258,19 +533,13 @@
         }
 
         function initActionMenus() {
-            // Handle action menu button clicks
             document.querySelectorAll('.action-menu-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-
                     const dropdown = btn.nextElementSibling;
                     const isActive = btn.classList.contains('active');
-
-                    // Close all other dropdowns and remove active state
                     closeAllDropdowns();
-
-                    // Toggle current dropdown
                     if (!isActive) {
                         btn.classList.add('active');
                         dropdown.classList.add('show');
@@ -278,19 +547,13 @@
                 });
             });
 
-            // Handle view user button clicks
             document.querySelectorAll('.view-user-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-
                     const userId = btn.getAttribute('data-user-id');
-                    // Add your view user logic here
                     console.log('View user:', userId);
-                    // Example: window.location.href = '@Url.Action("ViewUser")' + '/' + userId;
                     alert('View user functionality - User ID: ' + userId);
-
-                    // Close dropdown
                     closeAllDropdowns();
                 });
             });
@@ -302,30 +565,8 @@
                 btn.nextElementSibling.classList.remove('show');
             });
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelector('.search-input').addEventListener('input', debouncedUserSubmit);
-            document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
-                dd.addEventListener('change', () => submitUserForm(false));
-            });
-            document.querySelector('.refresh-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                submitUserForm(true);
-            });
-
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.action-menu-container')) {
-                    closeAllDropdowns();
-                }
-            });
-
-            hookDeleteBtns();
-            initActionMenus();
-        });
     </script>
 }
-
 <style>
     /* Action Menu Styles */
     .action-menu-container {
