@@ -2154,6 +2154,8 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
+
+
         [HttpGet]
         public async Task<IActionResult> SearchAzureAdUsers(string searchTerm)
         {

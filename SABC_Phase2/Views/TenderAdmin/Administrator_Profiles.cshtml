@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="breadcrumb-custom">
-    Home<span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Profile</span>
+    Home<span class="breadcrumb-arrow">&gt;</span> <span class="breadcrumb-active">Profile</span>
 </div>
 
 <div class="tab-container">
@@ -40,7 +40,7 @@
         <div class="row">
             <!-- Left section -->
             <div class="col-md-12">
-                <form method="post" enctype="multipart/form-data">
+                <form id="changeProfileForm" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
 
                     <!-- First & Last Name side by side -->
@@ -125,14 +125,16 @@
 
                     <hr />
 
-                    <div class="form-group">
-                        <label>Delete account</label>
-                        <p class="text-muted small">Please note that all of the information will be permanently deleted</p>
-                        <button type="button" class="btn btn-danger" id="showDeleteAccountModalBtn">Delete account</button>
+                    <!-- Save button outside the container, centered on screen -->
+                    <div class="save-btn-outer d-flex justify-content-end">
+                        <button type="submit" form="changeProfileForm" class="btn btn-save-3d" id="saveBtn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            <span class="btn-text">Save</span>
+                        </button>
+
                     </div>
 
                     <div class="form-group text-end mt-4">
-                        <button type="submit" class="btn btn-success" id="saveBtn">Save</button>
                     </div>
                 </form>
             </div>
@@ -140,37 +142,53 @@
     </div>
 </div>
 
-<!-- Email Change Modal (Existing) -->
+<!-- Email Change Modal (Updated layout to match screenshot) -->
 <div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="changeEmailForm" autocomplete="off" onsubmit="return false;">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email Address</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Change email address</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <input type="email" class="form-control" id="newEmailInput" name="newEmail" placeholder="Enter new email address" required />
-                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Send OTP</button>
-                        </div>
+
+                    <!-- Step 1: Email Address -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-success me-2">1</span> Email Address
+                        </label>
+                        <input type="email" class="form-control mb-2" id="newEmailInput" name="newEmail" placeholder="Enter your new email address" />
                         <div class="invalid-feedback" id="newEmailError" style="display:block"></div>
-                    </div>
-                    <div id="otpSection" class="mb-3 d-none">
-                        <label>Enter OTP Code</label>
-                        <div class="d-flex justify-content-between gap-2 mb-2">
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Get OTP</button>
                         </div>
-                        <button type="button" class="btn btn-primary w-100" id="verifyOtpBtn">Verify OTP</button>
+                    </div>
+
+                    <!-- Step 2: Verify OTP -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-warning text-dark me-2">2</span> Verify Email Address
+                        </label>
+                        <div class="d-flex align-items-center mb-3">
+                            <a href="javascript:void(0)" id="resendOtpLink" class="me-2">Resend OTP</a>
+                            <span class="text-muted">• This OTP will expire after <span id="otpTimer" style="color:#0074d9;">00:05:00</span></span>
+                        </div>
+                        <div class="d-flex justify-content-start gap-2 mb-3">
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                        </div>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="verifyOtpBtn" style="min-width:130px;" disabled>Verify</button>
+                        </div>
                         <div class="invalid-feedback" id="otpError" style="display:block"></div>
                         <div class="valid-feedback" id="otpSuccess" style="display:block"></div>
                     </div>
+
                 </div>
             </form>
         </div>
@@ -234,239 +252,283 @@
 
 <!-- Place this at the bottom of your view, after your other modals -->
 <div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
-    <div class="modal-content">
-      <div class="modal-header bg-warning">
-        <h5 class="modal-title" id="passwordRequirementsModalLabel">
-          Password Requirements
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closePasswordReqModal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="mb-2">Your new password must meet all of the following:</p>
-        <ul class="list-unstyled mb-0" id="passwordRequirementsChecklist">
-          @{
-              // Use ViewBag.AttemptedPassword or Model.NewPassword as appropriate
-              string attemptedPassword = ViewBag.AttemptedPassword ?? Model?.NewPassword ?? "";
-              bool hasLength = attemptedPassword.Length >= 8 && attemptedPassword.Length <= 15;
-              bool hasLower = attemptedPassword.Any(char.IsLower);
-              bool hasUpper = attemptedPassword.Any(char.IsUpper);
-              bool hasDigit = attemptedPassword.Any(char.IsDigit);
-              bool hasSpecial = attemptedPassword.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c));
-          }
-          <li>
-            <span class="@(hasLength ? "text-success" : "text-danger")">
-              <i class="fa-solid @(hasLength ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
-              Must be 8 to 15 characters long.
-            </span>
-          </li>
-          <li>
-            <span class="@(hasLower ? "text-success" : "text-danger")">
-              <i class="fa-solid @(hasLower ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
-              Must contain a lowercase letter.
-            </span>
-          </li>
-          <li>
-            <span class="@(hasUpper ? "text-success" : "text-danger")">
-              <i class="fa-solid @(hasUpper ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
-              Must contain an uppercase letter.
-            </span>
-          </li>
-          <li>
-            <span class="@(hasDigit ? "text-success" : "text-danger")">
-              <i class="fa-solid @(hasDigit ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
-              Must contain a number.
-            </span>
-          </li>
-          <li>
-            <span class="@(hasSpecial ? "text-success" : "text-danger")">
-              <i class="fa-solid @(hasSpecial ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
-              Must contain a special character.
-            </span>
-          </li>
-        </ul>
-      </div>
-      <div class="modal-footer border-0 d-flex justify-content-center">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closePasswordReqModalBtn">Close</button>
-      </div>
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content">
+            <!-- Error image and title, both enlarged and centered -->
+            <div class="modal-header d-block border-0 text-center" style="background:transparent;">
+                <img src="~/lib/Images/X-Box.png" alt="Error"
+                     style="width: 96px; height: 96px; margin: 0 auto 12px auto; display: block;" />
+                <h5 class="modal-title w-100" id="passwordRequirementsModalLabel"
+                    style="color:#e53935; font-weight:900; font-size:2rem; text-align:center;">
+                    Error
+                </h5>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p class="mb-2" style="font-size:1.2rem; font-weight:600;">Password Requirements:</p>
+                <ul class="list-unstyled mb-0" id="passwordRequirementsChecklist" style="display:inline-block; text-align:left;">
+                    @{
+                        string attemptedPassword = ViewBag.AttemptedPassword ?? Model?.NewPassword ?? "";
+                        bool hasLength = attemptedPassword.Length >= 8 && attemptedPassword.Length <= 15;
+                        bool hasLower = attemptedPassword.Any(char.IsLower);
+                        bool hasUpper = attemptedPassword.Any(char.IsUpper);
+                        bool hasDigit = attemptedPassword.Any(char.IsDigit);
+                        bool hasSpecial = attemptedPassword.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c));
+                    }
+                    <li>
+                        <span class="@(hasLength ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasLength ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use 8 or more characters
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasLower ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasLower ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use lower case letters (e.g. a)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasUpper ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasUpper ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use upper case letters (e.g. A)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasDigit ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasDigit ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use a number (e.g. 123)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasSpecial ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasSpecial ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use a symbol (e.g. !#$*)
+                        </span>
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="closePasswordReqModalBtn">Close</button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // ---- EMAIL CHANGE FLOW (Existing) ----
-        var changeEmailBtn = document.getElementById('changeEmailBtn');
-        var sendOtpBtn = document.getElementById('sendOtpBtn');
-        var verifyOtpBtn = document.getElementById('verifyOtpBtn');
-        var otpSection = document.getElementById('otpSection');
-        var newEmailInput = document.getElementById('newEmailInput');
+     // ---- EMAIL CHANGE FLOW ----
+     var changeEmailBtn = document.getElementById('changeEmailBtn');
+     var sendOtpBtn = document.getElementById('sendOtpBtn');
+     var verifyOtpBtn = document.getElementById('verifyOtpBtn');
+     var newEmailInput = document.getElementById('newEmailInput');
+     var otpInputs = document.querySelectorAll('.otp-input');
 
-        // Add spinner inside buttons
-        if (sendOtpBtn) {
-            sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Send OTP</span>';
-        }
-        if (verifyOtpBtn) {
-            verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify OTP</span>';
-        }
+     // Add spinner inside buttons
+     if (sendOtpBtn) {
+         sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Get OTP</span>';
+     }
+     if (verifyOtpBtn) {
+         verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify</span>';
+     }
 
-        var sendOtpSpinner = document.getElementById('sendOtpSpinner');
-        var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
-        var newEmailError = document.getElementById('newEmailError');
+     var sendOtpSpinner = document.getElementById('sendOtpSpinner');
+     var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
+     var newEmailError = document.getElementById('newEmailError');
+     var otpError = document.getElementById('otpError');
+     var otpSuccess = document.getElementById('otpSuccess');
+     var resendOtpLink = document.getElementById('resendOtpLink');
+     var otpTimer = document.getElementById('otpTimer');
 
-        if (changeEmailBtn) {
-            changeEmailBtn.addEventListener('click', function () {
-                // Clear inputs/errors when opening modal
-                newEmailInput.value = '';
-                newEmailInput.classList.remove('is-invalid', 'is-valid');
-                document.querySelectorAll('.otp-input').forEach(i => i.value = '');
-                document.getElementById('otpError').textContent = '';
-                document.getElementById('otpSuccess').textContent = '';
-                newEmailError.textContent = '';
-                otpSection.classList.add('d-none');
+     let countdownInterval;
+     let otpTimeLeft = 300; // 5 minutes
 
-                newEmailInput.removeAttribute('readonly');
-                sendOtpBtn.disabled = false;
+     // Reset OTP UI
+     function resetOtpUI() {
+         otpInputs.forEach(i => { i.value = ''; i.disabled = true; });
+         verifyOtpBtn.disabled = true;
+         otpError.textContent = '';
+         otpSuccess.textContent = '';
+         clearInterval(countdownInterval);
+         if (otpTimer) otpTimer.textContent = "00:05:00";
+     }
 
-                var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
-                modal.show();
-            });
-        }
+     // When opening modal
+     if (changeEmailBtn) {
+         changeEmailBtn.addEventListener('click', function () {
+             newEmailInput.value = '';
+             newEmailInput.classList.remove('is-invalid', 'is-valid');
+             newEmailError.textContent = '';
+             newEmailInput.removeAttribute('readonly');
+             sendOtpBtn.disabled = false;
+             sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+             resetOtpUI();
 
-        // Send Email OTP
-        if (sendOtpBtn) {
-            sendOtpBtn.addEventListener('click', async function () {
-                var newEmail = newEmailInput.value.trim();
-                newEmailInput.classList.remove('is-invalid', 'is-valid');
-                newEmailError.textContent = "";
+             var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+             modal.show();
+         });
+     }
 
-                if (!newEmail) {
-                    newEmailError.textContent = "Please enter email.";
-                    newEmailInput.classList.add('is-invalid');
-                    return;
-                }
+     // Send Email OTP
+     if (sendOtpBtn) {
+         sendOtpBtn.addEventListener('click', async function () {
+             var newEmail = newEmailInput.value.trim();
+             newEmailInput.classList.remove('is-invalid', 'is-valid');
+             newEmailError.textContent = "";
 
-                sendOtpSpinner.classList.remove('d-none');
-                sendOtpBtn.disabled = true;
+             if (!newEmail) {
+                 newEmailError.textContent = "Please enter email.";
+                 newEmailInput.classList.add('is-invalid');
+                 return;
+             }
 
-                try {
-                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    var headers = { 'Content-Type': 'application/json' };
-                    if (token) {
-                        headers['RequestVerificationToken'] = token.value;
-                    }
+             sendOtpSpinner.classList.remove('d-none');
+             sendOtpBtn.disabled = true;
 
-                    let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(newEmail)
-                    });
+             try {
+                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                 var headers = { 'Content-Type': 'application/json' };
+                 if (token) {
+                     headers['RequestVerificationToken'] = token.value;
+                 }
 
-                    let data = await res.json();
-                    if (data.success) {
-                        otpSection.classList.remove('d-none');
-                        newEmailError.textContent = '';
-                        newEmailInput.classList.remove('is-invalid');
-                        newEmailInput.classList.add('is-valid');
-                        document.querySelector('.otp-input').focus();
-                        newEmailInput.setAttribute('readonly', true);
-                        sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
-                    } else {
-                        newEmailError.textContent = data.message;
-                        newEmailInput.value = '';
-                        newEmailInput.classList.remove('is-valid');
-                        newEmailInput.classList.add('is-invalid');
-                        newEmailInput.focus();
-                        sendOtpBtn.disabled = false;
-                        sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
-                        otpSection.classList.add('d-none');
-                    }
-                } catch (err) {
-                    console.error('Detailed error:', err);
-                    newEmailError.textContent = "Error sending OTP. Please try again.";
-                    newEmailInput.value = '';
-                    newEmailInput.classList.remove('is-valid');
-                    newEmailInput.classList.add('is-invalid');
-                    newEmailInput.focus();
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
-                    otpSection.classList.add('d-none');
-                } finally {
-                    sendOtpSpinner.classList.add('d-none');
-                }
-            });
-        }
+                 let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
+                     method: 'POST',
+                     headers: headers,
+                     body: JSON.stringify(newEmail)
+                 });
 
-        // Email OTP input behavior
-        const otpInputs = document.querySelectorAll('.otp-input');
-        otpInputs.forEach((input, index) => {
-            input.addEventListener('input', () => {
-                if (input.value.length === 1 && index < otpInputs.length - 1) {
-                    otpInputs[index + 1].focus();
-                }
-                let otpCode = Array.from(otpInputs).map(i => i.value).join('');
-                if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
-                    if (!verifyOtpBtn.disabled) {
-                        verifyOtpBtn.click();
-                    }
-                }
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && index > 0) {
-                    otpInputs[index - 1].focus();
-                }
-            });
-        });
+                 let data = await res.json();
+                 if (data.success) {
+                     newEmailError.textContent = '';
+                     newEmailInput.classList.remove('is-invalid');
+                     newEmailInput.classList.add('is-valid');
+                     newEmailInput.setAttribute('readonly', true);
+                     sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
 
-        // Verify Email OTP
-        if (verifyOtpBtn) {
-            verifyOtpBtn.addEventListener('click', async function () {
-                let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+                     // Enable OTP inputs
+                     otpInputs.forEach(i => i.disabled = false);
+                     verifyOtpBtn.disabled = false;
+                     otpInputs[0].focus();
 
-                if (!otpCode || otpCode.length < 6) {
-                    document.getElementById('otpError').textContent = "Please enter full 6-digit OTP.";
-                    return;
-                }
+                     // Start countdown
+                     otpTimeLeft = 300;
+                     startCountdown();
+                 } else {
+                     newEmailError.textContent = data.message;
+                     newEmailInput.value = '';
+                     newEmailInput.classList.remove('is-valid');
+                     newEmailInput.classList.add('is-invalid');
+                     newEmailInput.focus();
+                     sendOtpBtn.disabled = false;
+                     sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                     resetOtpUI();
+                 }
+             } catch (err) {
+                 console.error('Detailed error:', err);
+                 newEmailError.textContent = "Error sending OTP. Please try again.";
+                 newEmailInput.value = '';
+                 newEmailInput.classList.remove('is-valid');
+                 newEmailInput.classList.add('is-invalid');
+                 newEmailInput.focus();
+                 sendOtpBtn.disabled = false;
+                 sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                 resetOtpUI();
+             } finally {
+                 sendOtpSpinner.classList.add('d-none');
+             }
+         });
+     }
 
-                verifyOtpSpinner.classList.remove('d-none');
-                verifyOtpBtn.disabled = true;
+     // OTP input behavior
+     otpInputs.forEach((input, index) => {
+         input.addEventListener('input', () => {
+             if (input.value.length === 1 && index < otpInputs.length - 1) {
+                 otpInputs[index + 1].focus();
+             }
+         });
+         input.addEventListener('keydown', (e) => {
+             if (e.key === 'Backspace' && !input.value && index > 0) {
+                 otpInputs[index - 1].focus();
+             }
+         });
+     });
 
-                try {
-                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    var headers = { 'Content-Type': 'application/json' };
-                    if (token) {
-                        headers['RequestVerificationToken'] = token.value;
-                    }
+     // Verify Email OTP
+     if (verifyOtpBtn) {
+         verifyOtpBtn.addEventListener('click', async function () {
+             let otpCode = Array.from(otpInputs).map(i => i.value).join('');
 
-                    let res = await fetch('/TenderAdmin/VerifyAdminEmailOtp', {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify({ otp: otpCode })
-                    });
+             if (!otpCode || otpCode.length < 6) {
+                 otpError.textContent = "Please enter full 6-digit OTP.";
+                 return;
+             }
 
-                    let data = await res.json();
-                    if (data.success) {
-                        document.getElementById('otpError').textContent = '';
-                        document.getElementById('otpSuccess').textContent = data.message;
-                        document.getElementById('emailStatic').textContent = newEmailInput.value;
+             verifyOtpSpinner.classList.remove('d-none');
+             verifyOtpBtn.disabled = true;
 
-                        setTimeout(() => {
-                            var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
-                            modal.hide();
-                        }, 1500);
-                    } else {
-                        document.getElementById('otpError').textContent = data.message;
-                        verifyOtpBtn.disabled = false;
-                    }
-                } catch (err) {
-                    console.error('Verify OTP error:', err);
-                    document.getElementById('otpError').textContent = "Error verifying OTP.";
-                    verifyOtpBtn.disabled = false;
-                } finally {
-                    verifyOtpSpinner.classList.add('d-none');
-                }
-            });
-        }
+             try {
+                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                 var headers = { 'Content-Type': 'application/json' };
+                 if (token) {
+                     headers['RequestVerificationToken'] = token.value;
+                 }
+
+                 let res = await fetch('/TenderAdmin/VerifyAdminEmailOtp', {
+                     method: 'POST',
+                     headers: headers,
+                     body: JSON.stringify({ otp: otpCode })
+                 });
+
+                 let data = await res.json();
+                 if (data.success) {
+                     otpError.textContent = '';
+                     otpSuccess.textContent = data.message;
+                     document.getElementById('emailStatic').textContent = newEmailInput.value;
+
+                     setTimeout(() => {
+                         var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
+                         modal.hide();
+                     }, 1500);
+                 } else {
+                     otpError.textContent = data.message;
+                     verifyOtpBtn.disabled = false;
+                 }
+             } catch (err) {
+                 console.error('Verify OTP error:', err);
+                 otpError.textContent = "Error verifying OTP.";
+                 verifyOtpBtn.disabled = false;
+             } finally {
+                 verifyOtpSpinner.classList.add('d-none');
+             }
+         });
+     }
+
+     // Resend OTP
+     if (resendOtpLink) {
+         resendOtpLink.addEventListener('click', function () {
+             resetOtpUI();
+             if (sendOtpBtn) {
+                 sendOtpBtn.disabled = false;
+                 sendOtpBtn.click(); // auto resend using existing flow
+             }
+         });
+     }
+
+     // Countdown
+     function startCountdown() {
+         clearInterval(countdownInterval);
+         countdownInterval = setInterval(() => {
+             if (otpTimeLeft <= 0) {
+                 clearInterval(countdownInterval);
+                 otpTimer.textContent = "Expired";
+                 verifyOtpBtn.disabled = true;
+                 return;
+             }
+             otpTimeLeft--;
+             let minutes = String(Math.floor(otpTimeLeft / 60)).padStart(2, "0");
+             let seconds = String(otpTimeLeft % 60).padStart(2, "0");
+             otpTimer.textContent = `00:${minutes}:${seconds}`;
+         }, 1000);
+     }
 
         // ---- PASSWORD VALIDATION HIDING ON INPUT ----
         const passwordFieldNames = ['CurrentPassword', 'NewPassword', 'ConfirmPassword'];
@@ -504,11 +566,19 @@
         if (form) {
             form.addEventListener('submit', function(e) {
                 // Disable buttons to prevent double submission
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = 'Saving...';
-                    saveBtn.classList.add('btn-disabled-saving');
-                }
+                  if (saveBtn) {
+        const spinner = saveBtn.querySelector('.spinner-border');
+        const btnText = saveBtn.querySelector('.btn-text');
+
+        if (spinner && btnText) {
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Saving...';
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.classList.add('btn-disabled-saving');
+    }
+
                 if (deleteBtn) {
                     deleteBtn.disabled = true;
                     deleteBtn.classList.add('btn-disabled-saving');
@@ -519,10 +589,10 @@
         // Show success modal if profile updated
         @if (TempData["ProfileUpdateSuccess"] != null)
         {
-                    <text>
-                    var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
-                    modal.show();
-                    </text>
+                        <text>
+                        var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
+                        modal.show();
+                        </text>
         }
 
         // ---- PASSWORD CHANGE TOGGLE ----
@@ -599,10 +669,10 @@
          // Show password requirements modal if set in ViewBag
         @if (ViewBag.ShowPasswordRequirementsModal == true)
         {
-                <text>
-                var pwModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
-                pwModal.show();
-                </text>
+                    <text>
+                    var pwModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
+                    pwModal.show();
+                    </text>
         }
 
         // Optional: Clear password fields when closing the modal
@@ -614,6 +684,135 @@
 </script>
 
 <style>
+    .btn-disabled-saving {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+
+
+    /* Center the Save button outside the container */
+    .save-btn-outer {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: 32px;
+        margin-bottom: 32px;
+    }
+
+    /* 3D effect, square corners for Save button */
+    .btn-save-3d {
+        border-radius: 8px; /* rounded edges */
+        box-shadow: 0 4px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.10);
+        border: 2px solid #16913b;
+        background-color: #16913c;
+        color: #fff;
+        font-weight: 700;
+        padding: 0.5rem 2.5rem;
+        min-width: 120px;
+        font-size: 1.1rem;
+        transition: box-shadow 0.2s, background 0.2s;
+    }
+
+        .btn-save-3d:active {
+            box-shadow: 0 2px 0 #157a3a, 0 1px 4px rgba(34,197,94,0.10);
+            background-color: #16913b;
+        }
+
+        .btn-save-3d:hover, .btn-save-3d:focus {
+            background-color: #16913b;
+            box-shadow: 0 2px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.15);
+            color: #fff;
+        }
+    /* Style for step numbers (badges) */
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.4em 0.65em;
+        border-radius: 50%;
+    }
+
+
+    /* Email/OTP modal layout adjustments */
+    #changeEmailModal .modal-body .mb-5 {
+        margin-bottom: 3rem !important; /* Increase gap between sections */
+    }
+
+    /* 3D effect, square corners for Get OTP and Verify buttons */
+    #sendOtpBtn, #verifyOtpBtn {
+        border-radius: 0 !important;
+        box-shadow: 0 4px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.10);
+        border: 2px solid #16913b;
+        background-color: #16913c;
+        color: #fff;
+        font-weight: 600;
+        padding: 0.3rem 2.2rem;
+        min-width: 120px;
+        transition: box-shadow 0.2s, background 0.2s;
+    }
+
+        #sendOtpBtn:active, #verifyOtpBtn:active {
+            box-shadow: 0 2px 0 #157a3a, 0 1px 4px rgba(34,197,94,0.10);
+            background-color: #16913b;
+        }
+
+        #sendOtpBtn:hover, #verifyOtpBtn:hover,
+        #sendOtpBtn:focus, #verifyOtpBtn:focus {
+            background-color: #16913b;
+            box-shadow: 0 2px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.15);
+            color: #fff;
+        }
+
+    #otpTimer {
+        font-weight: 500;
+    }
+
+    .otp-input {
+        width: 45px;
+        height: 50px;
+        font-size: 1.3rem;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+        background: #fff;
+    }
+
+        .otp-input:focus {
+            border-color: #198754;
+            box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+            outline: none;
+        }
+
+    /* Error + success messages */
+    .invalid-feedback {
+        display: block;
+        color: #dc3545;
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+
+    .valid-feedback {
+        display: block;
+        color: #198754;
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+
+    #resendOtpLink {
+        color: #198754;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+
+        #resendOtpLink:hover {
+            text-decoration: underline;
+        }
+
+    /* Make password requirements modal more rounded */
+    #passwordRequirementsModal .modal-content {
+        border-radius: 2rem !important;
+    }
+
     #passwordRequirementsChecklist li {
         margin-bottom: 8px;
         font-size: 1rem;
@@ -706,9 +905,15 @@
         font-weight: 500;
         margin-bottom: 18px;
         margin-top: 32px;
+        letter-spacing: 0.01em;
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.2em;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+        /* Remove: margin-left: 0; */
     }
 
         .breadcrumb-custom .breadcrumb-arrow {
@@ -740,4 +945,29 @@
         opacity: 0.6;
         cursor: not-allowed;
     }
-</style>
+
+    @@media (max-width: 768px) {
+        .tab-container {
+            padding: 18px 6px 12px 6px;
+            max-width: 100%;
+            margin: 0 auto 32px auto;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            position: relative;
+            left: 10vw; /* Move container more to the right */
+            width: 90vw;
+        }
+
+        .breadcrumb-custom {
+            position: relative;
+            left: 15vw; /* Move breadcrumbs more to the right */
+            width: 90vw;
+            max-width: 90vw;
+            padding-left: 0;
+            padding-right: 0;
+        }
+        /* ...other responsive styles... */
+    }</style>
+
+
+
