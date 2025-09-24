@@ -313,227 +313,282 @@
     </div>
 </div>
 
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-     // ---- EMAIL CHANGE FLOW ----
-     var changeEmailBtn = document.getElementById('changeEmailBtn');
-     var sendOtpBtn = document.getElementById('sendOtpBtn');
-     var verifyOtpBtn = document.getElementById('verifyOtpBtn');
-     var newEmailInput = document.getElementById('newEmailInput');
-     var otpInputs = document.querySelectorAll('.otp-input');
+         document.addEventListener('DOMContentLoaded', function () {
+        // ---- EMAIL CHANGE FLOW ----
+        var changeEmailBtn = document.getElementById('changeEmailBtn');
+        var sendOtpBtn = document.getElementById('sendOtpBtn');
+        var verifyOtpBtn = document.getElementById('verifyOtpBtn');
+        var newEmailInput = document.getElementById('newEmailInput');
+        var otpInputs = document.querySelectorAll('.otp-input');
+        var resendOtpLink = document.getElementById('resendOtpLink');
+        var otpTimer = document.getElementById('otpTimer');
+        var newEmailError = document.getElementById('newEmailError');
+        var otpError = document.getElementById('otpError');
+        var otpSuccess = document.getElementById('otpSuccess');
 
-     // Add spinner inside buttons
-     if (sendOtpBtn) {
-         sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Get OTP</span>';
-     }
-     if (verifyOtpBtn) {
-         verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify</span>';
-     }
+        // Add spinner inside buttons
+        if (sendOtpBtn) {
+            sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Get OTP</span>';
+        }
+        if (verifyOtpBtn) {
+            verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify</span>';
+        }
 
-     var sendOtpSpinner = document.getElementById('sendOtpSpinner');
-     var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
-     var newEmailError = document.getElementById('newEmailError');
-     var otpError = document.getElementById('otpError');
-     var otpSuccess = document.getElementById('otpSuccess');
-     var resendOtpLink = document.getElementById('resendOtpLink');
-     var otpTimer = document.getElementById('otpTimer');
+        var sendOtpSpinner = document.getElementById('sendOtpSpinner');
+        var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
 
-     let countdownInterval;
-     let otpTimeLeft = 300; // 5 minutes
+        let countdownInterval;
+        let otpTimeLeft = 300; // 5 minutes
+        let resendCooldownTime = 60;
+        let resendCooldownLeft = 0;
+        let resendCooldownInterval = null;
 
-     // Reset OTP UI
-     function resetOtpUI() {
-         otpInputs.forEach(i => { i.value = ''; i.disabled = true; });
-         verifyOtpBtn.disabled = true;
-         otpError.textContent = '';
-         otpSuccess.textContent = '';
-         clearInterval(countdownInterval);
-         if (otpTimer) otpTimer.textContent = "00:05:00";
-     }
+    // Start cooldown
+    function startResendCooldown(seconds) {
+        resendCooldownLeft = seconds;
+        updateResendLinkState();
 
-     // When opening modal
-     if (changeEmailBtn) {
-         changeEmailBtn.addEventListener('click', function () {
-             newEmailInput.value = '';
-             newEmailInput.classList.remove('is-invalid', 'is-valid');
-             newEmailError.textContent = '';
-             newEmailInput.removeAttribute('readonly');
-             sendOtpBtn.disabled = false;
-             sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-             resetOtpUI();
+        if (resendCooldownInterval) clearInterval(resendCooldownInterval);
+        resendCooldownInterval = setInterval(() => {
+            resendCooldownLeft--;
+            updateResendLinkState();
+            if (resendCooldownLeft <= 0) {
+                clearInterval(resendCooldownInterval);
+            }
+        }, 1000);
+    }
+    // Helper to update resend link text/state
+    function updateResendLinkState() {
+        if (!resendOtpLink) return;
 
-             var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
-             modal.show();
-         });
-     }
+        if (resendCooldownLeft > 0) {
+            // During cooldown
+            resendOtpLink.classList.add('disabled');
+            resendOtpLink.style.pointerEvents = 'none';
+            resendOtpLink.textContent = `Resend OTP (${resendCooldownLeft}s)`;
+        } else {
+            // Cooldown finished → enable
+            resendOtpLink.classList.remove('disabled');
+            resendOtpLink.style.pointerEvents = '';
+            resendOtpLink.textContent = 'Resend OTP';
+        }
+    }
 
-     // Send Email OTP
-     if (sendOtpBtn) {
-         sendOtpBtn.addEventListener('click', async function () {
-             var newEmail = newEmailInput.value.trim();
-             newEmailInput.classList.remove('is-invalid', 'is-valid');
-             newEmailError.textContent = "";
+        // Reset OTP UI and disable resend link initially (when entering modal or after failed OTP)
+        function resetOtpUI() {
+            otpInputs.forEach(i => { i.value = ''; i.disabled = true; });
+            verifyOtpBtn.disabled = true;
+            otpError.textContent = '';
+            otpSuccess.textContent = '';
+            clearInterval(countdownInterval);
+            if (otpTimer) otpTimer.textContent = "00:05:00";
+            resendCooldownLeft = resendCooldownTime;
+            updateResendLinkState();
+        }
 
-             if (!newEmail) {
-                 newEmailError.textContent = "Please enter email.";
-                 newEmailInput.classList.add('is-invalid');
-                 return;
-             }
+        // When opening modal
+        if (changeEmailBtn) {
+            changeEmailBtn.addEventListener('click', function () {
+                newEmailInput.value = '';
+                newEmailInput.classList.remove('is-invalid', 'is-valid');
+                newEmailError.textContent = '';
+                newEmailInput.removeAttribute('readonly');
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                resetOtpUI();
 
-             sendOtpSpinner.classList.remove('d-none');
-             sendOtpBtn.disabled = true;
+                var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+                modal.show();
+            });
+        }
 
-             try {
-                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                 var headers = { 'Content-Type': 'application/json' };
-                 if (token) {
-                     headers['RequestVerificationToken'] = token.value;
-                 }
+        // Send Email OTP
+        if (sendOtpBtn) {
+            sendOtpBtn.addEventListener('click', async function () {
+                var newEmail = newEmailInput.value.trim();
+                newEmailInput.classList.remove('is-invalid', 'is-valid');
+                newEmailError.textContent = "";
 
-                 let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
-                     method: 'POST',
-                     headers: headers,
-                     body: JSON.stringify(newEmail)
-                 });
+                if (!newEmail) {
+                    newEmailError.textContent = "Please enter email.";
+                    newEmailInput.classList.add('is-invalid');
+                    return;
+                }
 
-                 let data = await res.json();
-                 if (data.success) {
-                     newEmailError.textContent = '';
-                     newEmailInput.classList.remove('is-invalid');
-                     newEmailInput.classList.add('is-valid');
-                     newEmailInput.setAttribute('readonly', true);
-                     sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
+                sendOtpSpinner.classList.remove('d-none');
+                sendOtpBtn.disabled = true;
 
-                     // Enable OTP inputs
-                     otpInputs.forEach(i => i.disabled = false);
-                     verifyOtpBtn.disabled = false;
-                     otpInputs[0].focus();
+                try {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) {
+                        headers['RequestVerificationToken'] = token.value;
+                    }
 
-                     // Start countdown
-                     otpTimeLeft = 300;
-                     startCountdown();
-                 } else {
-                     newEmailError.textContent = data.message;
-                     newEmailInput.value = '';
-                     newEmailInput.classList.remove('is-valid');
-                     newEmailInput.classList.add('is-invalid');
-                     newEmailInput.focus();
-                     sendOtpBtn.disabled = false;
-                     sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-                     resetOtpUI();
-                 }
-             } catch (err) {
-                 console.error('Detailed error:', err);
-                 newEmailError.textContent = "Error sending OTP. Please try again.";
-                 newEmailInput.value = '';
-                 newEmailInput.classList.remove('is-valid');
-                 newEmailInput.classList.add('is-invalid');
-                 newEmailInput.focus();
-                 sendOtpBtn.disabled = false;
-                 sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-                 resetOtpUI();
-             } finally {
-                 sendOtpSpinner.classList.add('d-none');
-             }
-         });
-     }
+                    let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(newEmail)
+                    });
 
-     // OTP input behavior
-     otpInputs.forEach((input, index) => {
-         input.addEventListener('input', () => {
-             if (input.value.length === 1 && index < otpInputs.length - 1) {
-                 otpInputs[index + 1].focus();
-             }
-         });
-         input.addEventListener('keydown', (e) => {
-             if (e.key === 'Backspace' && !input.value && index > 0) {
-                 otpInputs[index - 1].focus();
-             }
-         });
-     });
+                    let data = await res.json();
+                    if (data.success) {
+                        newEmailError.textContent = '';
+                        newEmailInput.classList.remove('is-invalid');
+                        newEmailInput.classList.add('is-valid');
+                        newEmailInput.setAttribute('readonly', true);
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
 
-     // Verify Email OTP
-     if (verifyOtpBtn) {
-         verifyOtpBtn.addEventListener('click', async function () {
-             let otpCode = Array.from(otpInputs).map(i => i.value).join('');
+                        // Enable OTP inputs
+                        otpInputs.forEach(i => i.disabled = false);
+                        verifyOtpBtn.disabled = false;
+                        otpInputs[0].focus();
 
-             if (!otpCode || otpCode.length < 6) {
-                 otpError.textContent = "Please enter full 6-digit OTP.";
-                 return;
-             }
+                        // Start countdown
+                        otpTimeLeft = 300;
+                        startCountdown();
 
-             verifyOtpSpinner.classList.remove('d-none');
-             verifyOtpBtn.disabled = true;
+                        // Enable resend link and start cooldown
+                        startResendCooldown(resendCooldownTime);
+                        updateResendLinkState();
+                    } else {
+                        newEmailError.textContent = data.message;
+                        newEmailInput.value = '';
+                        newEmailInput.classList.remove('is-valid');
+                        newEmailInput.classList.add('is-invalid');
+                        newEmailInput.focus();
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                        resetOtpUI();
 
-             try {
-                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                 var headers = { 'Content-Type': 'application/json' };
-                 if (token) {
-                     headers['RequestVerificationToken'] = token.value;
-                 }
+                        // If rate-limited from server, optionally use secondsLeft property
+                        if (data.message && data.message.includes('Please wait before requesting')) {
+                            let secondsLeft = resendCooldownTime;
+                            if (typeof data.secondsLeft === "number" && data.secondsLeft > 0) {
+                                secondsLeft = data.secondsLeft;
+                            }
+                            startResendCooldown(secondsLeft);
+                            updateResendLinkState();
+                        }
+                    }
+                } catch (err) {
+                    console.error('Detailed error:', err);
+                    newEmailError.textContent = "Error sending OTP. Please try again.";
+                    newEmailInput.value = '';
+                    newEmailInput.classList.remove('is-valid');
+                    newEmailInput.classList.add('is-invalid');
+                    newEmailInput.focus();
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                    resetOtpUI();
+                } finally {
+                    sendOtpSpinner.classList.add('d-none');
+                }
+            });
+        }
 
-                 let res = await fetch('/TenderAdmin/VerifyAdminEmailOtp', {
-                     method: 'POST',
-                     headers: headers,
-                     body: JSON.stringify({ otp: otpCode })
-                 });
+        // OTP input behavior
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', () => {
+                if (input.value.length === 1 && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+        });
 
-                 let data = await res.json();
-                 if (data.success) {
-                     otpError.textContent = '';
-                     otpSuccess.textContent = data.message;
-                     document.getElementById('emailStatic').textContent = newEmailInput.value;
+        // Verify Email OTP
+        if (verifyOtpBtn) {
+            verifyOtpBtn.addEventListener('click', async function () {
+                let otpCode = Array.from(otpInputs).map(i => i.value).join('');
 
-                     setTimeout(() => {
-                         var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
-                         modal.hide();
-                     }, 1500);
-                 } else {
-                     otpError.textContent = data.message;
-                     verifyOtpBtn.disabled = false;
-                 }
-             } catch (err) {
-                 console.error('Verify OTP error:', err);
-                 otpError.textContent = "Error verifying OTP.";
-                 verifyOtpBtn.disabled = false;
-             } finally {
-                 verifyOtpSpinner.classList.add('d-none');
-             }
-         });
-     }
+                if (!otpCode || otpCode.length < 6) {
+                    otpError.textContent = "Please enter full 6-digit OTP.";
+                    return;
+                }
 
-     // Resend OTP
-     if (resendOtpLink) {
-         resendOtpLink.addEventListener('click', function () {
-             resetOtpUI();
-             if (sendOtpBtn) {
-                 sendOtpBtn.disabled = false;
-                 sendOtpBtn.click(); // auto resend using existing flow
-             }
-         });
-     }
+                verifyOtpSpinner.classList.remove('d-none');
+                verifyOtpBtn.disabled = true;
 
-     // Countdown
-     function startCountdown() {
-         clearInterval(countdownInterval);
-         countdownInterval = setInterval(() => {
-             if (otpTimeLeft <= 0) {
-                 clearInterval(countdownInterval);
-                 otpTimer.textContent = "Expired";
-                 verifyOtpBtn.disabled = true;
-                 return;
-             }
-             otpTimeLeft--;
-             let minutes = String(Math.floor(otpTimeLeft / 60)).padStart(2, "0");
-             let seconds = String(otpTimeLeft % 60).padStart(2, "0");
-             otpTimer.textContent = `00:${minutes}:${seconds}`;
-         }, 1000);
-     }
+                try {
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) {
+                        headers['RequestVerificationToken'] = token.value;
+                    }
+
+                    let res = await fetch('/TenderAdmin/VerifyAdminEmailOtp', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ otp: otpCode })
+                    });
+
+                    let data = await res.json();
+                    if (data.success) {
+                        otpError.textContent = '';
+                        otpSuccess.textContent = data.message;
+                        document.getElementById('emailStatic').textContent = newEmailInput.value;
+
+                        setTimeout(() => {
+                            var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
+                            modal.hide();
+                        }, 1500);
+                    } else {
+                        otpError.textContent = data.message;
+                        verifyOtpBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Verify OTP error:', err);
+                    otpError.textContent = "Error verifying OTP.";
+                    verifyOtpBtn.disabled = false;
+                } finally {
+                    verifyOtpSpinner.classList.add('d-none');
+                }
+            });
+        }
+
+        // Resend OTP
+        if (resendOtpLink) {
+            resendOtpLink.addEventListener('click', function () {
+                if (resendCooldownLeft > 0 || otpInputs[0].disabled) return; // Prevent click during cooldown or when not ready
+
+                resetOtpUI();
+                if (sendOtpBtn) {
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.click(); // auto resend using existing flow
+                    startResendCooldown(resendCooldownTime);
+                    updateResendLinkState();
+                }
+            });
+        }
+
+        // Countdown for OTP validity
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                if (otpTimeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    otpTimer.textContent = "Expired";
+                    verifyOtpBtn.disabled = true;
+                    return;
+                }
+                otpTimeLeft--;
+                let minutes = String(Math.floor(otpTimeLeft / 60)).padStart(2, "0");
+                let seconds = String(otpTimeLeft % 60).padStart(2, "0");
+                otpTimer.textContent = `00:${minutes}:${seconds}`;
+            }, 1000);
+        }
 
         // ---- PASSWORD VALIDATION HIDING ON INPUT ----
         const passwordFieldNames = ['CurrentPassword', 'NewPassword', 'ConfirmPassword'];
 
-        passwordFieldNames.forEach(function(fieldName) {
+        passwordFieldNames.forEach(function (fieldName) {
             const input = document.querySelector(`[name="${fieldName}"]`);
             if (input) {
                 input.addEventListener('input', function () {
@@ -548,7 +603,7 @@
                     }
 
                     const generalErrors = document.querySelectorAll('.text-danger');
-                    generalErrors.forEach(function(errorElement) {
+                    generalErrors.forEach(function (errorElement) {
                         if (errorElement.textContent &&
                             errorElement.textContent.toLowerCase().includes('password')) {
                             errorElement.style.display = 'none';
@@ -564,35 +619,26 @@
         const deleteBtn = document.getElementById('showDeleteAccountModalBtn');
 
         if (form) {
-            form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', function (e) {
                 // Disable buttons to prevent double submission
-                  if (saveBtn) {
-        const spinner = saveBtn.querySelector('.spinner-border');
-        const btnText = saveBtn.querySelector('.btn-text');
+                if (saveBtn) {
+                    const spinner = saveBtn.querySelector('.spinner-border');
+                    const btnText = saveBtn.querySelector('.btn-text');
 
-        if (spinner && btnText) {
-            spinner.classList.remove('d-none');
-            btnText.textContent = 'Saving...';
-        }
+                    if (spinner && btnText) {
+                        spinner.classList.remove('d-none');
+                        btnText.textContent = 'Saving...';
+                    }
 
-        saveBtn.disabled = true;
-        saveBtn.classList.add('btn-disabled-saving');
-    }
+                    saveBtn.disabled = true;
+                    saveBtn.classList.add('btn-disabled-saving');
+                }
 
                 if (deleteBtn) {
                     deleteBtn.disabled = true;
                     deleteBtn.classList.add('btn-disabled-saving');
                 }
             });
-        }
-
-        // Show success modal if profile updated
-        @if (TempData["ProfileUpdateSuccess"] != null)
-        {
-                        <text>
-                        var modal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
-                        modal.show();
-                        </text>
         }
 
         // ---- PASSWORD CHANGE TOGGLE ----
@@ -620,7 +666,7 @@
                     if (passwordErrorBlock) passwordErrorBlock.style.display = 'none';
 
                     // Hide individual field errors
-                    document.querySelectorAll('#passwordFields .text-danger').forEach(function(span) {
+                    document.querySelectorAll('#passwordFields .text-danger').forEach(function (span) {
                         span.style.display = 'none';
                     });
                 }
@@ -666,22 +712,17 @@
             });
         }
 
-         // Show password requirements modal if set in ViewBag
-        @if (ViewBag.ShowPasswordRequirementsModal == true)
-        {
-                    <text>
-                    var pwModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
-                    pwModal.show();
-                    </text>
-        }
-
         // Optional: Clear password fields when closing the modal
         document.getElementById('passwordRequirementsModal')?.addEventListener('hidden.bs.modal', function () {
             document.querySelector('[name="NewPassword"]')?.focus();
         });
 
-    }); // End DOMContentLoaded
+        // Razor/CSHTML modal logic (success, password requirements) should remain in your view
+    });
 </script>
+
+
+
 
 <style>
     .btn-disabled-saving {
