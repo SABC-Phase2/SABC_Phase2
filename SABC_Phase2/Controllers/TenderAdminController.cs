@@ -2509,6 +2509,8 @@ namespace SABC_Phase2.Controllers
 
         // Step 1: Send Email OTP
         // Enhanced SendAdminEmailOtp method with session-based rate limiting
+        // Step 1: Send Email OTP
+        // Enhanced SendAdminEmailOtp method with session-based rate limiting
         [HttpPost]
         public async Task<IActionResult> SendAdminEmailOtp([FromBody] string newEmail)
         {
@@ -2546,13 +2548,14 @@ namespace SABC_Phase2.Controllers
             if (existingAdmin != null)
                 return BadRequest(new { success = false, message = "This email address is already in use by another administrator." });
 
-            // Enhanced Rate Limiting Logic
-            var now = DateTime.UtcNow;
+            // === Use SA Time Service ===
+            var nowSa = _saTimeService.GetCurrentSouthAfricanTime();
+            var nowUtc = _saTimeService.ConvertSaLocalToUtc(nowSa).ToDateTimeUtc();
 
             // Check if user is currently blocked
-            if (admin.OtpBlockedUntil.HasValue && now < admin.OtpBlockedUntil.Value)
+            if (admin.OtpBlockedUntil.HasValue && nowUtc < admin.OtpBlockedUntil.Value)
             {
-                var timeLeft = admin.OtpBlockedUntil.Value - now;
+                var timeLeft = admin.OtpBlockedUntil.Value - nowUtc;
                 var minutesLeft = Math.Ceiling(timeLeft.TotalMinutes);
                 return BadRequest(new
                 {
@@ -2565,7 +2568,7 @@ namespace SABC_Phase2.Controllers
 
             // Reset count if enough time has passed since last request (e.g., 1 hour)
             if (admin.LastOtpRequestTime.HasValue &&
-                now.Subtract(admin.LastOtpRequestTime.Value).TotalHours >= 1)
+                nowUtc.Subtract(admin.LastOtpRequestTime.Value).TotalHours >= 1)
             {
                 admin.OtpRequestCount = 0;
                 admin.OtpBlockedUntil = null;
@@ -2573,9 +2576,9 @@ namespace SABC_Phase2.Controllers
 
             // Check basic cooldown (60 seconds between requests)
             if (admin.LastOtpRequestTime.HasValue &&
-                now.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds < 60)
+                nowUtc.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds < 60)
             {
-                var timeLeft = 60 - (int)now.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds;
+                var timeLeft = 60 - (int)nowUtc.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds;
                 return BadRequest(new
                 {
                     success = false,
@@ -2588,7 +2591,7 @@ namespace SABC_Phase2.Controllers
             if (admin.OtpRequestCount >= 3)
             {
                 // Block for 15 minutes after 3 attempts
-                admin.OtpBlockedUntil = now.AddMinutes(15);
+                admin.OtpBlockedUntil = nowUtc.AddMinutes(15);
                 admin.OtpRequestCount = 0; // Reset for next cycle
                 await _context.SaveChangesAsync();
 
@@ -2604,15 +2607,15 @@ namespace SABC_Phase2.Controllers
             // Generate OTP
             var otpService = HttpContext.RequestServices.GetRequiredService<OtpService>();
             var otpCode = otpService.GenerateOtpCode();
-            var expiry = otpService.GetOtpExpiration();
+            var expiryUtc = otpService.GetOtpExpiration(); // already UTC
 
             // Update rate limiting counters
             admin.OtpRequestCount++;
-            admin.LastOtpRequestTime = now;
+            admin.LastOtpRequestTime = nowUtc;
 
             // Save OTP + pending email
             admin.OtpCode = otpCode;
-            admin.OtpExpiration = expiry;
+            admin.OtpExpiration = expiryUtc;
             admin.PendingEmail = newEmail;
             admin.OtpType = "email";
 
