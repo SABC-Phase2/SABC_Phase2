@@ -22,5 +22,13 @@
 
         // Add password last updated tracking
         public DateTime? PasswordLastUpdated { get; set; }
+
+
+
+        // Enhanced rate limiting fields
+      
+        public int OtpRequestCount { get; set; } = 0;
+        public DateTime? OtpBlockedUntil { get; set; }
+
     }
 }

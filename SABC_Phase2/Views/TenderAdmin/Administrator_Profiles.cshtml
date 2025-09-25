@@ -345,6 +345,9 @@
         let resendCooldownLeft = 0;
         let resendCooldownInterval = null;
 
+           let blockTimeLeft = 0;
+    let blockInterval = null;
+
     // Start cooldown
     function startResendCooldown(seconds) {
         resendCooldownLeft = seconds;
@@ -359,24 +362,58 @@
             }
         }, 1000);
     }
-    // Helper to update resend link text/state
-    function updateResendLinkState() {
-        if (!resendOtpLink) return;
+    // Enhanced updateResendLinkState to handle both cooldown and blocking
+       function updateResendLinkState() {
+           if (!resendOtpLink) return;
 
-        if (resendCooldownLeft > 0) {
-            // During cooldown
-            resendOtpLink.classList.add('disabled');
-            resendOtpLink.style.pointerEvents = 'none';
-            resendOtpLink.textContent = `Resend OTP (${resendCooldownLeft}s)`;
-        } else {
-            // Cooldown finished → enable
-            resendOtpLink.classList.remove('disabled');
-            resendOtpLink.style.pointerEvents = '';
-            resendOtpLink.textContent = 'Resend OTP';
-        }
+           // Check if blocked (takes priority over cooldown)
+           if (blockTimeLeft > 0) {
+               resendOtpLink.classList.add('disabled');
+               resendOtpLink.style.pointerEvents = 'none';
+               resendOtpLink.style.color = '#dc3545'; // Red for blocked state
+
+               const minutes = Math.floor(blockTimeLeft / 60);
+               const seconds = blockTimeLeft % 60;
+               resendOtpLink.textContent = `Blocked (${minutes}:${seconds.toString().padStart(2, '0')})`;
+               return;
+           }
+
+           // Normal cooldown logic
+           if (resendCooldownLeft > 0) {
+               resendOtpLink.classList.add('disabled');
+               resendOtpLink.style.pointerEvents = 'none';
+               resendOtpLink.style.color = '#6c757d'; // Gray for cooldown
+               resendOtpLink.textContent = `Resend OTP (${resendCooldownLeft}s)`;
+           } else {
+               resendOtpLink.classList.remove('disabled');
+               resendOtpLink.style.pointerEvents = '';
+               resendOtpLink.style.color = ''; // Reset to default
+               resendOtpLink.textContent = 'Resend OTP';
+           }
+       }
+
+
+         // Function to start block countdown
+    function startBlockCountdown(seconds) {
+        blockTimeLeft = seconds;
+        updateResendLinkState();
+
+        if (blockInterval) clearInterval(blockInterval);
+        blockInterval = setInterval(() => {
+            blockTimeLeft--;
+            updateResendLinkState();
+            if (blockTimeLeft <= 0) {
+                clearInterval(blockInterval);
+                // Reset button state when block expires
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                newEmailInput.removeAttribute('readonly');
+            }
+        }, 1000);
     }
 
         // Reset OTP UI and disable resend link initially (when entering modal or after failed OTP)
+    // Enhanced resetOtpUI to handle blocking state
         function resetOtpUI() {
             otpInputs.forEach(i => { i.value = ''; i.disabled = true; });
             verifyOtpBtn.disabled = true;
@@ -384,110 +421,151 @@
             otpSuccess.textContent = '';
             clearInterval(countdownInterval);
             if (otpTimer) otpTimer.textContent = "00:05:00";
-            resendCooldownLeft = resendCooldownTime;
-            updateResendLinkState();
+
+            // Don't reset block state, only regular cooldown
+            if (blockTimeLeft <= 0) {
+                resendCooldownLeft = resendCooldownTime;
+                updateResendLinkState();
+            }
         }
+
 
         // When opening modal
-        if (changeEmailBtn) {
-            changeEmailBtn.addEventListener('click', function () {
-                newEmailInput.value = '';
-                newEmailInput.classList.remove('is-invalid', 'is-valid');
-                newEmailError.textContent = '';
-                newEmailInput.removeAttribute('readonly');
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-                resetOtpUI();
+    // Enhanced modal reset to handle blocking state
+       if (changeEmailBtn) {
+           changeEmailBtn.addEventListener('click', function () {
+               newEmailInput.value = '';
+               newEmailInput.classList.remove('is-invalid', 'is-valid');
+               newEmailError.textContent = '';
 
-                var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
-                modal.show();
-            });
-        }
+               // Only enable input and button if not blocked
+               if (blockTimeLeft <= 0) {
+                   newEmailInput.removeAttribute('readonly');
+                   sendOtpBtn.disabled = false;
+                   sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+               } else {
+                   newEmailInput.setAttribute('readonly', true);
+                   sendOtpBtn.disabled = true;
+                   const minutes = Math.floor(blockTimeLeft / 60);
+                   const seconds = blockTimeLeft % 60;
+                   newEmailError.textContent = `You are temporarily blocked. Please wait ${minutes}:${seconds.toString().padStart(2, '0')}.`;
+               }
+
+               resetOtpUI();
+
+               var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+               modal.show();
+           });
+       }
+
 
         // Send Email OTP
-        if (sendOtpBtn) {
-            sendOtpBtn.addEventListener('click', async function () {
-                var newEmail = newEmailInput.value.trim();
-                newEmailInput.classList.remove('is-invalid', 'is-valid');
-                newEmailError.textContent = "";
+    // Enhanced Send Email OTP with better error handling
+       if (sendOtpBtn) {
+           sendOtpBtn.addEventListener('click', async function () {
+               var newEmail = newEmailInput.value.trim();
+               newEmailInput.classList.remove('is-invalid', 'is-valid');
+               newEmailError.textContent = "";
 
-                if (!newEmail) {
-                    newEmailError.textContent = "Please enter email.";
-                    newEmailInput.classList.add('is-invalid');
-                    return;
-                }
+               if (!newEmail) {
+                   newEmailError.textContent = "Please enter email.";
+                   newEmailInput.classList.add('is-invalid');
+                   return;
+               }
 
-                sendOtpSpinner.classList.remove('d-none');
-                sendOtpBtn.disabled = true;
+               // Don't allow clicks if blocked
+               if (blockTimeLeft > 0) {
+                   const minutes = Math.floor(blockTimeLeft / 60);
+                   const seconds = blockTimeLeft % 60;
+                   newEmailError.textContent = `You are temporarily blocked. Please wait ${minutes}:${seconds.toString().padStart(2, '0')}.`;
+                   return;
+               }
 
-                try {
-                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    var headers = { 'Content-Type': 'application/json' };
-                    if (token) {
-                        headers['RequestVerificationToken'] = token.value;
-                    }
+               sendOtpSpinner.classList.remove('d-none');
+               sendOtpBtn.disabled = true;
 
-                    let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(newEmail)
-                    });
+               try {
+                   var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                   var headers = { 'Content-Type': 'application/json' };
+                   if (token) {
+                       headers['RequestVerificationToken'] = token.value;
+                   }
 
-                    let data = await res.json();
-                    if (data.success) {
-                        newEmailError.textContent = '';
-                        newEmailInput.classList.remove('is-invalid');
-                        newEmailInput.classList.add('is-valid');
-                        newEmailInput.setAttribute('readonly', true);
-                        sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
+                   let res = await fetch('/TenderAdmin/SendAdminEmailOtp', {
+                       method: 'POST',
+                       headers: headers,
+                       body: JSON.stringify(newEmail)
+                   });
 
-                        // Enable OTP inputs
-                        otpInputs.forEach(i => i.disabled = false);
-                        verifyOtpBtn.disabled = false;
-                        otpInputs[0].focus();
+                   let data = await res.json();
+                   if (data.success) {
+                       newEmailError.textContent = '';
+                       newEmailInput.classList.remove('is-invalid');
+                       newEmailInput.classList.add('is-valid');
+                       newEmailInput.setAttribute('readonly', true);
 
-                        // Start countdown
-                        otpTimeLeft = 300;
-                        startCountdown();
+                       // Show remaining attempts if provided
+                       let btnText = 'OTP Sent';
+                       if (data.remainingAttempts !== undefined) {
+                           btnText += ` (${data.remainingAttempts} left)`;
+                       }
+                       sendOtpBtn.querySelector('.btn-text').textContent = btnText;
 
-                        // Enable resend link and start cooldown
-                        startResendCooldown(resendCooldownTime);
-                        updateResendLinkState();
-                    } else {
-                        newEmailError.textContent = data.message;
-                        newEmailInput.value = '';
-                        newEmailInput.classList.remove('is-valid');
-                        newEmailInput.classList.add('is-invalid');
-                        newEmailInput.focus();
-                        sendOtpBtn.disabled = false;
-                        sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-                        resetOtpUI();
+                       // Enable OTP inputs
+                       otpInputs.forEach(i => i.disabled = false);
+                       verifyOtpBtn.disabled = false;
+                       otpInputs[0].focus();
 
-                        // If rate-limited from server, optionally use secondsLeft property
-                        if (data.message && data.message.includes('Please wait before requesting')) {
-                            let secondsLeft = resendCooldownTime;
-                            if (typeof data.secondsLeft === "number" && data.secondsLeft > 0) {
-                                secondsLeft = data.secondsLeft;
-                            }
-                            startResendCooldown(secondsLeft);
-                            updateResendLinkState();
-                        }
-                    }
-                } catch (err) {
-                    console.error('Detailed error:', err);
-                    newEmailError.textContent = "Error sending OTP. Please try again.";
-                    newEmailInput.value = '';
-                    newEmailInput.classList.remove('is-valid');
-                    newEmailInput.classList.add('is-invalid');
-                    newEmailInput.focus();
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
-                    resetOtpUI();
-                } finally {
-                    sendOtpSpinner.classList.add('d-none');
-                }
-            });
-        }
+                       // Start countdown
+                       otpTimeLeft = 300;
+                       startCountdown();
+
+                       // Normal resend cooldown
+                       startResendCooldown(resendCooldownTime);
+                       updateResendLinkState();
+                   } else {
+                       // Handle different types of errors
+                       newEmailError.textContent = data.message;
+                       newEmailInput.value = '';
+                       newEmailInput.classList.remove('is-valid');
+                       newEmailInput.classList.add('is-invalid');
+                       newEmailInput.focus();
+
+                       // Check if blocked
+                       if (data.isBlocked && data.secondsLeft) {
+                           // User is blocked, disable button and start block countdown
+                           sendOtpBtn.querySelector('.btn-text').textContent = 'Blocked';
+                           startBlockCountdown(data.secondsLeft);
+                           newEmailInput.setAttribute('readonly', true);
+                       } else {
+                           // Normal error, re-enable button
+                           sendOtpBtn.disabled = false;
+                           sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+
+                           // Handle regular cooldown
+                           if (data.secondsLeft && data.secondsLeft > 0) {
+                               startResendCooldown(data.secondsLeft);
+                           }
+                       }
+
+                       resetOtpUI();
+                       updateResendLinkState();
+                   }
+               } catch (err) {
+                   console.error('Detailed error:', err);
+                   newEmailError.textContent = "Error sending OTP. Please try again.";
+                   newEmailInput.value = '';
+                   newEmailInput.classList.remove('is-valid');
+                   newEmailInput.classList.add('is-invalid');
+                   newEmailInput.focus();
+                   sendOtpBtn.disabled = false;
+                   sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                   resetOtpUI();
+               } finally {
+                   sendOtpSpinner.classList.add('d-none');
+               }
+           });
+       }
 
         // OTP input behavior
         otpInputs.forEach((input, index) => {
@@ -554,19 +632,21 @@
         }
 
         // Resend OTP
-        if (resendOtpLink) {
-            resendOtpLink.addEventListener('click', function () {
-                if (resendCooldownLeft > 0 || otpInputs[0].disabled) return; // Prevent click during cooldown or when not ready
+    // Enhanced Resend OTP to respect blocking
+      if (resendOtpLink) {
+          resendOtpLink.addEventListener('click', function () {
+              // Don't allow resend if blocked or during cooldown
+              if (blockTimeLeft > 0 || resendCooldownLeft > 0 || otpInputs[0].disabled) return;
 
-                resetOtpUI();
-                if (sendOtpBtn) {
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.click(); // auto resend using existing flow
-                    startResendCooldown(resendCooldownTime);
-                    updateResendLinkState();
-                }
-            });
-        }
+              resetOtpUI();
+              if (sendOtpBtn) {
+                  sendOtpBtn.disabled = false;
+                  sendOtpBtn.click(); // auto resend using existing flow
+                  startResendCooldown(resendCooldownTime);
+                  updateResendLinkState();
+              }
+          });
+      }
 
         // Countdown for OTP validity
         function startCountdown() {

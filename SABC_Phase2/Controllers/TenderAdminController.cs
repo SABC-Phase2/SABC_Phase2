@@ -2508,6 +2508,7 @@ namespace SABC_Phase2.Controllers
 
 
         // Step 1: Send Email OTP
+        // Enhanced SendAdminEmailOtp method with session-based rate limiting
         [HttpPost]
         public async Task<IActionResult> SendAdminEmailOtp([FromBody] string newEmail)
         {
@@ -2545,11 +2546,59 @@ namespace SABC_Phase2.Controllers
             if (existingAdmin != null)
                 return BadRequest(new { success = false, message = "This email address is already in use by another administrator." });
 
-            // Rate limiting check
-            if (admin.LastOtpRequestTime.HasValue &&
-                DateTime.UtcNow.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds < 60)
+            // Enhanced Rate Limiting Logic
+            var now = DateTime.UtcNow;
+
+            // Check if user is currently blocked
+            if (admin.OtpBlockedUntil.HasValue && now < admin.OtpBlockedUntil.Value)
             {
-                return BadRequest(new { success = false, message = "Please wait before requesting another code." });
+                var timeLeft = admin.OtpBlockedUntil.Value - now;
+                var minutesLeft = Math.Ceiling(timeLeft.TotalMinutes);
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Too many OTP requests. Please wait {minutesLeft} minutes before trying again.",
+                    secondsLeft = (int)timeLeft.TotalSeconds,
+                    isBlocked = true
+                });
+            }
+
+            // Reset count if enough time has passed since last request (e.g., 1 hour)
+            if (admin.LastOtpRequestTime.HasValue &&
+                now.Subtract(admin.LastOtpRequestTime.Value).TotalHours >= 1)
+            {
+                admin.OtpRequestCount = 0;
+                admin.OtpBlockedUntil = null;
+            }
+
+            // Check basic cooldown (60 seconds between requests)
+            if (admin.LastOtpRequestTime.HasValue &&
+                now.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds < 60)
+            {
+                var timeLeft = 60 - (int)now.Subtract(admin.LastOtpRequestTime.Value).TotalSeconds;
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Please wait {timeLeft} seconds before requesting another code.",
+                    secondsLeft = timeLeft
+                });
+            }
+
+            // Check attempt limit
+            if (admin.OtpRequestCount >= 3)
+            {
+                // Block for 15 minutes after 3 attempts
+                admin.OtpBlockedUntil = now.AddMinutes(15);
+                admin.OtpRequestCount = 0; // Reset for next cycle
+                await _context.SaveChangesAsync();
+
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Too many OTP requests. You are blocked for 15 minutes.",
+                    secondsLeft = 15 * 60,
+                    isBlocked = true
+                });
             }
 
             // Generate OTP
@@ -2557,12 +2606,16 @@ namespace SABC_Phase2.Controllers
             var otpCode = otpService.GenerateOtpCode();
             var expiry = otpService.GetOtpExpiration();
 
+            // Update rate limiting counters
+            admin.OtpRequestCount++;
+            admin.LastOtpRequestTime = now;
+
             // Save OTP + pending email
             admin.OtpCode = otpCode;
             admin.OtpExpiration = expiry;
             admin.PendingEmail = newEmail;
             admin.OtpType = "email";
-            admin.LastOtpRequestTime = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
 
             // Send OTP email with error handling
@@ -2571,12 +2624,12 @@ namespace SABC_Phase2.Controllers
 
             if (!emailResult.Success)
             {
-                // Clear the OTP data since email failed
+                // Clear the OTP data since email failed, but keep rate limiting counters
                 admin.OtpCode = null;
                 admin.OtpExpiration = null;
                 admin.PendingEmail = null;
                 admin.OtpType = null;
-                admin.LastOtpRequestTime = null;
+                // Don't reset LastOtpRequestTime and OtpRequestCount to maintain rate limiting
                 await _context.SaveChangesAsync();
 
                 return BadRequest(new
@@ -2586,10 +2639,29 @@ namespace SABC_Phase2.Controllers
                 });
             }
 
-            return Ok(new { success = true, message = "OTP sent successfully" });
+            // Calculate remaining attempts
+            int remainingAttempts = 3 - admin.OtpRequestCount;
+
+            return Ok(new
+            {
+                success = true,
+                message = "OTP sent successfully",
+                remainingAttempts = remainingAttempts,
+                attemptsUsed = admin.OtpRequestCount
+            });
+        }
+
+        // Optional: Add a method to reset rate limiting (for admin use or after successful verification)
+        private async Task ResetOtpRateLimiting(Administrator admin)
+        {
+            admin.OtpRequestCount = 0;
+            admin.OtpBlockedUntil = null;
+            admin.LastOtpRequestTime = null;
+            await _context.SaveChangesAsync();
         }
 
         // Step 2: Verify OTP and update email
+        // Update VerifyAdminEmailOtp to reset rate limiting on successful verification
         [HttpPost]
         public async Task<IActionResult> VerifyAdminEmailOtp([FromBody] VerifyAdminOtpRequest request)
         {
@@ -2608,7 +2680,7 @@ namespace SABC_Phase2.Controllers
             if (!valid)
                 return BadRequest(new { success = false, message = "Invalid or expired OTP" });
 
-            // Update email
+            // Update email and reset rate limiting on successful verification
             if (!string.IsNullOrEmpty(admin.PendingEmail))
             {
                 using var transaction = await _context.Database.BeginTransactionAsync();
@@ -2619,6 +2691,10 @@ namespace SABC_Phase2.Controllers
                     admin.OtpCode = null;
                     admin.OtpExpiration = null;
                     admin.OtpType = null;
+
+                    // Reset rate limiting on successful verification
+                    admin.OtpRequestCount = 0;
+                    admin.OtpBlockedUntil = null;
                     admin.LastOtpRequestTime = null;
 
                     await _context.SaveChangesAsync();
