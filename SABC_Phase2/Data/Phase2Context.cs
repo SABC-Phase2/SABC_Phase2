@@ -29,6 +29,10 @@ namespace SABC_Phase2.Data
         public DbSet<AwardedTender> AwardedTenders { get; set; }
 
         public DbSet<AuditLog> AuditLogs { get; set; }
+
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+
+        public DbSet<PasswordHistory> PasswordHistories { get; set; }
         //--------------------------------------------------------------------------------------------------------
         // Adminstrator dummy data
         public DbSet<Administrator> Administrators { get; set; }

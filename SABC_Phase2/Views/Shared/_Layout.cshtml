@@ -29,12 +29,13 @@
 
     @await Html.PartialAsync("~/Views/Shared/sidebar.cshtml")
 
-    <div class="container">
-        <main role="main" class="pb-3 page-body-bg">
-            @RenderBody()
-        </main>
+    <div class="main-content">
+        <div class="container">
+            <main role="main" class="pb-3 page-body-bg">
+                @RenderBody()
+            </main>
+        </div>
     </div>
-
     <footer>
         @await Html.PartialAsync("~/Views/Shared/footer.cshtml")
     </footer>
@@ -50,59 +51,76 @@
 
 
 <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
     html, body {
         height: 100%;
         min-height: 100vh;
         margin: 0;
         padding: 0;
     }
-    body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        background-image: url('/lib/Images/bg.png');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-attachment: fixed;
-        width: 100vw;
-        height: 100vh;
-        transform: scaleX(-1); /* Flip horizontally */
-        pointer-events: none;
-    }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image: url('/lib/Images/bg.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;
+            width: 100vw;
+            height: 100vh;
+            transform: scaleX(-1); /* Flip horizontally */
+            pointer-events: none;
+        }
+
     body {
         background: none !important; /* Remove the original background to avoid double images */
     }
 
-        .page-body-bg {
-            padding: 20px;
-            min-height: 100vh;
-            background: transparent;
-        }
+    .page-body-bg {
+        padding: 20px;
+        min-height: 100vh;
+        background: transparent;
+    }
 
-        .page-banner {
-            position: relative; /* Same as sidebar width */
-            width: 100%;
-            height: 20px;
-            margin-right: 0px;
-            text-align: center;
-            text-transform: uppercase;
-            font-size: 44px;
-            font-style: Bold;
-            color: #000;
-            padding: 119px 0;
-            background-image: url("/lib/Images/banner.png");
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
+    .page-banner {
+        position: relative; /* Same as sidebar width */
+        width: 100%;
+        height: 20px;
+        margin-right: 0px;
+        text-align: center;
+        text-transform: uppercase;
+        font-size: 34px;
+        font-style: Bold;
+        color: #000;
+        padding: 70px 0;
+        background-image: url("/lib/Images/banner.png");
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+
+    .main-content {
+        transition: margin-left 0.3s cubic-bezier(.4,0,.2,1);
+        margin-left: 340px; /* Match new sidebar width */
+    }
+
+    .sidebar.collapsed ~ .main-content {
+        margin-left: 90px; /* Match new collapsed sidebar width */
+    }
+
+    @@media (max-width: 768px) {
+        .main-content {
+            margin-left: 0 !important; /* Sidebar overlays, not pushes content */
         }
-</style>
+    }</style>
 
 
 

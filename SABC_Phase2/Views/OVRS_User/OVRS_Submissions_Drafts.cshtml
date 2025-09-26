@@ -18,13 +18,12 @@
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="row">
         <div class="col-12">
-            <a href="@Url.Action("Index", "Home")" style="color:#888; text-decoration:none;">Home</a>
+            <a href="@Url.Action("Index", "OVRS_User")" style="color:#888;; text-decoration:none;">Home</a>
             <span style="color:#888;"> &gt; </span>
             <a href="#" style="color:#17994d; text-decoration:none;">My Documents</a>
         </div>
     </div>
 </div>
-
 
 <!-- Submissions Section (Toggle + Card) -->
 <div class="submission-section">
@@ -964,6 +963,27 @@
     window.moveCarousel = function(direction) {
         carousel.move(direction);
     };
+
+        // Disable carousel transform on mobile
+    function updateCarouselForMobile() {
+        var carousel = document.getElementById('draftGridView');
+        if (window.innerWidth <= 700 && carousel) {
+            carousel.style.transform = 'none';
+        }
+    }
+    window.addEventListener('resize', updateCarouselForMobile);
+    window.addEventListener('DOMContentLoaded', updateCarouselForMobile);
+
+        document.addEventListener("DOMContentLoaded", function() {
+        var sidebar = document.getElementById("sidebar");
+        if (sidebar && !sidebar.classList.contains("collapsed")) {
+            sidebar.classList.add("collapsed");
+            // Optionally hide chevrons for collapsed state
+            document.querySelectorAll('.chevron-toggle').forEach(function(chevron) {
+                chevron.style.display = "none";
+            });
+        }
+    });
 </script>
 
 
@@ -1739,6 +1759,17 @@
         top: 0;
     }
 
+    @@media (min-width: 992px) {
+        .container-fluid,
+        .submission-section,
+        .drafts-section {
+            margin-left: -20px; /* reduced from auto or 260px */
+            margin-right: auto;
+            max-width: 90%;
+            width: 90%;
+        }
+    }
+
         .btn-edit:hover {
             background: #f0f9f3;
             color: #0d6e35;
@@ -2002,6 +2033,325 @@
     /* Ensure the carousel items have relative positioning for absolute positioning of delete button */
     .draft-carousel-item {
         position: relative;
+    }
+
+
+    /* --- MOBILE RESPONSIVE STYLES --- */
+    @@media (max-width: 600px) {
+        .container-fluid {
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        .submission-section,
+        .drafts-section {
+            min-width: unset;
+            width: 100%;
+            margin: 18px auto 18px auto;
+            padding: 0;
+        }
+
+        .submission-toggle,
+        .drafts-toggle {
+            padding: 12px 6px;
+            font-size: 1.05rem;
+            border-radius: 6px;
+        }
+
+        .submission-card,
+        .drafts-card {
+            padding: 10px 4px;
+            font-size: 0.98rem;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .submissions-header-row,
+        .drafts-header-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .submissions-header-title,
+        .drafts-header-title {
+            font-size: 1.1rem;
+        }
+
+        .view-toggle-buttons {
+            gap: 4px;
+        }
+
+        .details-underline {
+            height: 3px;
+            margin-bottom: 6px;
+            margin-top: 2px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .submissions-table {
+            font-size: 0.95rem;
+            min-width: 600px;
+        }
+
+            .submissions-table th,
+            .submissions-table td {
+                padding: 6px 4px;
+                font-size: 0.95rem;
+            }
+
+        .custom-pagination .pagination-list {
+            gap: 8px;
+            padding: 6px 8px;
+            font-size: 0.95rem;
+        }
+
+        .page-link,
+        .page-link.arrow-link {
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            padding: 0;
+        }
+        /* Drafts carousel and cards */
+        .draft-carousel-wrapper {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .draft-carousel-container {
+            width: 100%;
+            min-width: unset;
+            padding: 0;
+        }
+
+        .draft-carousel-item {
+            flex: 0 0 100%;
+            padding: 0 2px;
+            min-width: 0;
+        }
+
+        .draft-tile-card {
+            min-width: 0;
+            width: 98vw;
+            padding: 10px 2px;
+            font-size: 0.98rem;
+        }
+
+        .draft-card-logo {
+            width: 60px;
+            height: 60px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+        }
+
+            .draft-card-logo img {
+                width: 50px;
+                height: 50px;
+            }
+
+        .badge {
+            font-size: 0.8rem;
+            padding: 3px 8px 3px 8px;
+            top: 8px;
+            right: 0;
+        }
+
+        .draft-card-content {
+            min-width: 0;
+            font-size: 0.98rem;
+        }
+
+        .draft-tender-title {
+            min-height: 28px;
+            font-size: 0.98rem;
+        }
+
+        .carousel-arrow {
+            font-size: 1.2rem;
+            width: 24px;
+            height: 24px;
+        }
+        /* List view */
+        .draft-list-view {
+            max-height: 260px;
+            padding-right: 2px;
+            font-size: 0.98rem;
+        }
+
+        .draft-list-row {
+            gap: 8px;
+            padding: 10px 2px;
+            font-size: 0.98rem;
+        }
+
+        .draft-list-logo {
+            width: 36px;
+            height: 36px;
+            margin-top: 0;
+        }
+
+            .draft-list-logo img {
+                width: 32px;
+                height: 32px;
+            }
+
+        .draft-list-number-desc {
+            font-size: 1rem;
+        }
+
+        .draft-list-meta {
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+            .draft-list-meta .dot,
+            .draft-list-status .dot {
+                height: 7px;
+                width: 7px;
+            }
+
+        .status-badge {
+            font-size: 0.95rem;
+            padding: 1px 6px;
+        }
+
+        .draft-delete-btn-list,
+        .draft-delete-btn {
+            width: 26px;
+            height: 26px;
+            font-size: 1rem;
+            margin-right: 2px;
+            margin-top: 2px;
+        }
+        /* Modals */
+        .modal-content {
+            padding: 8px !important;
+            font-size: 0.98rem;
+        }
+
+        .modal-header {
+            padding: 0.5rem 0 !important;
+        }
+
+        .modal-title {
+            font-size: 1.1rem !important;
+        }
+
+        .modal-body {
+            padding: 1rem 0.5rem 0.5rem 0.5rem !important;
+        }
+
+        .modal-footer {
+            padding-bottom: 1rem !important;
+            gap: 6px !important;
+        }
+
+        .btn {
+            min-width: 80px;
+            padding: 7px 10px;
+            font-size: 0.95rem;
+        }
+
+        .btn-cancel, .btn-delete {
+            font-size: 0.95rem;
+        }
+
+        .toast-container {
+            padding: 1rem !important;
+        }
+
+        .toast-body {
+            font-size: 0.95rem;
+        }
+    }
+
+
+    /* Mobile: Remove left margin so content uses full width */
+    @@media (max-width: 991px) {
+        .container-fluid,
+        .submission-section,
+        .drafts-section {
+            margin-left: 50px;
+            max-width: 90%;
+            width: 90%;
+        }
+    }
+    /* Desktop: Prevent long tender numbers from overflowing draft cards */
+    @@media (min-width: 701px) {
+        .draft-tile-card .draft-tender-number {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .draft-carousel-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .draft-carousel-container {
+            width: 100%;
+            min-width: 0;
+            padding: 0 12px; /* Add horizontal padding */
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+
+        .draft-carousel {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            transition: none;
+            transform: none !important;
+            box-sizing: border-box;
+        }
+
+        .draft-carousel-item {
+            flex: 0 0 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            padding: 0 8px;
+        }
+
+        .draft-tile-card {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .carousel-arrow {
+            display: none !important;
+        }
+    }
+
+    @@media (max-width: 992px) {
+        .modal, .modal.show, .modal.fade {
+            z-index: 9999 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 9998 !important;
+        }
+        /* If your sidebar uses a z-index, ensure it's lower than 9999 */
+        .sidebar {
+            z-index: 1000 !important;
+        }
     }
 </style>
 

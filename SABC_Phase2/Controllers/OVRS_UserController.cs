@@ -24,7 +24,7 @@ namespace SABC_Phase2.Controllers
     /// 
 
 
- 
+
     public class OVRS_UserController : Controller
     {
         // Dependency-injected database context for EF Core operations.
@@ -68,8 +68,8 @@ namespace SABC_Phase2.Controllers
         /// <summary>
         /// Main OVRS tender listing with optional status filtering and pagination.
         /// </summary>
-        
-        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
+
+        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7, string sortOrder = "date_desc")
         {
             var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
 
@@ -104,6 +104,16 @@ namespace SABC_Phase2.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
+            // Sorting
+            switch (sortOrder)
+            {
+                case "date_asc":
+                    query = query.OrderBy(t => t.DatePublished);
+                    break;
+                default:
+                    query = query.OrderByDescending(t => t.DatePublished);
+                    break;
+            }
             // No more BlobName/FilePath logic! Use SharePointPath directly in your views.
 
             ViewBag.CurrentPage = page;
@@ -113,6 +123,7 @@ namespace SABC_Phase2.Controllers
             ViewBag.Status = status;
             ViewBag.Type = type;
             ViewBag.Search = search;
+            ViewBag.SortOrder = sortOrder;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return PartialView("OVRS_TendersTablePartial_Index", tenders);
@@ -1309,7 +1320,7 @@ namespace SABC_Phase2.Controllers
             // Post-Redirect-Get pattern
             return RedirectToAction(nameof(OVRS_Profiles));
         }
-      
+
 
         [HttpPost]
         public async Task<IActionResult> SendEmailOtp([FromBody] string newEmail)
@@ -1547,7 +1558,7 @@ namespace SABC_Phase2.Controllers
                 {
                     legacyUser.Phone = $"{user.PendingCountryCode} {user.PendingPhoneNumber}";
                     //legacyUser.UpdatedDate = DateTime.Now;
-               
+
 
                     await _legacyContext.SaveChangesAsync();
                 }

@@ -1,6 +1,6 @@
-﻿﻿@{
+﻿@{
 
-Layout = null;
+    Layout = null;
 
 }
 
@@ -9,6 +9,7 @@ Layout = null;
 <head>
     <meta charset="utf-8" />
     <title>Login</title>
+    @* <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"> *@
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
     <style>
 
@@ -338,6 +339,108 @@ Layout = null;
                 transform: scale(1);
             }
         }
+
+        /* 📱 Tablet and below */
+        @@media (max-width: 768px) {
+            /* Top bar stacks vertically */
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 15px;
+                font-size: 14px;
+                text-align: left;
+                gap: 6px;
+            }
+
+                .top-bar .search-box {
+                    width: 100%;
+                }
+
+                    .top-bar .search-box input {
+                        width: 100%;
+                        min-width: unset;
+                    }
+            /* Nav bar collapses */
+            .nav-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 15px;
+                height: auto;
+            }
+
+                .nav-bar img {
+                    height: 80px;
+                    margin-top: 0;
+                    margin-bottom: 10px;
+                }
+
+                .nav-bar .menu {
+                    flex-direction: column;
+                    gap: 10px;
+                    width: 100%;
+                }
+
+                    .nav-bar .menu a {
+                        font-size: 14px;
+                        padding: 6px 0;
+                    }
+
+
+            button {
+                font-size: 15px;
+            }
+        }
+
+        /* 📱 Small phones */
+        @@media (max-width: 480px) {
+            .top-bar {
+                font-size: 13px;
+            }
+
+            .nav-bar img {
+                height: 65px;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .main-content {
+                padding: 0;
+                min-height: 100vh;
+            }
+
+            .login-container {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 32px 12px !important;
+                border-radius: 0 !important;
+                box-sizing: border-box;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .login-container {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0 !important;
+                padding: 18px 4px !important;
+                border-radius: 0 !important;
+                box-sizing: border-box;
+            }
+
+                .login-container h2 {
+                    font-size: 22px;
+                }
+        }
+
+        .btn-submit:disabled,
+        .btn-submit[disabled] {
+            background: #bdbdbd !important;
+            color: #888 !important;
+            cursor: not-allowed !important;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -412,21 +515,125 @@ Layout = null;
                 <h3>Forgot Password</h3>
             </div>
             <div class="modal-body">
-                <label for="forgotEmail"><b>Enter Email ID <span style="color:red;">*</span></b></label>
-                <input type="email" id="forgotEmail" placeholder="Enter Email ID" required />
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-submit">Submit</button>
-                <button class="btn btn-close" onclick="closeForgotModal()">Close</button>
+                <form id="forgotPasswordForm" asp-controller="Account" asp-action="ForgotPassword">
+                    <label for="forgotEmail"><b>Enter Email ID <span style="color:red;">*</span></b></label>
+                    <input type="email" id="forgotEmail" name="email" placeholder="Enter Email ID" required />
+                    <div id="forgotPasswordMessage" style="margin-bottom:10px; color:#d32f2f; font-weight:600;"></div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-submit">Submit</button>
+                        <button type="button" class="btn btn-close" onclick="closeForgotModal()">Close</button>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
 </body>
 </html>
 
 
 
 <script>
+    // Open modal
+
+    function openForgotModal() {
+        document.getElementById("forgotPasswordModal").style.display = "flex";
+        document.getElementById("forgotPasswordMessage").textContent = "";
+        document.getElementById("forgotEmail").value = "";
+        resetForgotButton();
+    }
+
+    // Close modal
+
+    function closeForgotModal() {
+        document.getElementById("forgotPasswordModal").style.display = "none";
+        document.getElementById("forgotPasswordMessage").textContent = "";
+        resetForgotButton();
+    }
+
+    // Close when clicking outside
+
+    window.onclick = function(e) {
+        let modal = document.getElementById("forgotPasswordModal");
+        if (e.target === modal) {
+            modal.style.display = "none";
+            resetForgotButton();
+        }
+    }
+
+    // Prevent default form submission for the forgot password form
+    document.getElementById("forgotPasswordForm").addEventListener("submit", function (e) {
+        e.preventDefault(); // Prevent form from submitting normally
+    });
+
+    // Handle AJAX submit
+    document.querySelector(".btn-submit").addEventListener("click", async function (e) {
+        e.preventDefault(); // Prevent default button behavior
+
+        let email = document.getElementById("forgotEmail").value;
+        let messageDiv = document.getElementById("forgotPasswordMessage");
+        let submitBtn = document.querySelector(".btn-submit");
+
+        // Set loading/disabled state
+        submitBtn.disabled = true;
+        submitBtn.style.background = "#bdbdbd";
+        submitBtn.style.color = "#888";
+        submitBtn.style.cursor = "not-allowed";
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Submitting...';
+
+        messageDiv.style.color = "#d32f2f"; // red for error
+        messageDiv.textContent = "";
+
+        if (!email) {
+            messageDiv.textContent = "Please enter your email address.";
+            resetForgotButton();
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("email", email);
+
+        let response;
+        try {
+            response = await fetch('/Account/ForgotPassword', {
+                method: 'POST',
+                body: formData
+            });
+
+            let result = await response.json();
+
+            if (result.success) {
+                messageDiv.style.color = "#388e3c"; // green
+                messageDiv.textContent = "Password reset link has been sent to your email.";
+                setTimeout(() => {
+                    closeForgotModal();
+                    messageDiv.textContent = "";
+                }, 2500);
+            } else {
+                messageDiv.textContent = result.message;
+                resetForgotButton();
+            }
+        } catch (err) {
+            console.error("AJAX error:", err);
+            if (response) {
+                let text = await response.text();
+                console.log("Server returned:", text);
+            }
+            messageDiv.textContent = "Something went wrong. Check console for details.";
+            resetForgotButton();
+        }
+    });
+
+    // Reset the submit button to normal state
+    function resetForgotButton() {
+        let submitBtn = document.querySelector(".btn-submit");
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.background = "";
+            submitBtn.style.color = "";
+            submitBtn.style.cursor = "";
+            submitBtn.innerHTML = "Submit";
+        }
+    }
+
     function togglePassword() {
         var passwordField = document.getElementById("password");
         var eyeIcon = document.getElementById("eyeIcon");
@@ -439,23 +646,6 @@ Layout = null;
             passwordField.type = "password";
             eyeIcon.classList.remove("fa-eye-slash");
             eyeIcon.classList.add("fa-eye");
-        }
-    }
-
-        // Open modal
-    function openForgotModal() {
-        document.getElementById("forgotPasswordModal").style.display = "flex";
-    }
-    // Close modal
-    function closeForgotModal() {
-        document.getElementById("forgotPasswordModal").style.display = "none";
-    }
-
-    // Close when clicking outside
-    window.onclick = function(e) {
-        let modal = document.getElementById("forgotPasswordModal");
-        if (e.target === modal) {
-            modal.style.display = "none";
         }
     }
 </script>

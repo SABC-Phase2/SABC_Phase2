@@ -9,7 +9,9 @@
     string statusFilter = ViewBag.Status as string ?? "";
     string typeFilter = ViewBag.Type as string ?? "";
 }
+
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+
 <div class="breadcrumb-custom">
     <span class="breadcrumb-active">Home</span>
 </div>
@@ -32,9 +34,8 @@
             <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>
             <option value="rfo" selected="@(typeFilter == "rfo" ? "selected" : null)">RFO</option>
         </select>
-        <button type="submit" class="refresh-btn"
-                title="Clear search and filters"
-                formaction="@Url.Action("Index", new { page = 1, pageSize = pageSize, search = "", status = statusFilter, type = "" })"
+        <button type="button" class="refresh-btn"
+                title="Refresh table"
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
         </button>
@@ -46,7 +47,7 @@
 </div>
 
 <script>
-    // AJAX form submission for instant search/filter with debounce
+    // Debounce utility for search input
     function debounce(fn, delay) {
         let timer = null;
         return function(...args) {
@@ -55,10 +56,11 @@
         };
     }
 
+    // AJAX form submission for search/filter/pagination
     function submitForm(keepPage = false) {
         const form = document.getElementById('filterForm');
         // If not keepPage, reset to page=1 for a new search
-        if(!keepPage) {
+        if (!keepPage) {
             let pageInput = document.createElement('input');
             pageInput.type = "hidden";
             pageInput.name = "page";
@@ -66,25 +68,26 @@
             form.appendChild(pageInput);
         }
         const data = new URLSearchParams(new FormData(form)).toString();
-        fetch('@Url.Action("Index")' + '?' + data, {
+        fetch('@Url.Action("Index", "OVRS_User")' + '?' + data, {
             headers: { "X-Requested-With": "XMLHttpRequest" }
         })
         .then(resp => resp.text())
         .then(html => {
             document.getElementById('tenders-table').innerHTML = html;
-            // Set dropdown & search input to match query!
+            // Restore filter values after AJAX update
             const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
             document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
-            document.querySelector('#tenderStatusDropdown').value = params.get('status') ?? '';
             document.querySelector('.search-input').value = params.get('search') ?? '';
-            // Re-hook row clicks and pagination
             hookRowClicks();
             hookPaginationLinks();
+                    hookSortIcon();
+
         });
     }
 
     const debouncedSubmit = debounce(() => submitForm(false), 300);
 
+    // Make table rows clickable
     function hookRowClicks() {
         document.querySelectorAll('.clickable-row').forEach(function(row) {
             row.onclick = function() {
@@ -93,6 +96,8 @@
             };
         });
     }
+
+    // AJAX pagination
     function hookPaginationLinks() {
         document.querySelectorAll('.pagination-list a.page-link').forEach(function(link) {
             link.onclick = function(e) {
@@ -100,34 +105,68 @@
                 const url = new URL(link.href);
                 const params = new URLSearchParams(url.search);
                 document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
-                document.querySelector('#tenderStatusDropdown').value = params.get('status') ?? '';
                 document.querySelector('.search-input').value = params.get('search') ?? '';
-
                 fetch(link.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
                 .then(resp => resp.text())
                 .then(html => {
                     document.getElementById('tenders-table').innerHTML = html;
                     document.querySelector('#tenderTypeDropdown').value = params.get('type') ?? '';
-                    document.querySelector('#tenderStatusDropdown').value = params.get('status') ?? '';
                     document.querySelector('.search-input').value = params.get('search') ?? '';
                     hookRowClicks();
                     hookPaginationLinks();
+                            hookSortIcon();
+
                 });
             };
         });
     }
+            function hookSortIcon() {
+        const table = document.querySelector('.tender-table');
+        if (!table) return;
 
+        // Find the header with "DATE PUBLISHED"
+        const sortTh = [...table.querySelectorAll('th')]
+            .find(th => th.textContent.toLowerCase().includes('date published'));
+        if (!sortTh) return;
+
+        const sortIcon = sortTh.querySelector('i.fas');
+        if (!sortIcon) return;
+
+        let asc = true; // default direction
+        sortIcon.style.cursor = "pointer";
+        sortIcon.title = "Sort by date published";
+
+        sortIcon.onclick = function () {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+                .filter(row => row.querySelector('td') && row.cells[3]); // 4th col = date
+
+            rows.sort((a, b) => {
+                const dateA = new Date(a.cells[3].innerText.trim());
+                const dateB = new Date(b.cells[3].innerText.trim());
+                return asc ? dateA - dateB : dateB - dateA;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Toggle direction + update icon
+            asc = !asc;
+            sortIcon.className = asc ? "fas fa-sort-up" : "fas fa-sort-down";
+        };
+    }
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelector('.search-input').addEventListener('input', debouncedSubmit);
         document.querySelector('#tenderTypeDropdown').addEventListener('change', () => submitForm(false));
-        document.querySelector('#tenderStatusDropdown').addEventListener('change', () => submitForm(false));
         document.querySelector('.refresh-btn').addEventListener('click', function(e) {
             e.preventDefault();
+            document.querySelector('.search-input').value = '';
+            document.querySelector('#tenderTypeDropdown').value = '';
             submitForm(true);
         });
-
         hookRowClicks();
         hookPaginationLinks();
+                hookSortIcon();
+
     });
 </script>
 <!--
@@ -155,51 +194,72 @@
         font-family: 'Segoe UI', sans-serif;
     }
 
-        /* Table header with background and rounded corners */
-        .tender-table thead th {
-            background-color: #f5c012;
-            color: #fff;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-            border-radius: 0;
-        }
-
-            .tender-table thead th:nth-child(2), /* TITLES */
-            .tender-table thead th:nth-child(4) { /* DATE PUBLISHED */
-                background-color: #333;
-            }
-
-            .tender-table thead th:first-child {
-                border-top-left-radius: 6px;
-            }
-
-            .tender-table thead th:last-child {
-                border-top-right-radius: 6px;
-                /* No background-color here */
-            }
-
-            .tender-table thead th:nth-child(4) i {
-                margin-left: 8px;
-                font-size: 0.9rem;
-            }
-
-        /* Table body rows and hover effect */
-        .tender-table tbody tr {
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            transition: background 0.2s ease-in-out;
-        }
-
-            .tender-table tbody tr:hover {
-                background-color: #f1f1f1;
-            }
-
         .tender-table td {
+            word-wrap: break-word; /* Allow wrapping */
+            overflow-wrap: anywhere; /* Modern browsers */
+            white-space: normal; /* Let text wrap normally */
             padding: 16px;
             vertical-align: middle;
             text-align: center;
         }
+
+    /* Specifically for tender title & number cells */
+    .tender-title,
+    .tender-number {
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Limit to 2 lines */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+        white-space: normal; /* Multi-line truncation */
+        line-height: 1.3;
+    }
+    /* Table header with background and rounded corners */
+    .tender-table thead th {
+        background-color: #f5c012;
+        color: #fff;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 0;
+    }
+
+        .tender-table thead th:nth-child(2), /* TITLES */
+        .tender-table thead th:nth-child(4) { /* DATE PUBLISHED */
+            background-color: #333;
+        }
+
+        .tender-table thead th:first-child {
+            border-top-left-radius: 6px;
+        }
+
+        .tender-table thead th:last-child {
+            border-top-right-radius: 6px;
+            /* No background-color here */
+        }
+
+        .tender-table thead th:nth-child(4) i {
+            margin-left: 8px;
+            font-size: 0.9rem;
+        }
+
+    /* Table body rows and hover effect */
+    .tender-table tbody tr {
+        background-color: #f9f9f9;
+        border-radius: 6px;
+        transition: background 0.2s ease-in-out;
+    }
+
+        .tender-table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
+    .tender-table td {
+        padding: 16px;
+        vertical-align: middle;
+        text-align: center;
+    }
 
     /* Thumbnail image styling */
     .tender-thumbnail {
@@ -608,6 +668,136 @@
         border-color: #000;
     }
 
+    /* ========== MOBILE RESPONSIVE FIXES ========== */
+    @@media (max-width: 992px) {
+        /* Action bar */
+        .tender-action-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .filter-dropdown {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .refresh-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        /* Table container scroll padding */
+        .table-container {
+            padding: 15px;
+        }
+
+        .table-scroll-container {
+            overflow-x: auto;
+        }
+        /* Responsive table: stack cells */
+        .tender-table thead {
+            display: none; /* hide header */
+        }
+
+        .tender-table,
+        .tender-table tbody,
+        .tender-table tr,
+        .tender-table td {
+            display: block;
+            width: 100%;
+        }
+
+            .tender-table tr {
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 12px;
+                background: #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            }
+
+            .tender-table td {
+                text-align: left;
+                padding: 8px 0;
+                border: none !important;
+            }
+
+                .tender-table td:before {
+                    content: attr(data-label);
+                    display: block;
+                    font-weight: bold;
+                    color: #555;
+                    margin-bottom: 4px;
+                }
+
+        .tender-thumbnail {
+            width: 40px;
+            height: 40px;
+        }
+
+        .tender-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        /* Pagination */
+        .custom-pagination {
+            margin-top: 20px;
+        }
+
+        .pagination-list {
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .page-link {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .tender-table tr {
+            padding: 10px;
+        }
+
+        .tender-table td {
+            font-size: 0.85rem;
+        }
+
+        .tender-title {
+            font-size: 0.9rem;
+        }
+
+        .search-input,
+        .filter-dropdown,
+        .refresh-btn {
+            font-size: 0.9rem;
+            padding: 10px;
+        }
+    }
+    /* Fix for sidebar overlap on smaller screens */
+    @@media (max-width: 1024px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 50px; /* push content right */
+            margin-right: 10px; /* add breathing room */
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
+            margin-left: 55px; /* push more on mobile */
+            margin-right: 15px;
+        }
+    }
 </style>
 
 

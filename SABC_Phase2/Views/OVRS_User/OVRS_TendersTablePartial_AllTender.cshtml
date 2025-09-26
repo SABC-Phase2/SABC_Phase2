@@ -34,14 +34,35 @@
                             <img src="~/lib/Images/logoblack.png" class="tender-thumbnail" alt="SABC Logo" />
                         </td>
                         <td>
-                            <strong>@tender.TenderNumber</strong> : @tender.Title
-                        </td>
-                        <td>
-                            <span class="tender-status
+                            @{
+                                var tenderText = !string.IsNullOrWhiteSpace(tender.TenderNumber)
+                                ? tender.TenderNumber + (string.IsNullOrWhiteSpace(tender.Title) ? "" : ": " + tender.Title)
+                                : "(No Tender Number)" + (string.IsNullOrWhiteSpace(tender.Title) ? "" : ": " + tender.Title);
+                            }
+
+                            <div class="tender-title-block truncate-text" title="@tenderText">
+                                @if (!string.IsNullOrWhiteSpace(tender.TenderNumber))
+                                {
+                                    <strong class="tender-number">@tender.TenderNumber</strong>
+                                }
+                                else
+                                {
+                                    <strong class="tender-number">(No Tender Number)</strong>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(tender.Title))
+                                {
+                                    @(": " + tender.Title)
+                                }
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="tender-status
                                         @(tenderStatus == "open tender" ? "tender-status-open" :
-                                                                          tenderStatus == "closed tender" ? "tender-status-closed" :
-                                                                          tenderStatus == "awarded tender" ? "tender-status-awarded" :
-                                                                          tenderStatus == "cancelled tender" ? "tender-status-cancelled" : "")">
+                                                                                                                                      tenderStatus == "closed tender" ? "tender-status-closed" :
+                                                                                                                                      tenderStatus == "awarded tender" ? "tender-status-awarded" :
+                                                                                                                                      tenderStatus == "cancelled tender" ? "tender-status-cancelled" : "")">
                             @tender.Status
                         </span>
                     </td>
@@ -119,3 +140,20 @@
         };
     });
 </script>
+
+<style>
+
+    .truncate-text {
+        display: inline-block;
+        max-width: 220px; /* adjust width as needed */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+    }
+
+    .tender-title {
+        max-width: 240px;
+        font-weight: bold;
+    }
+</style>

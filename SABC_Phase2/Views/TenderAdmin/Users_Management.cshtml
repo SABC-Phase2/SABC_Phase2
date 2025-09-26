@@ -263,59 +263,71 @@
                 resetForm();
             });
 
-            // Search Azure AD Users function
-            function searchAzureAdUsers(searchTerm) {
-                fetch('@Url.Action("SearchAzureAdUsers")' + '?searchTerm=' + encodeURIComponent(searchTerm))
-                    .then(response => response.json())
-                    .then(data => {
-                        searchSpinner.style.display = 'none';
+        // Enhanced search function with better error handling
+        function searchAzureAdUsers(searchTerm) {
+            fetch('@Url.Action("SearchAzureAdUsers")' + '?searchTerm=' + encodeURIComponent(searchTerm))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    searchSpinner.style.display = 'none';
 
-                        if (data.success && data.users && data.users.length > 0) {
-                            displaySearchResults(data.users);
-                        } else {
-                            displayNoResults(data.message || 'No users found');
-                        }
-                    })
-                    .catch(error => {
-                        searchSpinner.style.display = 'none';
-                        console.error('Error searching AD users:', error);
-                        displayNoResults('Error searching users. Please try again.');
-                    });
-            }
+                    console.log('Search response:', data); // Debug logging
 
-            // Display search results
-            function displaySearchResults(users) {
-                let resultsHtml = '';
+                    if (data.success && data.users && data.users.length > 0) {
+                        displaySearchResults(data.users);
+                    } else {
+                        displayNoResults(data.message || 'No users found');
+                    }
+                })
+                .catch(error => {
+                    searchSpinner.style.display = 'none';
+                    console.error('Error searching AD users:', error);
+                    displayNoResults('Error searching users. Please try again.');
+                });
+        }
+        // Display search results with better null checking and case handling
+        function displaySearchResults(users) {
+            let resultsHtml = '';
 
-                users.forEach(user => {
-                    resultsHtml += `
-                        <div class="search-result-item" data-user='${JSON.stringify(user)}'
-                             style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
-                            <div style="font-weight:bold;">${user.DisplayName}</div>
-                            <div style="font-size:0.9em; color:#666;">${user.Email || 'No email'}</div>
-                        </div>
-                    `;
+            users.forEach(user => {
+                // Handle different possible casings from the server response
+                const displayName = user.DisplayName || user.displayName || 'Unknown User';
+                const email = user.Email || user.email || user.Mail || user.mail || 'No email available';
+
+                console.log('Processing user:', user); // Debug log to see actual structure
+
+                resultsHtml += `
+                    <div class="search-result-item" data-user='${JSON.stringify(user)}'
+                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+                        <div style="font-weight:bold;">${displayName}</div>
+                        <div style="font-size:0.9em; color:#666;">${email}</div>
+                    </div>
+                `;
+            });
+
+            searchResults.innerHTML = resultsHtml;
+            searchResults.style.display = 'block';
+
+            // Add click handlers to result items
+            document.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const userData = JSON.parse(this.getAttribute('data-user'));
+                    selectUser(userData);
                 });
 
-                searchResults.innerHTML = resultsHtml;
-                searchResults.style.display = 'block';
-
-                // Add click handlers to result items
-                document.querySelectorAll('.search-result-item').forEach(item => {
-                    item.addEventListener('click', function() {
-                        const userData = JSON.parse(this.getAttribute('data-user'));
-                        selectUser(userData);
-                    });
-
-                    item.addEventListener('mouseenter', function() {
-                        this.style.backgroundColor = '#f5f5f5';
-                    });
-
-                    item.addEventListener('mouseleave', function() {
-                        this.style.backgroundColor = 'white';
-                    });
+                item.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f5f5f5';
                 });
-            }
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+            });
+        }
 
             // Display no results message
             function displayNoResults(message) {
@@ -333,28 +345,42 @@
                 searchSpinner.style.display = 'none';
             }
 
-            // Select user and populate fields
-            function selectUser(user) {
-                selectedAdUser = user;
+            // Select user and populate fields with better case handling
+        function selectUser(user) {
+            selectedAdUser = user;
 
-                // Update search input to show selected user
-                adUserSearch.value = user.DisplayName;
+            // Handle different possible casings
+            const displayName = user.DisplayName || user.displayName || 'Unknown User';
+            const firstName = user.FirstName || user.firstName || user.GivenName || user.givenName || '';
+            const lastName = user.LastName || user.lastName || user.Surname || user.surname || '';
+            const email = user.Email || user.email || user.Mail || user.mail || '';
 
-                // Populate form fields and make them read-only
-                document.getElementById('firstName').value = user.FirstName || '';
-                document.getElementById('firstName').readOnly = true;
-                document.getElementById('firstName').style.backgroundColor = '#f8f9fa';
+            console.log('Selected user data:', {
+                displayName,
+                firstName,
+                lastName,
+                email,
+                rawUser: user
+            });
 
-                document.getElementById('lastName').value = user.LastName || '';
-                document.getElementById('lastName').readOnly = true;
-                document.getElementById('lastName').style.backgroundColor = '#f8f9fa';
+            // Update search input to show selected user
+            adUserSearch.value = displayName;
 
-                document.getElementById('email').value = user.Email || '';
-                document.getElementById('email').readOnly = true;
-                document.getElementById('email').style.backgroundColor = '#f8f9fa';
+            // Populate form fields and make them read-only
+            document.getElementById('firstName').value = firstName;
+            document.getElementById('firstName').readOnly = true;
+            document.getElementById('firstName').style.backgroundColor = '#f8f9fa';
 
-                hideSearchResults();
-            }
+            document.getElementById('lastName').value = lastName;
+            document.getElementById('lastName').readOnly = true;
+            document.getElementById('lastName').style.backgroundColor = '#f8f9fa';
+
+            document.getElementById('email').value = email;
+            document.getElementById('email').readOnly = true;
+            document.getElementById('email').style.backgroundColor = '#f8f9fa';
+
+            hideSearchResults();
+        }
 
             // Clear user fields
             function clearUserFields() {
@@ -567,6 +593,8 @@
         }
     </script>
 }
+
+
 <style>
     /* Action Menu Styles */
     .action-menu-container {

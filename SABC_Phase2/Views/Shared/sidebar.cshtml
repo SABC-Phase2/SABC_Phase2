@@ -678,10 +678,11 @@
             color: white;
         }
 
+
     .sidebar {
         background-color: #333;
         color: #fff;
-        width: 280px;
+        width: 320px; /* Increased from 280px */
         position: fixed;
         top: 120px;
         left: 0;
@@ -702,7 +703,8 @@
     }
 
     .sidebar.collapsed {
-        width: 70px;
+        width: 90px; /* Increased collapsed width for proportion */
+        min-width: 90px;
     }
 
     .menu-toggle {
@@ -899,8 +901,8 @@
     }
 
     /*     .sidebar.collapsed .submenu-icon {
-                            display: none !important;
-                        } */
+                                display: none !important;
+                            } */
 
     @*---------------------------------------------
 

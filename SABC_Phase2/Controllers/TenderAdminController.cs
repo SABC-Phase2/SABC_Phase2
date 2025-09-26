@@ -683,7 +683,6 @@ namespace SABC_Phase2.Controllers
         }
 
         [HttpGet]
-
         public async Task<IActionResult> DraftIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
 
         {
@@ -2172,28 +2171,48 @@ namespace SABC_Phase2.Controllers
                 var users = await graphServiceClient.Users
                     .GetAsync((requestConfiguration) =>
                     {
-                        requestConfiguration.QueryParameters.Filter = $"startswith(displayName,'{searchTerm}') or startswith(givenName,'{searchTerm}') or startswith(surname,'{searchTerm}') or startswith(mail,'{searchTerm}')";
-                        requestConfiguration.QueryParameters.Select = new string[] { "id", "displayName", "givenName", "surname", "mail" };
+                        requestConfiguration.QueryParameters.Filter = $"startswith(displayName,'{searchTerm}') or startswith(givenName,'{searchTerm}') or startswith(surname,'{searchTerm}') or startswith(mail,'{searchTerm}') or startswith(userPrincipalName,'{searchTerm}')";
+                        requestConfiguration.QueryParameters.Select = new string[] { "id", "displayName", "givenName", "surname", "mail", "userPrincipalName" };
                         requestConfiguration.QueryParameters.Top = 10;
                     });
 
-                var userList = users.Value.Select(u => new
+                var userList = users.Value.Select(u => {
+                    var displayName = u.DisplayName ?? $"{u.GivenName ?? ""} {u.Surname ?? ""}".Trim();
+                    var email = u.Mail ?? u.UserPrincipalName ?? "";
+
+                    // Skip users with no meaningful display name
+                    if (string.IsNullOrWhiteSpace(displayName) || displayName.Trim() == "")
+                    {
+                        displayName = email; // Use email as fallback display name
+                    }
+
+                    return new
+                    {
+                        Id = u.Id ?? "",
+                        DisplayName = displayName,
+                        FirstName = u.GivenName ?? "",
+                        LastName = u.Surname ?? "",
+                        Email = email
+                    };
+                })
+                .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.Email))
+                .ToList();
+
+                Console.WriteLine($"Found {userList.Count} users matching '{searchTerm}'");
+                foreach (var user in userList.Take(3)) // Log first 3 for debugging
                 {
-                    Id = u.Id,
-                    DisplayName = u.DisplayName,
-                    FirstName = u.GivenName,
-                    LastName = u.Surname,
-                    Email = u.Mail
-                }).ToList();
+                    Console.WriteLine($"User: {user.DisplayName}, Email: {user.Email}");
+                }
 
                 return Json(new { success = true, users = userList });
             }
             catch (Exception ex)
             {
+                // Log the full exception for debugging
+                Console.WriteLine($"Error searching Azure AD: {ex}");
                 return Json(new { success = false, message = "Error searching Azure AD users: " + ex.Message });
             }
         }
-
         private GraphServiceClient GetGraphServiceClient()
         {
             // Using the current Azure.Identity package instead of deprecated Microsoft.Graph.Auth

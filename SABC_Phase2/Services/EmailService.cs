@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -55,7 +56,60 @@ SABC SCM";
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        public async Task SendPasswordResetEmailAsync(string toEmail, string resetLink)
+        {
+            var emailSettings = _configuration.GetSection("EmailSettings");
+            using var smtpClient = new SmtpClient(emailSettings["SmtpServer"])
+            {
+                Port = int.Parse(emailSettings["SmtpPort"]),
+                Credentials = new NetworkCredential(
+                    emailSettings["ServiceAccountEmail"],
+                    emailSettings["ServiceAccountPassword"]),
+                EnableSsl = bool.Parse(emailSettings["EnableSsl"] ?? "true"),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 10000
+            };
 
+            var fromEmail = new MailAddress(
+                emailSettings["ServiceAccountEmail"],
+                $"{emailSettings["FromName"]}");
+
+            // Try to get company name from tbl_suppliers (legacy DB)
+            string companyName = "Supplier";
+            try
+            {
+                var legacyConnStr = _configuration.GetConnectionString("LegacyDb");
+                using var conn = new SqlConnection(legacyConnStr);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand("SELECT TOP 1 ISNULL(tradingname, legalname) FROM tbl_suppliers WHERE email=@Email", conn);
+                cmd.Parameters.AddWithValue("@Email", toEmail);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result != null && !string.IsNullOrWhiteSpace(result.ToString()))
+                    companyName = result.ToString();
+            }
+            catch
+            {
+                // fallback to default if lookup fails
+            }
+
+            var body = $@"Dear {companyName}
+
+Below is the link to reset password for your account. Link will expire in 24 hours,
+
+{resetLink}
+
+Thanks & Regards
+SABC Support Team";
+
+            using var mailMessage = new MailMessage(fromEmail, new MailAddress(toEmail))
+            {
+                Subject = "SABC Password Reset",
+                Body = body,
+                IsBodyHtml = false
+            };
+
+            await smtpClient.SendMailAsync(mailMessage);
+        }
         public async Task SendTenderClosedNotificationAsync(
     IEnumerable<string> adminEmails, string tenderNumber, string tenderTitle, DateTime closingDateTime)
         {

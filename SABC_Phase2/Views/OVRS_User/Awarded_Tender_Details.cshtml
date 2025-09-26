@@ -468,4 +468,199 @@
         margin-top: 28px;
         margin-bottom: 20px;
     }
+
+    /* Mobile responsiveness */
+    @@media (max-width: 767px) {
+        /* Card container should fit screen */
+        .tender-details-card {
+            padding: 22px 18px;
+            margin: 12px;
+            max-width: 100%;
+        }
+        /* Breadcrumb */
+        .breadcrumb-custom {
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+        /* Back arrow + title */
+        .details-header {
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+
+        .details-title {
+            font-size: 1.2rem !important;
+        }
+
+        .back-arrow {
+            font-size: 1.2rem;
+            margin-right: 6px;
+        }
+        /* Remove large left indents */
+        .tender-number,
+        .tender-main-info,
+        .tender-description,
+        .tender-attachments {
+            margin-left: 0 !important;
+        }
+
+        .tender-title {
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .tender-meta,
+        .tender-closing,
+        .tender-description {
+            font-size: 0.95rem;
+        }
+        /* Attachments table */
+        .tender-attachments-table {
+            padding: 12px 14px;
+        }
+
+            .tender-attachments-table table,
+            .tender-attachments-table tbody,
+            .tender-attachments-table tr,
+            .tender-attachments-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .tender-attachments-table td {
+                padding: 6px 0;
+                text-align: left !important;
+            }
+
+        .attachment-actions {
+            justify-content: flex-start;
+            margin-top: 6px;
+        }
+        /* Respond button */
+        .tender-respond-row {
+            margin-top: 22px;
+        }
+
+        .respond-btn {
+            width: 100%;
+            font-size: 1.1rem;
+            padding: 12px 109px;
+        }
+        /* Modals scale down */
+        .modal-content,
+        .already-applied-modal-content {
+            width: 90% !important;
+            margin: 20% auto !important;
+            padding: 22px !important;
+        }
+
+        .modal-error-title {
+            font-size: 1.4rem;
+        }
+
+        .modal-message {
+            font-size: 1rem;
+        }
+
+        .modal-ok-btn,
+        .modal-login-btn {
+            font-size: 0.95rem;
+            padding: 10px 22px;
+        }
+    }
+
+    /* Adjust content spacing when sidebar is visible */
+    @@media (min-width: 768px) {
+        body .tender-details-card, body .breadcrumb-custom, body .tender-respond-row {
+            margin-left: 260px; /* match your sidebar width */
+        }
+    }
+
+    /* On mobile, reset so it's centered */
+    @@media (max-width: 767px) {
+        body .tender-details-card, body .breadcrumb-custom, body .tender-respond-row {
+            margin-left: 60px;
+        }
+    }
+    /* Desktop only: move respond button more left inside card */
+    @@media (min-width: 768px) {
+        .tender-respond-row {
+            justify-content: center; /* align button to the left */
+            padding-right: 120px; /* optional spacing from card edge */
+        }
+    }
+
+
+    @@media (max-width: 992px) {
+        .modal, .modal.show, .modal.fade {
+            z-index: 9999 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 9998 !important;
+        }
+        /* If your sidebar uses a z-index, ensure it's lower than 9999 */
+        .sidebar {
+            z-index: 1000 !important;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        /* Make attachment tables block layout for mobile */
+        .tender-attachments table,
+        .tender-attachments tbody,
+        .tender-attachments tr {
+            display: block;
+            width: 100%;
+        }
+
+        .tender-attachments td {
+            display: block;
+            width: 100%;
+            padding: 8px 0 8px 0;
+            border-bottom: none;
+            box-sizing: border-box;
+        }
+            /* PDF icon cell */
+            .tender-attachments td:first-child {
+                width: 36px;
+                max-width: 36px;
+                display: inline-block;
+                vertical-align: middle;
+                padding-right: 8px;
+            }
+            /* Attachment name cell */
+            .tender-attachments td:nth-child(2) {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                word-break: break-all;
+                font-size: 0.97rem;
+                margin-bottom: 6px;
+                display: block;
+            }
+            /* Action buttons cell */
+            .tender-attachments td.action-buttons {
+                width: 100%;
+                max-width: 100%;
+                display: flex;
+                gap: 10px;
+                margin-top: 6px;
+                margin-bottom: 10px;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+
+        .icon-btn {
+            min-width: 38px;
+            width: 38px;
+            height: 38px;
+            font-size: 1.1rem;
+            margin-left: 0;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+    }
 </style>
