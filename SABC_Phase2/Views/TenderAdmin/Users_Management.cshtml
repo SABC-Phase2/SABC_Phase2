@@ -391,28 +391,23 @@
                 body: JSON.stringify(formData)
             })
             .then(response => response.json())
-            .then(data => {
-                     if (data.success) {
-            // Hide modal
-            modal.style.display = 'none';
-            resetForm();
+               .then(data => {
+            if (data.success) {
+                // Close the modal first
+                modal.style.display = 'none';
+                resetForm();
 
-            // Refresh users table
-            submitUserForm(true);
+                // Show the custom success popup instead of alert()
+                showSuccessPopup();
 
-            // Show success popup
-            const popup = document.getElementById("successPopup");
-            popup.style.display = "flex";
+                // Refresh the users table
+                submitUserForm(true);
+            } else {
+                alert('Error creating user: ' + (data.message || 'Unknown error'));
+            }
+        })
 
-            // Close popup on button click
-            document.getElementById("closeSuccessPopup").onclick = function() {
-                popup.style.display = "none";
-            };
-        }
-        else {
-                    alert('Error creating user: ' + (data.message || 'Unknown error'));
-                }
-            })
+
             .catch(error => {
                 console.error('Error:', error);
                 alert('An error occurred while creating the user account. Please try again.');
@@ -423,6 +418,27 @@
                 submitBtn.textContent = originalText;
             });
         });
+
+                // Add this new function to show and handle the success popup
+        function showSuccessPopup() {
+            const successPopup = document.getElementById('successPopup');
+            const closeBtn = document.getElementById('closeSuccessPopup');
+
+            // Show the popup
+            successPopup.style.display = 'flex';
+
+            // Handle close button
+            closeBtn.onclick = function() {
+                successPopup.style.display = 'none';
+            };
+
+            // Close when clicking outside the popup content
+            successPopup.onclick = function(e) {
+                if (e.target === successPopup) {
+                    successPopup.style.display = 'none';
+                }
+            };
+        }
 
         // Enhanced search function with better error handling
         function searchAzureAdUsers(searchTerm) {

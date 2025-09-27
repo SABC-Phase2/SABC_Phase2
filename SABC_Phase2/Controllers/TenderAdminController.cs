@@ -29,12 +29,12 @@ namespace SABC_Phase2.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly SouthAfricanTimeService _saTimeService;
         private readonly TenderReportPdfService _pdfService;
-
+        private readonly EmailService _emailService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService, AuditLogService auditLogService)
+        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService, AuditLogService auditLogService, EmailService emailService)
         {
             // Assign the injected database context to a private field for use throughout the controller.
             // This context enables database operations such as querying and saving tenders.
@@ -58,6 +58,7 @@ namespace SABC_Phase2.Controllers
             _saTimeService = saTimeService;
 
             _auditLogService = auditLogService;
+            _emailService = emailService;
         }
 
         // Helper to get current admin info
@@ -2184,12 +2185,15 @@ namespace SABC_Phase2.Controllers
                     return Json(new { success = false, message = "A user with this email already exists." });
                 }
 
-                // Validate role - no normalization needed since frontend sends correct format
+                // Validate role
                 var validRoles = new[] { "IT_Admin", "Tender_Administrator", "Vendor_Administrator" };
                 if (!validRoles.Contains(request.Role))
                 {
                     return Json(new { success = false, message = "Invalid role selected." });
                 }
+
+                // Store the plain password for email before hashing
+                string plainPassword = request.Password;
 
                 // Hash the password
                 string hashedPassword;
@@ -2214,7 +2218,7 @@ namespace SABC_Phase2.Controllers
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     CreatedAt = currentSaTime.ToDateTimeUnspecified(),
-                    Role = request.Role, // Use the role directly from the request
+                    Role = request.Role,
                     AccountStatus = 1, // Always set to active
                     OtpCode = null,
                     OtpExpiration = null,
@@ -2230,10 +2234,36 @@ namespace SABC_Phase2.Controllers
                 _context.Administrators.Add(newAdmin);
                 await _context.SaveChangesAsync();
 
+                // Send welcome email with account details
+                try
+                {
+                    await _emailService.SendNewUserAccountEmailAsync(
+                        newAdmin.Email,
+                        newAdmin.FirstName,
+                        newAdmin.LastName,
+                        newAdmin.Role,
+                        plainPassword
+                    );
+                }
+                catch (Exception emailEx)
+                {
+                    // Log email error but don't fail the user creation
+                    Console.WriteLine($"Failed to send welcome email: {emailEx.Message}");
+                    // You might want to use a proper logging framework here
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = "User account created successfully! However, there was an issue sending the welcome email. Please manually provide the user with their login credentials.",
+                        userId = newAdmin.Id,
+                        emailWarning = true
+                    });
+                }
+
                 return Json(new
                 {
                     success = true,
-                    message = "User account created successfully!",
+                    message = "User account created successfully! A welcome email with login credentials has been sent to the user.",
                     userId = newAdmin.Id
                 });
             }
@@ -2249,7 +2279,7 @@ namespace SABC_Phase2.Controllers
                 });
             }
         }
-        // Helper method for email validation
+
         private bool IsValidEmail(string email)
         {
             try
@@ -2263,7 +2293,6 @@ namespace SABC_Phase2.Controllers
             }
         }
 
-        // Request model for the POST data
         public class CreateUserRequest
         {
             public string FirstName { get; set; }

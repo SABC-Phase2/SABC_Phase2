@@ -153,5 +153,67 @@ SABC SCM System";
                 await smtpClient.SendMailAsync(mailMessage);
             }
         }
+
+        /// <summary>
+        /// Sends account creation notification email to newly created administrator users
+        /// </summary>
+        public async Task SendNewUserAccountEmailAsync(string toEmail, string firstName, string lastName, string role, string temporaryPassword)
+        {
+            var emailSettings = _configuration.GetSection("EmailSettings");
+
+            using var smtpClient = new SmtpClient(emailSettings["SmtpServer"])
+            {
+                Port = int.Parse(emailSettings["SmtpPort"]),
+                Credentials = new NetworkCredential(
+                    emailSettings["ServiceAccountEmail"],
+                    emailSettings["ServiceAccountPassword"]),
+                EnableSsl = bool.Parse(emailSettings["EnableSsl"] ?? "true"),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 10000
+            };
+
+            var fromEmail = new MailAddress(
+                emailSettings["ServiceAccountEmail"],
+                $"{emailSettings["FromName"]}");
+
+            // Format role for display
+            string roleDisplay = role switch
+            {
+                "IT_Admin" => "IT Administrator",
+                "Tender_Administrator" => "Tender Administrator",
+                "Vendor_Administrator" => "Vendor Administrator",
+                _ => role
+            };
+
+            var body = $@"Dear {firstName} {lastName},
+
+Welcome to the SABC SCM System!
+
+Your administrator account has been successfully created with the following details:
+
+Email: {toEmail}
+Role: {roleDisplay}
+Temporary Password: {temporaryPassword}
+
+IMPORTANT SECURITY NOTICE:
+For your account security, please log in and change your password immediately upon first access.
+Do not share these credentials with anyone.
+
+To access the system, please visit the SABC SCM portal and log in using the credentials provided above.
+
+If you have any questions or need assistance, please contact the IT support team.
+
+Best regards,
+SABC SCM Administration Team";
+
+            using var mailMessage = new MailMessage(fromEmail, new MailAddress(toEmail))
+            {
+                Subject = "SABC SCM - New Administrator Account Created",
+                Body = body,
+                IsBodyHtml = false
+            };
+
+            await smtpClient.SendMailAsync(mailMessage);
+        }
     }
 }
