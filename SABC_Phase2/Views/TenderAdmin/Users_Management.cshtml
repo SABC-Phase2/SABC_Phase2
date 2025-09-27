@@ -6,7 +6,6 @@
     string statusFilter = Context.Request.Query["statusFilter"];
     bool isOvrsUser = ViewBag.IsOVRSUser == true;
 }
-
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="breadcrumb-custom">
@@ -205,8 +204,24 @@
 
 @section Scripts {
     <script>
+
         let searchTimeout;
         let selectedAdUser = null;
+                const generatePasswordBtn = document.getElementById("generatePasswordBtn");
+        const passwordInput = document.getElementById("password");
+        const togglePasswordBtn = document.getElementById("togglePassword");
+        const copyPasswordBtn = document.getElementById("copyPasswordBtn");
+
+
+        // Random password generator
+        function generatePassword(length = 12) {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@@#$%^&*()_+";
+            let password = "";
+            for (let i = 0; i < length; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return password;
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             // Modal elements
@@ -456,6 +471,44 @@
 
             hookDeleteBtns();
             initActionMenus();
+
+              generatePasswordBtn.addEventListener("click", function () {
+            passwordInput.value = generatePassword();
+        });
+
+         // Toggle password visibility
+    togglePasswordBtn.addEventListener("click", function () {
+        const icon = this.querySelector("i");
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            passwordInput.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
+    });
+
+    // Copy password to clipboard
+    copyPasswordBtn.addEventListener("click", function () {
+        if (!passwordInput.value) {
+            alert("No password to copy!");
+            return;
+        }
+
+        navigator.clipboard.writeText(passwordInput.value).then(() => {
+            // Give quick feedback
+            copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                copyPasswordBtn.innerHTML = '<i class="fas fa-copy"></i>';
+            }, 1500);
+        }).catch(err => {
+            console.error("Clipboard error:", err);
+            alert("Failed to copy password.");
+        });
+    });
+
         });
 
         // Rest of your existing JavaScript functions remain the same...
