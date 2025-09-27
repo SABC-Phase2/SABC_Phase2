@@ -213,15 +213,40 @@
         const copyPasswordBtn = document.getElementById("copyPasswordBtn");
 
 
-        // Random password generator
-        function generatePassword(length = 12) {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@@#$%^&*()_+";
-            let password = "";
-            for (let i = 0; i < length; i++) {
-                password += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return password;
+         function generatePassword() {
+        const minLength = 8;
+        const maxLength = 15;
+
+        // Randomly pick length between min and max
+        const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+
+        const lowers = "abcdefghijklmnopqrstuvwxyz";
+        const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const numbers = "0123456789";
+        const specials = "!@@#$%^&*()_+";
+        const allChars = lowers + uppers + numbers + specials;
+
+        // Ensure at least one of each
+        let password = [
+            lowers[Math.floor(Math.random() * lowers.length)],
+            uppers[Math.floor(Math.random() * uppers.length)],
+            numbers[Math.floor(Math.random() * numbers.length)],
+            specials[Math.floor(Math.random() * specials.length)]
+        ];
+
+        // Fill the rest randomly
+        while (password.length < length) {
+            password.push(allChars[Math.floor(Math.random() * allChars.length)]);
         }
+
+        // Shuffle so it’s not predictable
+        for (let i = password.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [password[i], password[j]] = [password[j], password[i]];
+        }
+
+        return password.join('');
+    }
 
         document.addEventListener('DOMContentLoaded', function () {
             // Modal elements
