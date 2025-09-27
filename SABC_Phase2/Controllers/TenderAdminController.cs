@@ -1968,6 +1968,7 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+
         // This method deal with deleting a draft via edit
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -2674,8 +2675,7 @@ namespace SABC_Phase2.Controllers
         }
 
 
-        // Step 1: Send Email OTP
-        // Enhanced SendAdminEmailOtp method with session-based rate limiting
+     
         // Step 1: Send Email OTP
         // Enhanced SendAdminEmailOtp method with session-based rate limiting
         [HttpPost]

@@ -203,6 +203,44 @@
 </div>
 
 
+<!-- Error Popup -->
+<div id="errorPopup" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.4);
+    z-index:10000;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:#fff;
+        border-radius:12px;
+        padding:30px 40px;
+        text-align:center;
+        box-shadow:0 8px 20px rgba(0,0,0,0.2);
+        animation: fadeInScale 0.3s ease;
+        max-width:400px;
+        width:90%;
+    ">
+        <i class="fas fa-times-circle" style="color:#dc3545; font-size:3rem; margin-bottom:15px;"></i>
+        <h3 style="margin:0 0 10px; color:#333;">Cannot Create User!</h3>
+        <p id="errorPopupMsg" style="margin:0 0 20px; color:#666;">The account could not be created.</p>
+        <button id="closeErrorPopup" style="
+            background:#dc3545;
+            color:#fff;
+            border:none;
+            border-radius:6px;
+            padding:10px 20px;
+            font-size:1rem;
+            cursor:pointer;
+        ">
+            OK
+        </button>
+    </div>
+</div>
+
 
 <!-- Success Popup -->
 <div id="successPopup" style="
@@ -397,21 +435,25 @@
                 modal.style.display = 'none';
                 resetForm();
 
+
                 // Show the custom success popup instead of alert()
                 showSuccessPopup();
 
+
+                    // Reset filters BEFORE refreshing the table
+            resetUserFilters();
+
                 // Refresh the users table
                 submitUserForm(true);
-            } else {
-                alert('Error creating user: ' + (data.message || 'Unknown error'));
-            }
+                } else {
+            // Show custom error popup instead of alert
+            showErrorPopup(data.message || 'Unknown error');
+            resetForm();
+        }
         })
 
 
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while creating the user account. Please try again.');
-            })
+          
             .finally(() => {
                 // Re-enable submit button
                 submitBtn.disabled = false;
@@ -419,7 +461,6 @@
             });
         });
 
-                // Add this new function to show and handle the success popup
         function showSuccessPopup() {
             const successPopup = document.getElementById('successPopup');
             const closeBtn = document.getElementById('closeSuccessPopup');
@@ -430,14 +471,46 @@
             // Handle close button
             closeBtn.onclick = function() {
                 successPopup.style.display = 'none';
+                // <-- Refresh the table when OK is pressed
+                resetUserFilters(); // Optionally reset filters
+                submitUserForm(true); // Reload table
             };
 
             // Close when clicking outside the popup content
             successPopup.onclick = function(e) {
                 if (e.target === successPopup) {
                     successPopup.style.display = 'none';
+                    resetUserFilters();
+                    submitUserForm(true);
                 }
             };
+        }
+
+                function showErrorPopup(message) {
+            const errorPopup = document.getElementById('errorPopup');
+            const errorMsg = document.getElementById('errorPopupMsg');
+            const closeBtn = document.getElementById('closeErrorPopup');
+            errorMsg.textContent = message || "The account could not be created.";
+
+            errorPopup.style.display = 'flex';
+
+            closeBtn.onclick = function() {
+                errorPopup.style.display = 'none';
+                resetForm();
+            };
+
+            errorPopup.onclick = function(e) {
+                if (e.target === errorPopup) {
+                    errorPopup.style.display = 'none';
+                    resetForm();
+                }
+            };
+        }
+
+                function resetUserFilters() {
+            document.querySelector('.search-input').value = '';
+            document.querySelector('select[name="roleFilter"]').value = 'Administrator';
+            document.querySelector('select[name="statusFilter"]').value = 'all';
         }
 
         // Enhanced search function with better error handling
@@ -696,7 +769,7 @@
             };
         }
 
-        function submitUserForm(keepPage = false) {
+             function submitUserForm(keepPage = false) {
             const form = document.getElementById('userFilterForm');
             if(!keepPage) {
                 let pageInput = document.createElement('input');
@@ -705,7 +778,7 @@
                 pageInput.value = "1";
                 form.appendChild(pageInput);
             }
-            const data = new URLSearchParams(new FormData(form)).toString();
+            const data = new URLSearchParams(new FormData(form)).toString() + "&_=" + new Date().getTime();
             fetch('@Url.Action("Users_Management")' + '?' + data, {
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             })
