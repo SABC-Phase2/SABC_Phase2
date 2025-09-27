@@ -155,15 +155,15 @@
                     <input id="email" name="email" type="email" class="form-control"
                            style="width:100%;" required readonly />
                 </div>
-                <div style="flex:1;">
-                    <label for="role" style="font-weight:500;">User Role</label>
-                    <select id="role" name="role" class="form-control" style="width:100%;" required>
-                        <option value="">Select Role</option>
-                        <option value="IT ADMIN">IT ADMIN</option>
-                        <option value="TENDER ADMIN">TENDER ADMIN</option>
-                        <option value="VENDOR ADMIN">VENDOR ADMIN</option>
-                    </select>
-                </div>
+               <div style="flex:1;">
+    <label for="role" style="font-weight:500;">User Role</label>
+    <select id="role" name="role" class="form-control" style="width:100%;" required>
+        <option value="">Select Role</option>
+        <option value="IT_Admin">IT ADMIN</option>
+        <option value="Tender_Administrator">TENDER ADMIN</option>
+        <option value="Vendor_Administrator">VENDOR ADMIN</option>
+    </select>
+</div>
             </div>
 
             <!-- Password Generation Field (initially hidden) -->
@@ -304,29 +304,74 @@
                 }
             });
 
-            // Form submit handler
-            newUserForm.addEventListener('submit', function(e) {
-                e.preventDefault();
+                // Form submit handler - REPLACE the existing one
+        newUserForm.addEventListener('submit', function(e) {
+            e.preventDefault();
 
-                if (!selectedAdUser) {
-                    alert('Please search and select a user from Azure AD first.');
-                    return;
+            if (!selectedAdUser) {
+                alert('Please search and select a user from Azure AD first.');
+                return;
+            }
+
+            const password = document.getElementById('password').value;
+            if (!password) {
+                alert('Please generate a password first.');
+                return;
+            }
+
+            const role = document.getElementById('role').value;
+            if (!role) {
+                alert('Please select a role.');
+                return;
+            }
+
+            // Prepare form data - role is already in the correct format from the dropdown
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                role: role, // This will be the database-ready format (IT_Admin, Tender_Administrator, etc.)
+                password: password,
+                azureAdId: selectedAdUser.Id || selectedAdUser.id
+            };
+
+            // Disable submit button to prevent double submission
+            const submitBtn = newUserForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            // Submit to server
+            fetch('@Url.Action("CreateUser")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User account created successfully!\n\nPlease provide the user with their login credentials:\nEmail: ' + formData.email + '\nPassword: ' + formData.password);
+                    modal.style.display = 'none';
+                    resetForm();
+                    // Refresh the users table
+                    submitUserForm(true);
+                } else {
+                    alert('Error creating user: ' + (data.message || 'Unknown error'));
                 }
-
-                // Here you would normally submit the form data to your server
-                const formData = {
-                    firstName: document.getElementById('firstName').value,
-                    lastName: document.getElementById('lastName').value,
-                    email: document.getElementById('email').value,
-                    role: document.getElementById('role').value,
-                    azureAdId: selectedAdUser.Id
-                };
-
-                console.log('Form data:', formData);
-                alert('User created! (Demo - implement actual submission)');
-                modal.style.display = 'none';
-                resetForm();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while creating the user account. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             });
+        });
 
         // Enhanced search function with better error handling
         function searchAzureAdUsers(searchTerm) {

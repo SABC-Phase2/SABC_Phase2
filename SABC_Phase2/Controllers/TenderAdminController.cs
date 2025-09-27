@@ -2153,7 +2153,126 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        {
+            try
+            {
+                // Validate input
+                if (string.IsNullOrWhiteSpace(request.FirstName) ||
+                    string.IsNullOrWhiteSpace(request.LastName) ||
+                    string.IsNullOrWhiteSpace(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Role) ||
+                    string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return Json(new { success = false, message = "All fields are required." });
+                }
 
+                // Validate email format
+                if (!IsValidEmail(request.Email))
+                {
+                    return Json(new { success = false, message = "Invalid email format." });
+                }
+
+                // Check if email already exists
+                var existingUser = await _context.Administrators
+                    .FirstOrDefaultAsync(a => a.Email.ToLower() == request.Email.ToLower());
+
+                if (existingUser != null)
+                {
+                    return Json(new { success = false, message = "A user with this email already exists." });
+                }
+
+                // Validate role - no normalization needed since frontend sends correct format
+                var validRoles = new[] { "IT_Admin", "Tender_Administrator", "Vendor_Administrator" };
+                if (!validRoles.Contains(request.Role))
+                {
+                    return Json(new { success = false, message = "Invalid role selected." });
+                }
+
+                // Hash the password
+                string hashedPassword;
+                try
+                {
+                    hashedPassword = PasswordHelper.EncryptPassword(request.Password);
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { success = false, message = "Error processing password." });
+                }
+
+                // Get current South African time
+                var saTimeService = new SouthAfricanTimeService();
+                var currentSaTime = saTimeService.GetCurrentSouthAfricanTime();
+
+                // Create new administrator
+                var newAdmin = new Administrator
+                {
+                    Email = request.Email.Trim(),
+                    PasswordHash = hashedPassword,
+                    FirstName = request.FirstName.Trim(),
+                    LastName = request.LastName.Trim(),
+                    CreatedAt = currentSaTime.ToDateTimeUnspecified(),
+                    Role = request.Role, // Use the role directly from the request
+                    AccountStatus = 1, // Always set to active
+                    OtpCode = null,
+                    OtpExpiration = null,
+                    PendingEmail = null,
+                    OtpType = null,
+                    LastOtpRequestTime = null,
+                    PasswordLastUpdated = null,
+                    OtpBlockedUntil = null,
+                    OtpRequestCount = 0
+                };
+
+                // Save to database
+                _context.Administrators.Add(newAdmin);
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = "User account created successfully!",
+                    userId = newAdmin.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you might want to use a proper logging framework)
+                Console.WriteLine($"Error creating user: {ex.Message}");
+
+                return Json(new
+                {
+                    success = false,
+                    message = "An error occurred while creating the user account. Please try again."
+                });
+            }
+        }
+        // Helper method for email validation
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Request model for the POST data
+        public class CreateUserRequest
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string Email { get; set; }
+            public string Role { get; set; }
+            public string Password { get; set; }
+            public string AzureAdId { get; set; } // Optional if you want to store Azure AD reference
+        }
 
         [HttpGet]
         public async Task<IActionResult> SearchAzureAdUsers(string searchTerm)
