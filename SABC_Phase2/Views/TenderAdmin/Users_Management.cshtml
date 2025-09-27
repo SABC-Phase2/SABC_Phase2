@@ -202,6 +202,46 @@
     </div>
 </div>
 
+
+
+<!-- Success Popup -->
+<div id="successPopup" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.4);
+    z-index:10000;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:#fff;
+        border-radius:12px;
+        padding:30px 40px;
+        text-align:center;
+        box-shadow:0 8px 20px rgba(0,0,0,0.2);
+        animation: fadeInScale 0.3s ease;
+        max-width:400px;
+        width:90%;
+    ">
+        <i class="fas fa-check-circle" style="color:#28a745; font-size:3rem; margin-bottom:15px;"></i>
+        <h3 style="margin:0 0 10px; color:#333;">User Created!</h3>
+        <p style="margin:0 0 20px; color:#666;">The account was created successfully.</p>
+        <button id="closeSuccessPopup" style="
+            background:#28a745;
+            color:#fff;
+            border:none;
+            border-radius:6px;
+            padding:10px 20px;
+            font-size:1rem;
+            cursor:pointer;
+        ">
+            OK
+        </button>
+    </div>
+</div>
+
 @section Scripts {
     <script>
 
@@ -352,13 +392,24 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    alert('User account created successfully!\n\nPlease provide the user with their login credentials:\nEmail: ' + formData.email + '\nPassword: ' + formData.password);
-                    modal.style.display = 'none';
-                    resetForm();
-                    // Refresh the users table
-                    submitUserForm(true);
-                } else {
+                     if (data.success) {
+            // Hide modal
+            modal.style.display = 'none';
+            resetForm();
+
+            // Refresh users table
+            submitUserForm(true);
+
+            // Show success popup
+            const popup = document.getElementById("successPopup");
+            popup.style.display = "flex";
+
+            // Close popup on button click
+            document.getElementById("closeSuccessPopup").onclick = function() {
+                popup.style.display = "none";
+            };
+        }
+        else {
                     alert('Error creating user: ' + (data.message || 'Unknown error'));
                 }
             })
@@ -753,6 +804,23 @@
 
 
 <style>
+
+    @@keyframes fadeInScale {
+        from
+
+    {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    }
+
+
     /* Action Menu Styles */
     .action-menu-container {
         position: relative;
