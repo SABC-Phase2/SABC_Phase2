@@ -114,56 +114,59 @@
     </div>
 </div>
 
-
 <!-- New User Modal -->
 <div id="newUserModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
     <div class="modal-content" style="background:#fff; border-radius:8px; padding:32px 24px; min-width:350px; max-width:95vw; margin:auto; position:relative;">
         <span class="close-modal" style="position:absolute; right:18px; top:10px; font-size:2rem; font-weight:bold; color:#333; cursor:pointer;">&times;</span>
         <h2 style="margin-bottom: 24px;">Add New User</h2>
         <form id="newUserForm">
+            <!-- 🔒 SECURITY: Hidden field to store Azure AD ID for server validation -->
+            <input type="hidden" id="azureAdId" name="azureAdId" value="" />
+            <input type="hidden" id="dataHash" name="dataHash" value="" />
+            <input type="hidden" id="nonce" name="nonce" value="" />
+            <input type="hidden" id="timestamp" name="timestamp" value="" />
+
             <!-- Search Bar with Dropdown -->
-            <div style="margin-bottom:24px; position: relative;">
+            <div id="searchSection" style="margin-bottom:24px; position: relative;">
+                <label for="adUserSearch" style="font-weight:500; margin-bottom:8px; display:block;">Search for Azure AD User</label>
                 <input type="text" id="adUserSearch" placeholder="Search Azure AD users..."
                        class="form-control"
                        style="width:100%; padding:10px 12px; border-radius:6px; border:1px solid #ccc;" />
                 <div id="searchResults" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 6px 6px; max-height:200px; overflow-y:auto; z-index:1000;">
                     <!-- Search results will be populated here -->
                 </div>
-                <div id="searchSpinner" style="display:none; position:absolute; right:12px; top:12px;">
+                <div id="searchSpinner" style="display:none; position:absolute; right:12px; top:38px;">
                     <i class="fas fa-spinner fa-spin"></i>
                 </div>
             </div>
 
-            <!-- First Name & Last Name -->
-            <div style="display:flex; gap:16px; margin-bottom:20px;">
-                <div style="flex:1;">
-                    <label for="firstName" style="font-weight:500;">First Name</label>
-                    <input id="firstName" name="firstName" type="text" class="form-control"
-                           style="width:100%;" required readonly />
+            <!-- 🔒 SECURITY: User Info Display (Completely Read-Only) -->
+            <div id="userInfoDisplay" style="display:none; margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:6px; border:2px solid #28a745;">
+                <h4 style="margin:0 0 10px; color:#28a745;">✅ Selected User Information</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div><strong>First Name:</strong> <span id="displayFirstName">-</span></div>
+                    <div><strong>Last Name:</strong> <span id="displayLastName">-</span></div>
+                    <div style="grid-column: 1 / -1;"><strong>Email:</strong> <span id="displayEmail">-</span></div>
                 </div>
-                <div style="flex:1;">
-                    <label for="lastName" style="font-weight:500;">Last Name</label>
-                    <input id="lastName" name="lastName" type="text" class="form-control"
-                           style="width:100%;" required readonly />
-                </div>
+                <button type="button" id="changeUserBtn" style="margin-top:10px; padding:5px 10px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                    Change User Selection
+                </button>
             </div>
 
-            <!-- Email & Role -->
-            <div style="display:flex; gap:16px; margin-bottom:20px;">
-                <div style="flex:1;">
-                    <label for="email" style="font-weight:500;">Email Address</label>
-                    <input id="email" name="email" type="email" class="form-control"
-                           style="width:100%;" required readonly />
-                </div>
-               <div style="flex:1;">
-    <label for="role" style="font-weight:500;">User Role</label>
-    <select id="role" name="role" class="form-control" style="width:100%;" required>
-        <option value="">Select Role</option>
-        <option value="IT_Admin">IT ADMIN</option>
-        <option value="Tender_Administrator">TENDER ADMIN</option>
-        <option value="Vendor_Administrator">VENDOR ADMIN</option>
-    </select>
-</div>
+            <!-- 🔒 SECURITY: Hidden inputs that store the validated data -->
+            <input type="hidden" id="firstName" name="firstName" value="" />
+            <input type="hidden" id="lastName" name="lastName" value="" />
+            <input type="hidden" id="email" name="email" value="" />
+
+            <!-- Role Selection (Only user-editable field) -->
+            <div id="roleSection" style="display:none; margin-bottom:20px;">
+                <label for="role" style="font-weight:500;">User Role</label>
+                <select id="role" name="role" class="form-control" style="width:100%;" required>
+                    <option value="">Select Role</option>
+                    <option value="IT_Admin">IT ADMIN</option>
+                    <option value="Tender_Administrator">TENDER ADMIN</option>
+                    <option value="Vendor_Administrator">VENDOR ADMIN</option>
+                </select>
             </div>
 
             <!-- Password Generation Field (initially hidden) -->
@@ -192,7 +195,7 @@
             </div>
 
             <!-- Create Account Button -->
-            <div style="display:flex; justify-content:center; margin-top: 24px;">
+            <div id="submitSection" style="display:none; justify-content:center; margin-top: 24px;">
                 <button type="submit" class="btn"
                         style="background:#28a745; color:#fff; font-weight:bold; border:none; border-radius:6px; padding:12px 36px; font-size:1.1rem; cursor:pointer;">
                     Create Account
@@ -202,6 +205,54 @@
     </div>
 </div>
 
+<!-- Add the tamper detection modal before your existing modals -->
+<div id="tamperDetectedModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.6);
+    z-index:10001;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:#fff;
+        border-radius:12px;
+        padding:40px;
+        text-align:center;
+        box-shadow:0 8px 20px rgba(0,0,0,0.3);
+        max-width:500px;
+        width:90%;
+        border:3px solid #dc3545;
+    ">
+        <i class="fas fa-shield-alt" style="color:#dc3545; font-size:4rem; margin-bottom:20px;"></i>
+        <h2 style="margin:0 0 15px; color:#dc3545;">🚨 SECURITY ALERT 🚨</h2>
+        <h3 style="margin:0 0 15px; color:#333;">Form Tampering Detected!</h3>
+        <p id="tamperMessage" style="margin:0 0 20px; color:#666; font-size:1.1rem;">
+            The form has been tampered with using developer tools or other methods.
+        </p>
+        <div style="background:#fff3cd; border:1px solid #ffeaa7; border-radius:6px; padding:15px; margin:20px 0; text-align:left;">
+            <strong>⚠️ This incident has been logged for security purposes.</strong><br>
+            <span style="font-size:0.9em; color:#856404;">
+                Timestamp: <span id="tamperTimestamp"></span><br>
+                Type: <span id="tamperType"></span>
+            </span>
+        </div>
+        <button id="closeTamperModal" style="
+            background:#dc3545;
+            color:#fff;
+            border:none;
+            border-radius:6px;
+            padding:12px 25px;
+            font-size:1.1rem;
+            cursor:pointer;
+            font-weight:bold;
+        ">
+            Understood - Refresh Form
+        </button>
+    </div>
+</div>
 
 <!-- Error Popup -->
 <div id="errorPopup" style="
@@ -240,7 +291,6 @@
         </button>
     </div>
 </div>
-
 
 <!-- Success Popup -->
 <div id="successPopup" style="
@@ -282,52 +332,179 @@
 
 @section Scripts {
     <script>
-
         let searchTimeout;
         let selectedAdUser = null;
-                const generatePasswordBtn = document.getElementById("generatePasswordBtn");
+        let securityData = null;
+        let originalFormData = {};
+        let tamperCheckInterval = null;
+        let tamperDetectionActive = false; // NEW FLAG
+
+        const generatePasswordBtn = document.getElementById("generatePasswordBtn");
         const passwordInput = document.getElementById("password");
         const togglePasswordBtn = document.getElementById("togglePassword");
         const copyPasswordBtn = document.getElementById("copyPasswordBtn");
 
+        // Security functions
+        function generateSecurityData(userData) {
+            return fetch('@Url.Action("GenerateSecureFormData")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(userData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    securityData = {
+                        hash: data.hash,
+                        nonce: data.nonce,
+                        timestamp: data.timestamp
+                    };
 
-         function generatePassword() {
-        const minLength = 8;
-        const maxLength = 15;
+                    // Set hidden form fields
+                    document.getElementById('dataHash').value = data.hash;
+                    document.getElementById('nonce').value = data.nonce;
+                    document.getElementById('timestamp').value = data.timestamp;
 
-        // Randomly pick length between min and max
-        const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
-
-        const lowers = "abcdefghijklmnopqrstuvwxyz";
-        const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const numbers = "0123456789";
-        const specials = "!@@#$%^&*()_+";
-        const allChars = lowers + uppers + numbers + specials;
-
-        // Ensure at least one of each
-        let password = [
-            lowers[Math.floor(Math.random() * lowers.length)],
-            uppers[Math.floor(Math.random() * uppers.length)],
-            numbers[Math.floor(Math.random() * numbers.length)],
-            specials[Math.floor(Math.random() * specials.length)]
-        ];
-
-        // Fill the rest randomly
-        while (password.length < length) {
-            password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+                    startTamperDetection();
+                    return true;
+                } else {
+                    console.error('Failed to generate security data');
+                    return false;
+                }
+            });
         }
 
-        // Shuffle so it’s not predictable
-        for (let i = password.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [password[i], password[j]] = [password[j], password[i]];
+        function startTamperDetection() {
+            // Store the CURRENT state as the baseline (after legitimate user selection)
+            originalFormData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                azureAdId: document.getElementById('azureAdId').value
+            };
+
+            // Set the hidden fields as readonly to prevent tampering
+            const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
+            readOnlyFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                field.readOnly = true;
+            });
+
+            tamperDetectionActive = true; // Enable detection ONLY after legitimate setup
+            tamperCheckInterval = setInterval(checkForTampering, 2000); // Check every 2 seconds
         }
 
-        return password.join('');
-    }
+        function checkForTampering() {
+            if (!tamperDetectionActive) return; // Don't check during legitimate operations
+
+            const currentFormData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                azureAdId: document.getElementById('azureAdId').value
+            };
+
+            // Check if hidden fields have been modified
+            if (JSON.stringify(originalFormData) !== JSON.stringify(currentFormData)) {
+                showTamperDetectedModal('FORM_FIELD_MODIFIED', 'Hidden form fields have been modified using developer tools.');
+                return;
+            }
+
+            // Check if readonly attributes have been removed from hidden fields
+            const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
+            for (const fieldId of readOnlyFields) {
+                const field = document.getElementById(fieldId);
+                if (field && originalFormData[fieldId] && !field.readOnly) {
+                    showTamperDetectedModal('READONLY_REMOVED', 'Read-only attributes have been tampered with.');
+                    return;
+                }
+            }
+
+            // Check if security data has been tampered with
+            if (securityData) {
+                const currentHash = document.getElementById('dataHash').value;
+                const currentNonce = document.getElementById('nonce').value;
+                const currentTimestamp = document.getElementById('timestamp').value;
+
+                if (currentHash !== securityData.hash ||
+                    currentNonce !== securityData.nonce ||
+                    currentTimestamp !== securityData.timestamp.toString()) {
+                    showTamperDetectedModal('SECURITY_DATA_MODIFIED', 'Security validation data has been tampered with.');
+                    return;
+                }
+            }
+        }
+
+        function showTamperDetectedModal(tamperType, message) {
+            tamperDetectionActive = false; // Stop checking
+            clearInterval(tamperCheckInterval);
+
+            const modal = document.getElementById('tamperDetectedModal');
+            const messageEl = document.getElementById('tamperMessage');
+            const timestampEl = document.getElementById('tamperTimestamp');
+            const typeEl = document.getElementById('tamperType');
+
+            messageEl.textContent = message;
+            timestampEl.textContent = new Date().toLocaleString();
+            typeEl.textContent = tamperType;
+
+            modal.style.display = 'flex';
+
+            console.warn('🚨 TAMPERING DETECTED:', {
+                type: tamperType,
+                message: message,
+                timestamp: new Date().toISOString(),
+                originalData: originalFormData,
+                currentData: {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    email: document.getElementById('email').value,
+                    azureAdId: document.getElementById('azureAdId').value
+                }
+            });
+
+            const submitBtn = document.querySelector('#newUserForm button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Form Tampered - Cannot Submit';
+                submitBtn.style.background = '#dc3545';
+            }
+        }
+
+        function generatePassword() {
+            const minLength = 8;
+            const maxLength = 15;
+            const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+
+            const lowers = "abcdefghijklmnopqrstuvwxyz";
+            const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const numbers = "0123456789";
+            const specials = "!@@#$%^&*()_+";
+            const allChars = lowers + uppers + numbers + specials;
+
+            let password = [
+                lowers[Math.floor(Math.random() * lowers.length)],
+                uppers[Math.floor(Math.random() * uppers.length)],
+                numbers[Math.floor(Math.random() * numbers.length)],
+                specials[Math.floor(Math.random() * specials.length)]
+            ];
+
+            while (password.length < length) {
+                password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+            }
+
+            for (let i = password.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [password[i], password[j]] = [password[j], password[i]];
+            }
+
+            return password.join('');
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Modal elements
             const newUserBtn = document.querySelector('.big-newuser-btn');
             const modal = document.getElementById('newUserModal');
             const closeModal = modal.querySelector('.close-modal');
@@ -335,6 +512,14 @@
             const adUserSearch = document.getElementById('adUserSearch');
             const searchResults = document.getElementById('searchResults');
             const searchSpinner = document.getElementById('searchSpinner');
+
+            // Tamper detection modal handler
+            document.getElementById('closeTamperModal').addEventListener('click', function() {
+                document.getElementById('tamperDetectedModal').style.display = 'none';
+                modal.style.display = 'none';
+                resetForm();
+                location.reload();
+            });
 
             // Show modal
             newUserBtn.addEventListener('click', function () {
@@ -348,7 +533,7 @@
                 resetForm();
             });
 
-            // Close modal when clicking outside modal-content
+            // Close modal when clicking outside
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) {
                     modal.style.display = 'none';
@@ -356,20 +541,23 @@
                 }
             });
 
+            // Change user selection button
+            document.getElementById('changeUserBtn').addEventListener('click', function() {
+                showSearchSection();
+                clearUserFields();
+            });
+
             // Azure AD User Search
             adUserSearch.addEventListener('input', function(e) {
                 const searchTerm = e.target.value.trim();
-
                 clearTimeout(searchTimeout);
 
                 if (searchTerm.length < 3) {
                     hideSearchResults();
-                    clearUserFields();
                     return;
                 }
 
                 searchSpinner.style.display = 'block';
-
                 searchTimeout = setTimeout(function() {
                     searchAzureAdUsers(searchTerm);
                 }, 500);
@@ -382,44 +570,131 @@
                 }
             });
 
-                // Form submit handler - REPLACE the existing one
-        newUserForm.addEventListener('submit', function(e) {
-            e.preventDefault();
 
+        function isFormTampered() {
+            if (!tamperDetectionActive || !originalFormData || !securityData) {
+                return null; // Can't validate if not properly initialized
+            }
+
+            // Check if any required data is missing
+            if (!document.getElementById('firstName').value ||
+                !document.getElementById('lastName').value ||
+                !document.getElementById('email').value) {
+                return {
+                    type: 'MISSING_DATA',
+                    message: 'Required form data is missing.'
+                };
+            }
+
+            // Compare hidden field values to their original values
+            const currentFormData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                azureAdId: document.getElementById('azureAdId').value
+            };
+
+            if (JSON.stringify(originalFormData) !== JSON.stringify(currentFormData)) {
+                console.error('Field tampering detected:', {
+                    original: originalFormData,
+                    current: currentFormData
+                });
+                return {
+                    type: 'FORM_FIELD_MODIFIED',
+                    message: 'Form data has been tampered with using developer tools.'
+                };
+            }
+
+            // Check readonly attributes
+            const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
+            for (const fieldId of readOnlyFields) {
+                const field = document.getElementById(fieldId);
+                if (field && originalFormData[fieldId] && !field.readOnly) {
+                    return {
+                        type: 'READONLY_REMOVED',
+                        message: 'Form security attributes have been tampered with.'
+                    };
+                }
+            }
+
+            // Check security data integrity
+            const currentHash = document.getElementById('dataHash').value;
+            const currentNonce = document.getElementById('nonce').value;
+            const currentTimestamp = document.getElementById('timestamp').value;
+
+            if (currentHash !== securityData.hash ||
+                currentNonce !== securityData.nonce ||
+                currentTimestamp !== securityData.timestamp.toString()) {
+                return {
+                    type: 'SECURITY_DATA_MODIFIED',
+                    message: 'Security validation data has been compromised.'
+                };
+            }
+
+            return null; // No tampering detected
+        }
+
+
+
+
+                    // Enhanced form submit handler
+        newUserForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Always prevent default first
+
+            // CRITICAL: Run tamper check immediately before submit
+            const tamperResult = isFormTampered();
+            if (tamperResult) {
+                console.error('🚨 TAMPERING DETECTED ON SUBMIT:', tamperResult);
+                showTamperDetectedModal(tamperResult.type, tamperResult.message);
+                return false; // Explicitly stop execution
+            }
+
+            // Additional validation checks
             if (!selectedAdUser) {
-                alert('Please search and select a user from Azure AD first.');
-                return;
+                showErrorPopup('Please search and select a user from Azure AD first.');
+                return false;
+            }
+
+            if (!securityData) {
+                showErrorPopup('Security validation failed. Please select a user again.');
+                return false;
             }
 
             const password = document.getElementById('password').value;
             if (!password) {
-                alert('Please generate a password first.');
-                return;
+                showErrorPopup('Please generate a password first.');
+                return false;
             }
 
             const role = document.getElementById('role').value;
             if (!role) {
-                alert('Please select a role.');
-                return;
+                showErrorPopup('Please select a role.');
+                return false;
             }
 
-            // Prepare form data - role is already in the correct format from the dropdown
+            // Proceed with form submission only if all checks pass
+            submitFormData();
+        });
+
+        // Separate function for actual form submission
+        function submitFormData() {
             const formData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
                 email: document.getElementById('email').value,
-                role: role, // This will be the database-ready format (IT_Admin, Tender_Administrator, etc.)
-                password: password,
-                azureAdId: selectedAdUser.Id || selectedAdUser.id
+                role: document.getElementById('role').value,
+                password: document.getElementById('password').value,
+                azureAdId: selectedAdUser.Id || selectedAdUser.id,
+                dataHash: securityData.hash,
+                nonce: securityData.nonce,
+                timestamp: securityData.timestamp
             };
 
-            // Disable submit button to prevent double submission
             const submitBtn = newUserForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             submitBtn.disabled = true;
             submitBtn.textContent = 'Creating Account...';
 
-            // Submit to server
             fetch('@Url.Action("CreateUser")', {
                 method: 'POST',
                 headers: {
@@ -429,241 +704,66 @@
                 body: JSON.stringify(formData)
             })
             .then(response => response.json())
-               .then(data => {
-            if (data.success) {
-                // Close the modal first
-                modal.style.display = 'none';
-                resetForm();
-
-
-                // Show the custom success popup instead of alert()
-                showSuccessPopup();
-
-
-                    // Reset filters BEFORE refreshing the table
-            resetUserFilters();
-
-                // Refresh the users table
-                submitUserForm(true);
+            .then(data => {
+                if (data.success) {
+                    modal.style.display = 'none';
+                    resetForm();
+                    showSuccessPopup();
+                    resetUserFilters();
+                    submitUserForm(true);
+                } else if (data.tampered) {
+                    // Server detected tampering
+                    showTamperDetectedModal(data.tamperType, data.message);
                 } else {
-            // Show custom error popup instead of alert
-            showErrorPopup(data.message || 'Unknown error');
-            resetForm();
-        }
-        })
-
-
-          
+                    showErrorPopup(data.message || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorPopup('Network error occurred. Please try again.');
+            })
             .finally(() => {
-                // Re-enable submit button
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             });
-        });
+        }
 
-        function showSuccessPopup() {
-            const successPopup = document.getElementById('successPopup');
-            const closeBtn = document.getElementById('closeSuccessPopup');
+            // Password functions
+            generatePasswordBtn.addEventListener("click", function () {
+                passwordInput.value = generatePassword();
+            });
 
-            // Show the popup
-            successPopup.style.display = 'flex';
-
-            // Handle close button
-            closeBtn.onclick = function() {
-                successPopup.style.display = 'none';
-                // <-- Refresh the table when OK is pressed
-                resetUserFilters(); // Optionally reset filters
-                submitUserForm(true); // Reload table
-            };
-
-            // Close when clicking outside the popup content
-            successPopup.onclick = function(e) {
-                if (e.target === successPopup) {
-                    successPopup.style.display = 'none';
-                    resetUserFilters();
-                    submitUserForm(true);
+            togglePasswordBtn.addEventListener("click", function () {
+                const icon = this.querySelector("i");
+                if (passwordInput.type === "password") {
+                    passwordInput.type = "text";
+                    icon.classList.remove("fa-eye");
+                    icon.classList.add("fa-eye-slash");
+                } else {
+                    passwordInput.type = "password";
+                    icon.classList.remove("fa-eye-slash");
+                    icon.classList.add("fa-eye");
                 }
-            };
-        }
+            });
 
-                function showErrorPopup(message) {
-            const errorPopup = document.getElementById('errorPopup');
-            const errorMsg = document.getElementById('errorPopupMsg');
-            const closeBtn = document.getElementById('closeErrorPopup');
-            errorMsg.textContent = message || "The account could not be created.";
-
-            errorPopup.style.display = 'flex';
-
-            closeBtn.onclick = function() {
-                errorPopup.style.display = 'none';
-                resetForm();
-            };
-
-            errorPopup.onclick = function(e) {
-                if (e.target === errorPopup) {
-                    errorPopup.style.display = 'none';
-                    resetForm();
+            copyPasswordBtn.addEventListener("click", function () {
+                if (!passwordInput.value) {
+                    alert("No password to copy!");
+                    return;
                 }
-            };
-        }
 
-                function resetUserFilters() {
-            document.querySelector('.search-input').value = '';
-            document.querySelector('select[name="roleFilter"]').value = 'Administrator';
-            document.querySelector('select[name="statusFilter"]').value = 'all';
-        }
-
-        // Enhanced search function with better error handling
-        function searchAzureAdUsers(searchTerm) {
-            fetch('@Url.Action("SearchAzureAdUsers")' + '?searchTerm=' + encodeURIComponent(searchTerm))
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    searchSpinner.style.display = 'none';
-
-                    console.log('Search response:', data); // Debug logging
-
-                    if (data.success && data.users && data.users.length > 0) {
-                        displaySearchResults(data.users);
-                    } else {
-                        displayNoResults(data.message || 'No users found');
-                    }
-                })
-                .catch(error => {
-                    searchSpinner.style.display = 'none';
-                    console.error('Error searching AD users:', error);
-                    displayNoResults('Error searching users. Please try again.');
-                });
-        }
-        // Display search results with better null checking and case handling
-        function displaySearchResults(users) {
-            let resultsHtml = '';
-
-            users.forEach(user => {
-                // Handle different possible casings from the server response
-                const displayName = user.DisplayName || user.displayName || 'Unknown User';
-                const email = user.Email || user.email || user.Mail || user.mail || 'No email available';
-
-                console.log('Processing user:', user); // Debug log to see actual structure
-
-                resultsHtml += `
-                    <div class="search-result-item" data-user='${JSON.stringify(user)}'
-                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
-                        <div style="font-weight:bold;">${displayName}</div>
-                        <div style="font-size:0.9em; color:#666;">${email}</div>
-                    </div>
-                `;
-            });
-
-            searchResults.innerHTML = resultsHtml;
-            searchResults.style.display = 'block';
-
-            // Add click handlers to result items
-            document.querySelectorAll('.search-result-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const userData = JSON.parse(this.getAttribute('data-user'));
-                    selectUser(userData);
-                });
-
-                item.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#f5f5f5';
-                });
-
-                item.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = 'white';
+                navigator.clipboard.writeText(passwordInput.value).then(() => {
+                    copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        copyPasswordBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 1500);
+                }).catch(err => {
+                    console.error("Clipboard error:", err);
+                    alert("Failed to copy password.");
                 });
             });
-        }
 
-            // Display no results message
-            function displayNoResults(message) {
-                searchResults.innerHTML = `
-                    <div style="padding:10px; color:#666; text-align:center;">
-                        ${message}
-                    </div>
-                `;
-                searchResults.style.display = 'block';
-            }
-
-            // Hide search results
-            function hideSearchResults() {
-                searchResults.style.display = 'none';
-                searchSpinner.style.display = 'none';
-            }
-
-            // Select user and populate fields with better case handling
-        function selectUser(user) {
-            selectedAdUser = user;
-
-            // Handle different possible casings
-            const displayName = user.DisplayName || user.displayName || 'Unknown User';
-            const firstName = user.FirstName || user.firstName || user.GivenName || user.givenName || '';
-            const lastName = user.LastName || user.lastName || user.Surname || user.surname || '';
-            const email = user.Email || user.email || user.Mail || user.mail || '';
-
-            console.log('Selected user data:', {
-                displayName,
-                firstName,
-                lastName,
-                email,
-                rawUser: user
-            });
-
-            // Update search input to show selected user
-            adUserSearch.value = displayName;
-
-            // Populate form fields and make them read-only
-            document.getElementById('firstName').value = firstName;
-            document.getElementById('firstName').readOnly = true;
-            document.getElementById('firstName').style.backgroundColor = '#f8f9fa';
-
-            document.getElementById('lastName').value = lastName;
-            document.getElementById('lastName').readOnly = true;
-            document.getElementById('lastName').style.backgroundColor = '#f8f9fa';
-
-            document.getElementById('email').value = email;
-            document.getElementById('email').readOnly = true;
-            document.getElementById('email').style.backgroundColor = '#f8f9fa';
-
-            hideSearchResults();
-                 // Show password generation section
-        document.getElementById('passwordSection').style.display = 'block';
-        }
-
-            // Clear user fields
-                  function clearUserFields() {
-            selectedAdUser = null;
-
-            const fields = ['firstName', 'lastName', 'email'];
-            fields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                field.value = '';
-                // REMOVE the following two lines:
-                // field.readOnly = false;
-                // field.style.backgroundColor = '';
-                // Instead, just clear the value and reset background:
-                field.style.backgroundColor = '';
-            });
-
-            // Hide password generation section
-            document.getElementById('passwordSection').style.display = 'none';
-        }
-
-            // Reset form
-                  function resetForm() {
-            newUserForm.reset();
-            adUserSearch.value = '';
-            clearUserFields();
-            hideSearchResults();
-            document.getElementById('role').value = '';
-            document.getElementById('passwordSection').style.display = 'none';
-        }
-
-            // Existing handlers...
+            // Initialize existing handlers
             document.querySelector('.search-input').addEventListener('input', debouncedUserSubmit);
             document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
                 dd.addEventListener('change', () => submitUserForm(false));
@@ -681,49 +781,236 @@
 
             hookDeleteBtns();
             initActionMenus();
-
-              generatePasswordBtn.addEventListener("click", function () {
-            passwordInput.value = generatePassword();
         });
 
-         // Toggle password visibility
-    togglePasswordBtn.addEventListener("click", function () {
-        const icon = this.querySelector("i");
-        if (passwordInput.type === "password") {
-            passwordInput.type = "text";
-            icon.classList.remove("fa-eye");
-            icon.classList.add("fa-eye-slash");
-        } else {
-            passwordInput.type = "password";
-            icon.classList.remove("fa-eye-slash");
-            icon.classList.add("fa-eye");
-        }
-    });
-
-    // Copy password to clipboard
-    copyPasswordBtn.addEventListener("click", function () {
-        if (!passwordInput.value) {
-            alert("No password to copy!");
-            return;
+        // Show/hide sections
+        function showSearchSection() {
+            document.getElementById('searchSection').style.display = 'block';
+            document.getElementById('userInfoDisplay').style.display = 'none';
+            document.getElementById('roleSection').style.display = 'none';
+            document.getElementById('passwordSection').style.display = 'none';
+            document.getElementById('submitSection').style.display = 'none';
         }
 
-        navigator.clipboard.writeText(passwordInput.value).then(() => {
-            // Give quick feedback
-            copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => {
-                copyPasswordBtn.innerHTML = '<i class="fas fa-copy"></i>';
-            }, 1500);
-        }).catch(err => {
-            console.error("Clipboard error:", err);
-            alert("Failed to copy password.");
-        });
-    });
+        function showUserInfoSection() {
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('userInfoDisplay').style.display = 'block';
+            document.getElementById('roleSection').style.display = 'block';
+            document.getElementById('passwordSection').style.display = 'block';
+            document.getElementById('submitSection').style.display = 'flex';
+        }
 
-        });
+        function showSuccessPopup() {
+            const successPopup = document.getElementById('successPopup');
+            const closeBtn = document.getElementById('closeSuccessPopup');
 
-        // Rest of your existing JavaScript functions remain the same...
-        // (keeping the existing delete, reactivate, and other functions)
+            successPopup.style.display = 'flex';
 
+            closeBtn.onclick = function() {
+                successPopup.style.display = 'none';
+                resetUserFilters();
+                submitUserForm(true);
+            };
+
+            successPopup.onclick = function(e) {
+                if (e.target === successPopup) {
+                    successPopup.style.display = 'none';
+                    resetUserFilters();
+                    submitUserForm(true);
+                }
+            };
+        }
+
+        function showErrorPopup(message) {
+            const errorPopup = document.getElementById('errorPopup');
+            const errorMsg = document.getElementById('errorPopupMsg');
+            const closeBtn = document.getElementById('closeErrorPopup');
+            errorMsg.textContent = message || "The account could not be created.";
+
+            errorPopup.style.display = 'flex';
+
+            closeBtn.onclick = function() {
+                errorPopup.style.display = 'none';
+            };
+
+            errorPopup.onclick = function(e) {
+                if (e.target === errorPopup) {
+                    errorPopup.style.display = 'none';
+                }
+            };
+        }
+
+        function resetUserFilters() {
+            document.querySelector('.search-input').value = '';
+            document.querySelector('select[name="roleFilter"]').value = 'Administrator';
+            document.querySelector('select[name="statusFilter"]').value = 'all';
+        }
+
+        function searchAzureAdUsers(searchTerm) {
+            fetch('@Url.Action("SearchAzureAdUsers")' + '?searchTerm=' + encodeURIComponent(searchTerm))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    searchSpinner.style.display = 'none';
+
+                    if (data.success && data.users && data.users.length > 0) {
+                        displaySearchResults(data.users);
+                    } else {
+                        displayNoResults(data.message || 'No users found');
+                    }
+                })
+                .catch(error => {
+                    searchSpinner.style.display = 'none';
+                    console.error('Error searching AD users:', error);
+                    displayNoResults('Error searching users. Please try again.');
+                });
+        }
+
+        function displaySearchResults(users) {
+            let resultsHtml = '';
+
+            users.forEach(user => {
+                const displayName = user.DisplayName || user.displayName || 'Unknown User';
+                const email = user.Email || user.email || user.Mail || user.mail || 'No email available';
+
+                resultsHtml += `
+                    <div class="search-result-item" data-user='${JSON.stringify(user)}'
+                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+                        <div style="font-weight:bold;">${displayName}</div>
+                        <div style="font-size:0.9em; color:#666;">${email}</div>
+                    </div>
+                `;
+            });
+
+            searchResults.innerHTML = resultsHtml;
+            searchResults.style.display = 'block';
+
+            document.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const userData = JSON.parse(this.getAttribute('data-user'));
+                    selectUser(userData);
+                });
+
+                item.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f5f5f5';
+                });
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+            });
+        }
+
+        function displayNoResults(message) {
+            searchResults.innerHTML = `
+                <div style="padding:10px; color:#666; text-align:center;">
+                    ${message}
+                </div>
+            `;
+            searchResults.style.display = 'block';
+        }
+
+        function hideSearchResults() {
+            searchResults.style.display = 'none';
+            searchSpinner.style.display = 'none';
+        }
+
+        function selectUser(user) {
+            tamperDetectionActive = false; // Disable detection during legitimate user selection
+
+            selectedAdUser = user;
+
+            const displayName = user.DisplayName || user.displayName || 'Unknown User';
+            const firstName = user.FirstName || user.firstName || user.GivenName || user.givenName || '';
+            const lastName = user.LastName || user.lastName || user.Surname || user.surname || '';
+            const email = user.Email || user.email || user.Mail || user.mail || '';
+
+            // Update display fields
+            document.getElementById('displayFirstName').textContent = firstName;
+            document.getElementById('displayLastName').textContent = lastName;
+            document.getElementById('displayEmail').textContent = email;
+
+            // Populate hidden form fields
+            document.getElementById('firstName').value = firstName;
+            document.getElementById('lastName').value = lastName;
+            document.getElementById('email').value = email;
+            document.getElementById('azureAdId').value = user.Id || user.id || '';
+
+            hideSearchResults();
+
+            // Generate security data
+            const userData = {
+                Id: user.Id || user.id,
+                FirstName: firstName,
+                LastName: lastName,
+                Email: email,
+                DisplayName: displayName
+            };
+
+            generateSecurityData(userData).then(success => {
+                if (success) {
+                    showUserInfoSection();
+                } else {
+                    alert('Security initialization failed. Please try selecting the user again.');
+                }
+            });
+        }
+
+        function clearUserFields() {
+            tamperDetectionActive = false; // Disable detection during clearing
+            selectedAdUser = null;
+            securityData = null;
+
+            if (tamperCheckInterval) {
+                clearInterval(tamperCheckInterval);
+                tamperCheckInterval = null;
+            }
+
+            const fields = ['firstName', 'lastName', 'email', 'azureAdId', 'dataHash', 'nonce', 'timestamp'];
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                field.value = '';
+                field.readOnly = false; // Remove readonly during clearing
+            });
+
+            document.getElementById('displayFirstName').textContent = '-';
+            document.getElementById('displayLastName').textContent = '-';
+            document.getElementById('displayEmail').textContent = '-';
+
+            document.getElementById('adUserSearch').value = '';
+            document.getElementById('role').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function resetForm() {
+            tamperDetectionActive = false; // Disable detection during reset
+
+            if (tamperCheckInterval) {
+                clearInterval(tamperCheckInterval);
+                tamperCheckInterval = null;
+            }
+
+            securityData = null;
+            originalFormData = {};
+
+            newUserForm.reset();
+            clearUserFields();
+            hideSearchResults();
+            showSearchSection();
+
+            const submitBtn = document.querySelector('#newUserForm button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+                submitBtn.style.background = '#28a745';
+            }
+        }
+
+        // Keep all your existing functions below...
         document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
             e.preventDefault();
 
@@ -769,7 +1056,7 @@
             };
         }
 
-             function submitUserForm(keepPage = false) {
+        function submitUserForm(keepPage = false) {
             const form = document.getElementById('userFilterForm');
             if(!keepPage) {
                 let pageInput = document.createElement('input');

@@ -73,7 +73,8 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<SmsOtpService>();
 builder.Services.AddHttpClient(); // Required for SMS API calls
-
+// Add this line where you register your services
+builder.Services.AddScoped<ISecurityService, SecurityService>();
 var app = builder.Build();
 
 // -------------------------------------

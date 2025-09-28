@@ -11,7 +11,7 @@ using SABC_Phase2.Services;
 using System.Globalization;
 using System.Security.Claims;
 using Azure.Identity;
-
+using SABC_Phase2.Models.Security;
 
 namespace SABC_Phase2.Controllers
 {
@@ -22,7 +22,6 @@ namespace SABC_Phase2.Controllers
     public class TenderAdminController : Controller
     {
         private readonly AuditLogService _auditLogService;
-        // Dependency-injected database context for EF Core operations.
         private readonly Phase2Context _context;
         private readonly LegacyDbContext _legacyContext;
         private readonly IConfiguration _configuration;
@@ -30,35 +29,34 @@ namespace SABC_Phase2.Controllers
         private readonly SouthAfricanTimeService _saTimeService;
         private readonly TenderReportPdfService _pdfService;
         private readonly EmailService _emailService;
+        private readonly ISecurityService _securityService;
+        private readonly ILogger<TenderAdminController> _logger; // ✅ add logger
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
-        public TenderAdminController(Phase2Context context, LegacyDbContext legacyContext, IConfiguration configuration, IWebHostEnvironment env, TenderReportPdfService pdfService, SouthAfricanTimeService saTimeService, AuditLogService auditLogService, EmailService emailService)
+        public TenderAdminController(
+            Phase2Context context,
+            LegacyDbContext legacyContext,
+            IConfiguration configuration,
+            IWebHostEnvironment env,
+            TenderReportPdfService pdfService,
+            SouthAfricanTimeService saTimeService,
+            AuditLogService auditLogService,
+            EmailService emailService,
+            ISecurityService securityService,
+            ILogger<TenderAdminController> logger) // ✅ inject logger
         {
-            // Assign the injected database context to a private field for use throughout the controller.
-            // This context enables database operations such as querying and saving tenders.
             _context = context;
             _legacyContext = legacyContext;
-
-            // Assign the injected configuration object to a private field.
-            // This allows access to application settings (e.g., connection strings, custom config values).
             _configuration = configuration;
-
-            // Assign the injected web host environment to a private field.
-            // Useful for determining the current environment (Development, Production, etc.) 
-            // and accessing environment-specific paths or settings.
             _env = env;
-
-            // Assign the injected PDF service to a private field.
-            // This service is used to generate tender report PDFs as needed.
             _pdfService = pdfService;
-
-            //(NodaTime Time API))
             _saTimeService = saTimeService;
-
             _auditLogService = auditLogService;
             _emailService = emailService;
+            _securityService = securityService;
+            _logger = logger; // ✅ assign logger
         }
 
         // Helper to get current admin info
@@ -2155,12 +2153,100 @@ namespace SABC_Phase2.Controllers
             return View(users);
         }
 
+        // Add a new endpoint to generate secure form data
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        public IActionResult GenerateSecureFormData([FromBody] AzureUserValidationData userData)
         {
             try
             {
+                var nonce = _securityService.GenerateNonce();
+                var timestamp = _securityService.GetCurrentTimestamp();
+
+                var hash = _securityService.GenerateDataHash(
+                    userData.FirstName,
+                    userData.LastName,
+                    userData.Email,
+                    userData.Id,
+                    nonce,
+                    timestamp
+                );
+
+                return Json(new
+                {
+                    success = true,
+                    hash = hash,
+                    nonce = nonce,
+                    timestamp = timestamp
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error generating secure form data");
+                return Json(new { success = false, message = "Security initialization failed" });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateUser([FromBody] SecureCreateUserRequest request)
+        {
+            try
+            {
+                // 🔒 IMMEDIATE TAMPER CHECK
+                if (string.IsNullOrEmpty(request.DataHash) ||
+                    string.IsNullOrEmpty(request.Nonce) ||
+                    request.Timestamp == 0)
+                {
+                    _logger?.LogWarning("Missing security data in request");
+                    return Json(new
+                    {
+                        success = false,
+                        tampered = true,
+                        tamperType = "MISSING_SECURITY_DATA",
+                        message = "Security validation data is missing"
+                    });
+                }
+
+                // 🔒 ANTI-TAMPER VALIDATION
+                var tamperResult = _securityService.ValidateFormIntegrity(request, "your-secret-key");
+                if (tamperResult.IsTampered)
+                {
+                    _logger?.LogWarning("Form tampering detected: {TamperType} - {Details}",
+                        tamperResult.TamperType, tamperResult.Details);
+
+                    return Json(new
+                    {
+                        success = false,
+                        tampered = true,
+                        tamperType = tamperResult.TamperType,
+                        message = tamperResult.Message
+                    });
+                }
+
+                // 🔒 AZURE AD VALIDATION
+                var graphClient = GetGraphServiceClient();
+                var azureValidation = await _securityService.ValidateAzureUserData(
+                    request.AzureAdId,
+                    request.FirstName,
+                    request.LastName,
+                    request.Email,
+                    graphClient);
+
+                if (azureValidation.IsTampered)
+                {
+                    _logger?.LogWarning("Azure AD validation failed: {TamperType} - {Details}",
+                        azureValidation.TamperType, azureValidation.Details);
+
+                    return Json(new
+                    {
+                        success = false,
+                        tampered = true,
+                        tamperType = azureValidation.TamperType,
+                        message = azureValidation.Message
+                    });
+                }
+
                 // Validate input
                 if (string.IsNullOrWhiteSpace(request.FirstName) ||
                     string.IsNullOrWhiteSpace(request.LastName) ||
@@ -2220,7 +2306,7 @@ namespace SABC_Phase2.Controllers
                     LastName = request.LastName.Trim(),
                     CreatedAt = currentSaTime.ToDateTimeUnspecified(),
                     Role = request.Role,
-                    AccountStatus = 1, // Always set to active
+                    AccountStatus = 1,
                     OtpCode = null,
                     OtpExpiration = null,
                     PendingEmail = null,
@@ -2248,10 +2334,7 @@ namespace SABC_Phase2.Controllers
                 }
                 catch (Exception emailEx)
                 {
-                    // Log email error but don't fail the user creation
                     Console.WriteLine($"Failed to send welcome email: {emailEx.Message}");
-                    // You might want to use a proper logging framework here
-
                     return Json(new
                     {
                         success = true,
@@ -2270,9 +2353,7 @@ namespace SABC_Phase2.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (you might want to use a proper logging framework)
-                Console.WriteLine($"Error creating user: {ex.Message}");
-
+                _logger?.LogError(ex, "Error creating user");
                 return Json(new
                 {
                     success = false,
