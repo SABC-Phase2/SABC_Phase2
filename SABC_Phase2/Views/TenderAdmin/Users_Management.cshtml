@@ -141,16 +141,22 @@
             </div>
 
             <!-- 🔒 SECURITY: User Info Display (Completely Read-Only) -->
-            <div id="userInfoDisplay" style="display:none; margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:6px; border:2px solid #28a745;">
-                <h4 style="margin:0 0 10px; color:#28a745;">✅ Selected User Information</h4>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div><strong>First Name:</strong> <span id="displayFirstName">-</span></div>
-                    <div><strong>Last Name:</strong> <span id="displayLastName">-</span></div>
-                    <div style="grid-column: 1 / -1;"><strong>Email:</strong> <span id="displayEmail">-</span></div>
+            <div id="userInfoDisplay" style="display:none; margin-bottom:20px;">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label for="displayFirstName" style="font-weight:500; margin-bottom:5px; display:block;">First Name</label>
+                        <input type="text" id="displayFirstName" readonly style="width:100%; background:#f8f9fa; border:1px solid #ccc; border-radius:6px; padding:10px; color:#333;" value="-" tabindex="-1" />
+                    </div>
+                    <div style="flex:1;">
+                        <label for="displayLastName" style="font-weight:500; margin-bottom:5px; display:block;">Last Name</label>
+                        <input type="text" id="displayLastName" readonly style="width:100%; background:#f8f9fa; border:1px solid #ccc; border-radius:6px; padding:10px; color:#333;" value="-" tabindex="-1" />
+                    </div>
                 </div>
-                <button type="button" id="changeUserBtn" style="margin-top:10px; padding:5px 10px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    Change User Selection
-                </button>
+                <div style="margin-top:15px;">
+                    <label for="displayEmail" style="font-weight:500; margin-bottom:5px; display:block;">Email Address</label>
+                    <input type="text" id="displayEmail" readonly style="width:100%; background:#f8f9fa; border:1px solid #ccc; border-radius:6px; padding:10px; color:#333;" value="-" tabindex="-1" />
+                </div>
+             
             </div>
 
             <!-- 🔒 SECURITY: Hidden inputs that store the validated data -->
@@ -196,6 +202,9 @@
 
             <!-- Create Account Button -->
             <div id="submitSection" style="display:none; justify-content:center; margin-top: 24px;">
+                <button type="button" id="changeUserBtn" style="margin-top:15px; padding:5px 10px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                    Clear User
+                </button>
                 <button type="submit" class="btn"
                         style="background:#28a745; color:#fff; font-weight:bold; border:none; border-radius:6px; padding:12px 36px; font-size:1.1rem; cursor:pointer;">
                     Create Account
@@ -930,9 +939,9 @@
             const email = user.Email || user.email || user.Mail || user.mail || '';
 
             // Update display fields
-            document.getElementById('displayFirstName').textContent = firstName;
-            document.getElementById('displayLastName').textContent = lastName;
-            document.getElementById('displayEmail').textContent = email;
+                document.getElementById('displayFirstName').value = firstName;
+        document.getElementById('displayLastName').value = lastName;
+        document.getElementById('displayEmail').value = email;
 
             // Populate hidden form fields
             document.getElementById('firstName').value = firstName;
