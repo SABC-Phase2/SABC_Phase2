@@ -2495,8 +2495,12 @@ namespace SABC_Phase2.Controllers
                     totalAffected += ovrsUsers.Count;
                 }
 
-                // Handle Administrators
-                var adminIds = selectedUsers.Where(x => x.Type == "Administrator" || x.Type == "IT_Admin").Select(x => x.Id).ToList();
+                // Handle all Administrator types
+                var adminIds = selectedUsers.Where(x =>
+                    x.Type == "Administrator" ||
+                    x.Type == "IT_Admin" ||
+                    x.Type == "Tender_Administrator" ||
+                    x.Type == "Vendor_Administrator").Select(x => x.Id).ToList();
                 if (adminIds.Any())
                 {
                     var admins = await _context.Administrators
@@ -2522,7 +2526,6 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
         public class DeleteUserModel
         {
             public int Id { get; set; }
@@ -2547,7 +2550,7 @@ namespace SABC_Phase2.Controllers
                         return Json(new { success = false, message = "User not found." });
                     user.AccountStatus = 0;
                 }
-                else if (model.Type == "Administrator" || model.Type == "IT_Admin")
+                else if (model.Type == "IT_Admin" || model.Type == "Tender_Administrator" || model.Type == "Vendor_Administrator" || model.Type == "Administrator")
                 {
                     var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
                     if (admin == null)
@@ -2567,7 +2570,6 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
         public class ReactivateUserModel
         {
             public int Id { get; set; }
@@ -2590,7 +2592,7 @@ namespace SABC_Phase2.Controllers
                         return Json(new { success = false, message = "User not found." });
                     user.AccountStatus = 1;
                 }
-                else if (model.Type == "Administrator" || model.Type == "IT_Admin")
+                else if (model.Type == "IT_Admin" || model.Type == "Tender_Administrator" || model.Type == "Vendor_Administrator" || model.Type == "Administrator")
                 {
                     var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
                     if (admin == null)
@@ -2610,7 +2612,6 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
 
         [HttpGet]
         public async Task<IActionResult> Administrator_Profiles()
