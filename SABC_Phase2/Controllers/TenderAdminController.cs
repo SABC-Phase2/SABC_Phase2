@@ -84,6 +84,10 @@ namespace SABC_Phase2.Controllers
             return (adminId, email, fullName);
         }
 
+
+        // -----------------------------------------------------------------------------------------------------------------------------------------
+        // CREATE TENDER LOGIC
+
         [HttpGet]
         public IActionResult Create()
         {
@@ -326,126 +330,44 @@ namespace SABC_Phase2.Controllers
             });
         }
 
-
-
-        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
-
+        [HttpGet]
+        public IActionResult EditDraft(int id)
         {
+            // Retrieve the draft tender with documents
+            var draft = _context.TenderAdminsDraft
+                .Include(d => d.Documents)
+                .FirstOrDefault(d => d.Id == id);
 
-            var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
+            if (draft == null)
+                return NotFound();
 
-            // Map status to DB value
-
-            string statusDbValue = MapStatus(status);
-
-            if (!string.IsNullOrEmpty(statusDbValue))
-
-                query = query.Where(t => t.Status.ToLower() == statusDbValue);
-
-            // Type filter
-
-            if (!string.IsNullOrEmpty(type))
-
+            // Map the draft entity to the view model, reflecting SharePointPath changes
+            var model = new TenderViewModel
             {
-
-                string typeFilter = type.Trim().ToLower();
-
-                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
-
-            }
-
-            // Search filter
-
-            if (!string.IsNullOrEmpty(search))
-
-            {
-
-                string searchLower = search.ToLower();
-
-                query = query.Where(t =>
-
-                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
-
-                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
-
-                    (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
-
-                    (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(searchLower))
-
-                );
-
-            }
-
-            var totalItems = await query.CountAsync();
-
-            var tenders = await query
-
-                .OrderByDescending(t => t.DatePublished)
-
-                .Skip((page - 1) * pageSize)
-
-                .Take(pageSize)
-
-                .ToListAsync();
-
-            // --- Update: Use SharePointPath, no BlobService ---
-
-            foreach (var tender in tenders)
-
-            {
-
-                foreach (var doc in tender.Documents)
-
+                DraftId = draft.DraftId,
+                TenderType = draft.TenderType,
+                TenderNumber = draft.TenderNumber,
+                ClosingDate = draft.ClosingDate,
+                ClosingTime = draft.ClosingTime,
+                Status = draft.Status,
+                Title = draft.Title,
+                Description = draft.Description,
+                ExistingDocuments = draft.Documents?.Select(doc => new TenderDocumentViewModel
                 {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    // Use SharePointPath instead of FilePath or BlobName
+                    SharePointPath = doc.SharePointPath
+                }).ToList() ?? new List<TenderDocumentViewModel>()
+            };
 
-                    // Ensure FileName and SharePointPath are correct for view
+            // Optional: If ClosingDate is null, default to today's date
+            // if (draft.ClosingDate == null)
+            //     model.ClosingDate = DateTime.Today;
 
-                    // No BlobService, just keep the SharePointPath
-
-                    // Example: doc.FileName and doc.SharePointPath are already set
-
-                    // If you want to show a clickable link in your view, use doc.SharePointPath
-
-                    // No need to modify doc here
-
-                }
-
-            }
-
-            ViewBag.CurrentPage = page;
-
-            ViewBag.PageSize = pageSize;
-
-            ViewBag.TotalItems = totalItems;
-
-            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-            ViewBag.Status = status;
-
-            ViewBag.Type = type;
-
-            ViewBag.Search = search;
-
-            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-
-                return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
-
-            return View(tenders);
-
+            return View("Create", model);
         }
 
-
-        private string MapStatus(string status)
-        {
-            switch (status?.ToLower())
-            {
-                case "open": return "open tender";
-                case "closed": return "closed tender";
-                case "awarded": return "awarded tender";
-                case "cancelled": return "cancelled tender";
-                default: return null;
-            }
-        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -681,6 +603,217 @@ namespace SABC_Phase2.Controllers
             });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
+        {
+            try
+            {
+                if (request == null || request.Id <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Invalid draft ID" });
+                }
+
+                // Get the current user ID (optional, if you want to ensure users can only delete their own drafts)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Find the draft with its documents
+                var draft = await _context.TenderAdminsDraft
+                    .Include(d => d.Documents)
+                    .FirstOrDefaultAsync(d => d.Id == request.Id);
+
+                if (draft == null)
+                {
+                    return NotFound(new { success = false, message = "Draft not found" });
+                }
+
+                var sharePointService = new SharePointService(_configuration);
+
+                // Delete the entire tender folder (including Admin docs and any other subfolders)
+                if (draft.Documents != null && draft.Documents.Any())
+                {
+                    try
+                    {
+                        string tenderNumber = draft.TenderNumber;
+
+                        // Use DeleteTenderFolderAsync instead of DeleteAdminDocsFolder
+                        await sharePointService.DeleteTenderFolderAsync(tenderNumber);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting tender folder from SharePoint: {ex.Message}");
+                    }
+
+                    // Remove documents from database
+                    _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
+                }
+
+                // Remove the draft itself
+                _context.TenderAdminsDraft.Remove(draft);
+                await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log draft deletion ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "DeleteDraft",
+                    $"Draft for Tender \"{draft.TenderNumber}\" (DraftId: {draft.Id}) was deleted by {adminFullName} ({adminEmail})"
+                );
+
+                return Ok(new { success = true, message = "Draft deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting draft: {ex}");
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the draft" });
+            }
+        }
+
+
+        // This method deal with deleting a draft via edit
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDraftDocument([FromBody] DeleteDraftDocumentRequest req)
+        {
+            if (req == null || req.DocumentId <= 0)
+                return Json(new { success = false, message = "Invalid request." });
+
+            var doc = await _context.TenderAdminsDraftDocuments
+                .FirstOrDefaultAsync(d => d.Id == req.DocumentId);
+
+            if (doc == null)
+                return Json(new { success = false, message = "Document not found." });
+
+            var sharePointService = new SharePointService(_configuration);
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(doc.SharePointPath))
+                    await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
+            }
+            catch (Exception ex)
+            {
+                // You might want to log this
+                return Json(new { success = false, message = "Error deleting from SharePoint: " + ex.Message });
+            }
+
+            _context.TenderAdminsDraftDocuments.Remove(doc);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+
+        // -----------------------------------------------------------------------------------------------------------------------------------------
+        // INDEX Pages
+        public async Task<IActionResult> Index(string status = "", string type = "", string search = "", int page = 1, int pageSize = 7)
+
+        {
+
+            var query = _context.Tenders.Include(t => t.Documents).AsQueryable();
+
+            // Map status to DB value
+
+            string statusDbValue = MapStatus(status);
+
+            if (!string.IsNullOrEmpty(statusDbValue))
+
+                query = query.Where(t => t.Status.ToLower() == statusDbValue);
+
+            // Type filter
+
+            if (!string.IsNullOrEmpty(type))
+
+            {
+
+                string typeFilter = type.Trim().ToLower();
+
+                query = query.Where(t => t.TenderType.ToLower() == typeFilter);
+
+            }
+
+            // Search filter
+
+            if (!string.IsNullOrEmpty(search))
+
+            {
+
+                string searchLower = search.ToLower();
+
+                query = query.Where(t =>
+
+                    (t.TenderNumber != null && t.TenderNumber.ToLower().Contains(searchLower)) ||
+
+                    (t.Title != null && t.Title.ToLower().Contains(searchLower)) ||
+
+                    (t.Status != null && t.Status.ToLower().Contains(searchLower)) ||
+
+                    (t.DatePublished != null && t.DatePublished.ToString().ToLower().Contains(searchLower))
+
+                );
+
+            }
+
+            var totalItems = await query.CountAsync();
+
+            var tenders = await query
+
+                .OrderByDescending(t => t.DatePublished)
+
+                .Skip((page - 1) * pageSize)
+
+                .Take(pageSize)
+
+                .ToListAsync();
+
+            // --- Update: Use SharePointPath, no BlobService ---
+
+            foreach (var tender in tenders)
+
+            {
+
+                foreach (var doc in tender.Documents)
+
+                {
+
+                    // Ensure FileName and SharePointPath are correct for view
+
+                    // No BlobService, just keep the SharePointPath
+
+                    // Example: doc.FileName and doc.SharePointPath are already set
+
+                    // If you want to show a clickable link in your view, use doc.SharePointPath
+
+                    // No need to modify doc here
+
+                }
+
+            }
+
+            ViewBag.CurrentPage = page;
+
+            ViewBag.PageSize = pageSize;
+
+            ViewBag.TotalItems = totalItems;
+
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            ViewBag.Status = status;
+
+            ViewBag.Type = type;
+
+            ViewBag.Search = search;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+
+                return PartialView("Tender_Admin_TendersTablePartial_Index", tenders);
+
+            return View(tenders);
+
+        }
+
+
         [HttpGet]
         public async Task<IActionResult> DraftIndex(string search = "", string type = "", int page = 1, int pageSize = 7)
 
@@ -760,44 +893,104 @@ namespace SABC_Phase2.Controllers
 
         }
 
-        [HttpGet]
-        public IActionResult EditDraft(int id)
+        private string MapStatus(string status)
         {
-            // Retrieve the draft tender with documents
-            var draft = _context.TenderAdminsDraft
-                .Include(d => d.Documents)
-                .FirstOrDefault(d => d.Id == id);
-
-            if (draft == null)
-                return NotFound();
-
-            // Map the draft entity to the view model, reflecting SharePointPath changes
-            var model = new TenderViewModel
+            switch (status?.ToLower())
             {
-                DraftId = draft.DraftId,
-                TenderType = draft.TenderType,
-                TenderNumber = draft.TenderNumber,
-                ClosingDate = draft.ClosingDate,
-                ClosingTime = draft.ClosingTime,
-                Status = draft.Status,
-                Title = draft.Title,
-                Description = draft.Description,
-                ExistingDocuments = draft.Documents?.Select(doc => new TenderDocumentViewModel
-                {
-                    Id = doc.Id,
-                    FileName = doc.FileName,
-                    // Use SharePointPath instead of FilePath or BlobName
-                    SharePointPath = doc.SharePointPath
-                }).ToList() ?? new List<TenderDocumentViewModel>()
-            };
-
-            // Optional: If ClosingDate is null, default to today's date
-            // if (draft.ClosingDate == null)
-            //     model.ClosingDate = DateTime.Today;
-
-            return View("Create", model);
+                case "open": return "open tender";
+                case "closed": return "closed tender";
+                case "awarded": return "awarded tender";
+                case "cancelled": return "cancelled tender";
+                default: return null;
+            }
         }
 
+       
+
+
+        // -------------------------------------------------------------------------------------------------------------------------
+        // Edit a Published Tender Logic
+
+        [HttpGet]
+        public async Task<IActionResult> GetApplicantCompanies(int tenderId)
+        {
+            try
+            {
+                // Debug: Log the tender ID
+                Console.WriteLine($"DEBUG: Getting applicant companies for tender ID: {tenderId}");
+
+                // Get all users who applied for this tender
+                var applicantUserIds = await _context.Applied_For_Tenders
+                    .Where(aft => aft.TenderId == tenderId)
+                    .Select(aft => aft.OVRS_UserId)
+                    .ToListAsync();
+
+                Console.WriteLine($"DEBUG: Found {applicantUserIds.Count} applicant user IDs: {string.Join(", ", applicantUserIds)}");
+
+                if (!applicantUserIds.Any())
+                {
+                    Console.WriteLine("DEBUG: No applicants found for this tender");
+                    return Json(new { success = true, companies = new List<object>() });
+                }
+
+                // Get companies one by one to avoid OPENJSON issues
+                var companies = new List<object>();
+
+                foreach (var userId in applicantUserIds)
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user != null && user.LegacyUserId.HasValue)
+                    {
+                        var supplier = await _legacyContext.TblSuppliers
+                            .FirstOrDefaultAsync(s => s.UserId == user.LegacyUserId.Value);
+
+                        if (supplier != null)
+                        {
+                            var companyName = !string.IsNullOrWhiteSpace(supplier.TradingName)
+                                ? supplier.TradingName
+                                : supplier.LegalName;
+
+                            if (!string.IsNullOrWhiteSpace(companyName))
+                            {
+                                // Include account status information
+                                var companyObj = new
+                                {
+                                    UserId = supplier.UserId,
+                                    CompanyName = companyName,
+                                    IsAccountDeleted = user.AccountStatus == 0 // Check if account is deleted
+                                };
+
+                                companies.Add(companyObj);
+                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}, Account Deleted: {user.AccountStatus == 0}");
+                                Console.WriteLine($"DEBUG: Company object: {System.Text.Json.JsonSerializer.Serialize(companyObj)}");
+                            }
+                        }
+                    }
+                }
+
+                // Sort the companies - active companies first, then deleted accounts
+                companies = companies
+                    .Cast<dynamic>()
+                    .OrderBy(c => c.IsAccountDeleted) // Active accounts first
+                    .ThenBy(c => c.CompanyName)
+                    .Cast<object>()
+                    .ToList();
+
+                Console.WriteLine($"DEBUG: Found {companies.Count} companies with names");
+                Console.WriteLine($"DEBUG: Final companies JSON: {System.Text.Json.JsonSerializer.Serialize(companies)}");
+
+                var result = new { success = true, companies = companies };
+                Console.WriteLine($"DEBUG: Final result JSON: {System.Text.Json.JsonSerializer.Serialize(result)}");
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception occurred: {ex.Message}");
+                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
+                return Json(new { success = false, message = "Failed to load applicant companies", error = ex.Message });
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
@@ -944,87 +1137,7 @@ namespace SABC_Phase2.Controllers
             return View("Edit", dto);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetApplicantCompanies(int tenderId)
-        {
-            try
-            {
-                // Debug: Log the tender ID
-                Console.WriteLine($"DEBUG: Getting applicant companies for tender ID: {tenderId}");
-
-                // Get all users who applied for this tender
-                var applicantUserIds = await _context.Applied_For_Tenders
-                    .Where(aft => aft.TenderId == tenderId)
-                    .Select(aft => aft.OVRS_UserId)
-                    .ToListAsync();
-
-                Console.WriteLine($"DEBUG: Found {applicantUserIds.Count} applicant user IDs: {string.Join(", ", applicantUserIds)}");
-
-                if (!applicantUserIds.Any())
-                {
-                    Console.WriteLine("DEBUG: No applicants found for this tender");
-                    return Json(new { success = true, companies = new List<object>() });
-                }
-
-                // Get companies one by one to avoid OPENJSON issues
-                var companies = new List<object>();
-
-                foreach (var userId in applicantUserIds)
-                {
-                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-                    if (user != null && user.LegacyUserId.HasValue)
-                    {
-                        var supplier = await _legacyContext.TblSuppliers
-                            .FirstOrDefaultAsync(s => s.UserId == user.LegacyUserId.Value);
-
-                        if (supplier != null)
-                        {
-                            var companyName = !string.IsNullOrWhiteSpace(supplier.TradingName)
-                                ? supplier.TradingName
-                                : supplier.LegalName;
-
-                            if (!string.IsNullOrWhiteSpace(companyName))
-                            {
-                                // Include account status information
-                                var companyObj = new
-                                {
-                                    UserId = supplier.UserId,
-                                    CompanyName = companyName,
-                                    IsAccountDeleted = user.AccountStatus == 0 // Check if account is deleted
-                                };
-
-                                companies.Add(companyObj);
-                                Console.WriteLine($"DEBUG: Added company - ID: {supplier.UserId}, Name: {companyName}, Account Deleted: {user.AccountStatus == 0}");
-                                Console.WriteLine($"DEBUG: Company object: {System.Text.Json.JsonSerializer.Serialize(companyObj)}");
-                            }
-                        }
-                    }
-                }
-
-                // Sort the companies - active companies first, then deleted accounts
-                companies = companies
-                    .Cast<dynamic>()
-                    .OrderBy(c => c.IsAccountDeleted) // Active accounts first
-                    .ThenBy(c => c.CompanyName)
-                    .Cast<object>()
-                    .ToList();
-
-                Console.WriteLine($"DEBUG: Found {companies.Count} companies with names");
-                Console.WriteLine($"DEBUG: Final companies JSON: {System.Text.Json.JsonSerializer.Serialize(companies)}");
-
-                var result = new { success = true, companies = companies };
-                Console.WriteLine($"DEBUG: Final result JSON: {System.Text.Json.JsonSerializer.Serialize(result)}");
-
-                return Json(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEBUG: Exception occurred: {ex.Message}");
-                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
-                return Json(new { success = false, message = "Failed to load applicant companies", error = ex.Message });
-            }
-        }
-
+     
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenderEditDto dto)
@@ -1034,15 +1147,12 @@ namespace SABC_Phase2.Controllers
             {
                 var tenderNumber = dto.TenderNumber.Trim();
 
-                // Check other published tenders except this one
                 bool existsInOtherPublished = await _context.Tenders
                     .AnyAsync(t => t.TenderNumber == tenderNumber && t.Id != id);
 
-                // Check drafts
                 bool existsInDraft = await _context.TenderAdminsDraft
                     .AnyAsync(d => d.TenderNumber == tenderNumber);
 
-                // Check scheduled
                 bool existsInScheduled = await _context.ScheduledTenders
                     .AnyAsync(s => s.TenderNumber == tenderNumber);
 
@@ -1056,7 +1166,6 @@ namespace SABC_Phase2.Controllers
 
             if (!ModelState.IsValid)
             {
-                // Check if this is an AJAX request
                 if (Request.Headers["Content-Type"].ToString().Contains("multipart/form-data") ||
                     Request.Headers["RequestVerificationToken"].Any())
                 {
@@ -1074,21 +1183,44 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
+            // ✅ CAPTURE ORIGINAL STATE BEFORE ANY CHANGES
+            var originalTender = new Tender
+            {
+                TenderType = tender.TenderType,
+                TenderNumber = tender.TenderNumber,
+                Title = tender.Title,
+                Description = tender.Description,
+                ClosingDate = tender.ClosingDate,
+                ClosingTime = tender.ClosingTime,
+                Status = tender.Status,
+                AwardedTender = tender.AwardedTender != null ? new AwardedTender
+                {
+                    AwardedCompanyName = tender.AwardedTender.AwardedCompanyName
+                } : null
+            };
+
+            // ✅ TRACK DOCUMENT CHANGES
+            var originalDocs = tender.Documents.ToList();
+            var originalAwardedDocs = tender.AwardedTender?.Documents?.ToList() ?? new List<TenderDocument>();
+
+            // Also get previously uploaded awarded docs
+            var previousAwardedDocs = await _context.TenderDocuments
+                .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null)
+                .ToListAsync();
+            originalAwardedDocs.AddRange(previousAwardedDocs.Where(d => !originalAwardedDocs.Any(oad => oad.Id == d.Id)));
+
             // --- EARLY CHECK: Prevent awarding to deleted company BEFORE ANY DATA CHANGES ---
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
-                // 1. Find supplier by tradingname (or legalname if needed)
                 var supplier = await _legacyContext.TblSuppliers
                     .FirstOrDefaultAsync(s => s.TradingName == dto.AwardedTender || s.LegalName == dto.AwardedTender);
 
                 if (supplier != null)
                 {
-                    // 2. Find user in Phase 2 db by legacy user id
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.LegacyUserId == supplier.UserId);
 
                     if (user != null && user.AccountStatus == 0)
                     {
-                        // 3. User account is deleted, block the award, return error for JS
                         return Json(new
                         {
                             success = false,
@@ -1099,38 +1231,31 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- FIXED: AWARDED DOCUMENT VALIDATION ---
+            // --- AWARDED DOCUMENT VALIDATION ---
             if (dto.Status == "Awarded Tender")
             {
-                // IMPORTANT FIX: Use the correct property for awarded document deletions
                 var awardedDocsToDelete = dto.AwardedDocumentsToDelete ?? new List<int>();
 
-                // Count awarded docs not marked for deletion from current AwardedTender
                 int remainingAwardedDocsFromCurrent = tender.AwardedTender?.Documents
                     .Where(d => !awardedDocsToDelete.Contains(d.Id))
                     .Count() ?? 0;
 
-                // ADDITIONAL FIX: Also check for previously uploaded awarded documents for this tender
-                // (in case AwardedTender was set to null when status changed away from "Awarded Tender")
                 int remainingPreviousAwardedDocs = 0;
                 if (tender.AwardedTender == null)
                 {
-                    var previousAwardedDocs = await _context.TenderDocuments
+                    var previousDocs = await _context.TenderDocuments
                         .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && !awardedDocsToDelete.Contains(doc.Id))
                         .CountAsync();
-                    remainingPreviousAwardedDocs = previousAwardedDocs;
+                    remainingPreviousAwardedDocs = previousDocs;
                 }
 
                 int totalExistingAwardedDocs = remainingAwardedDocsFromCurrent + remainingPreviousAwardedDocs;
-
-                // Count new uploads
                 int newAwardedUploads = dto.UploadedFiles?.Count ?? 0;
 
                 if ((totalExistingAwardedDocs + newAwardedUploads) == 0)
                 {
                     ModelState.AddModelError("", "You must upload at least one awarded tender document.");
 
-                    // Re-populate AwardedDocuments for the view including previously uploaded docs
                     var allAwardedDocs = new List<TenderDocumentViewModel>();
 
                     if (tender.AwardedTender?.Documents != null)
@@ -1146,7 +1271,6 @@ namespace SABC_Phase2.Controllers
                     }
                     else
                     {
-                        // Add previously uploaded awarded docs
                         var previousDocs = await _context.TenderDocuments
                             .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && !awardedDocsToDelete.Contains(doc.Id))
                             .ToListAsync();
@@ -1166,10 +1290,9 @@ namespace SABC_Phase2.Controllers
 
             var sharePointService = new SharePointService(_configuration);
 
-            // FIXED: Handle awarded document deletions properly
+            // Handle awarded document deletions
             if (dto.AwardedDocumentsToDelete != null && dto.AwardedDocumentsToDelete.Any())
             {
-                // Get documents to delete - check both current AwardedTender and previous awarded docs
                 var docsToRemove = new List<TenderDocument>();
 
                 if (tender.AwardedTender != null)
@@ -1177,11 +1300,10 @@ namespace SABC_Phase2.Controllers
                     docsToRemove.AddRange(tender.AwardedTender.Documents.Where(d => dto.AwardedDocumentsToDelete.Contains(d.Id)));
                 }
 
-                // Also check for previously uploaded awarded documents
-                var previousAwardedDocs = await _context.TenderDocuments
+                var previousAwardedDocsToDelete = await _context.TenderDocuments
                     .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && dto.AwardedDocumentsToDelete.Contains(doc.Id))
                     .ToListAsync();
-                docsToRemove.AddRange(previousAwardedDocs);
+                docsToRemove.AddRange(previousAwardedDocsToDelete);
 
                 foreach (var doc in docsToRemove)
                 {
@@ -1221,7 +1343,6 @@ namespace SABC_Phase2.Controllers
                 {
                     await sharePointService.RenameTenderFolderAsync(oldTenderNumber, newTenderNumber);
 
-                    // Optional: update SharePointPath for all docs if folder in URL
                     foreach (var doc in tender.Documents)
                     {
                         if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
@@ -1240,12 +1361,11 @@ namespace SABC_Phase2.Controllers
                         }
                     }
 
-                    // ADDITIONAL FIX: Also update paths for previously uploaded awarded documents
-                    var previousAwardedDocs = await _context.TenderDocuments
+                    var previousAwardedDocsForRename = await _context.TenderDocuments
                         .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null)
                         .ToListAsync();
 
-                    foreach (var doc in previousAwardedDocs)
+                    foreach (var doc in previousAwardedDocsForRename)
                     {
                         if (!string.IsNullOrEmpty(doc.SharePointPath) && doc.SharePointPath.Contains(oldTenderNumber))
                         {
@@ -1255,7 +1375,6 @@ namespace SABC_Phase2.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Log or show error as needed
                     ModelState.AddModelError("", $"Failed to rename SharePoint folder: {ex.Message}");
                     return View("Edit", dto);
                 }
@@ -1332,12 +1451,11 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-            // --- FIXED: AwardedTender logic ---
+            // --- AwardedTender logic ---
             if (dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender))
             {
                 if (tender.AwardedTender == null)
                 {
-                    // IMPORTANT FIX: When creating new AwardedTender, reassociate any previously uploaded awarded documents
                     var awardedTender = new AwardedTender
                     {
                         AwardedCompanyName = dto.AwardedTender,
@@ -1347,12 +1465,11 @@ namespace SABC_Phase2.Controllers
                     await _context.SaveChangesAsync();
                     tender.AwardedTenderId = awardedTender.Id;
 
-                    // Reassociate previously uploaded awarded documents to this new AwardedTender
-                    var previousAwardedDocs = await _context.TenderDocuments
+                    var previousAwardedDocsForReassign = await _context.TenderDocuments
                         .Where(doc => doc.TenderId == tender.Id && doc.AwardedTenderId != null && doc.AwardedTenderId != awardedTender.Id)
                         .ToListAsync();
 
-                    foreach (var doc in previousAwardedDocs)
+                    foreach (var doc in previousAwardedDocsForReassign)
                     {
                         doc.AwardedTenderId = awardedTender.Id;
                     }
@@ -1367,33 +1484,52 @@ namespace SABC_Phase2.Controllers
                 tender.AwardedTenderId = null;
             }
 
-            // --- AUDIT LOG: Log tender edit or award ---
+            // ✅ BUILD DETAILED AUDIT LOG
             var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+
+            // Track all document changes
+            var documentChanges = new List<string>();
+
+            // Track supporting document changes
+            var supportingDocChanges = _auditLogService.TrackDocumentChanges(
+                originalDocs,
+                dto.DocumentsToDelete,
+                dto.Status != "Awarded Tender" ? dto.UploadedFiles?.ToList() : null,
+                isAwardedDocs: false
+            );
+            documentChanges.AddRange(supportingDocChanges);
+
+            // Track awarded document changes
+            var awardedDocChanges = _auditLogService.TrackDocumentChanges(
+                originalAwardedDocs,
+                dto.AwardedDocumentsToDelete,
+                dto.Status == "Awarded Tender" ? dto.UploadedFiles?.ToList() : null,
+                isAwardedDocs: true
+            );
+            documentChanges.AddRange(awardedDocChanges);
+
+            // Build comprehensive change log with admin name
+            string changeDescription = _auditLogService.BuildTenderChangeLog(
+                originalTender,
+                dto,
+                adminFullName,
+                documentChanges
+            );
+
+            // Save changes to database
+            await _context.SaveChangesAsync();
+
+            // Log the detailed changes
+            await _auditLogService.LogAsync(
+                adminId,
+                adminEmail,
+                adminFullName,
+                "EditTender",
+                changeDescription
+            );
+
             bool isAwarded = dto.Status == "Awarded Tender" && !string.IsNullOrWhiteSpace(dto.AwardedTender);
 
-            if (isAwarded)
-            {
-                await _auditLogService.LogAsync(
-                    adminId,
-                    adminEmail,
-                    adminFullName,
-                    "EditTender",
-                    $"Tender \"{tender.TenderNumber}\" was edited by {adminFullName} ({adminEmail}) and has awarded this Tender to {dto.AwardedTender}"
-                );
-            }
-            else
-            {
-                await _auditLogService.LogAsync(
-                    adminId,
-                    adminEmail,
-                    adminFullName,
-                    "EditTender",
-                    $"Tender \"{tender.TenderNumber}\" was edited by {adminFullName} ({adminEmail})"
-                );
-            }
-
-
-            // Return JSON for regular success, set awarded appropriately
             return Json(new
             {
                 success = true,
@@ -1402,6 +1538,9 @@ namespace SABC_Phase2.Controllers
                 awarded = isAwarded
             });
         }
+
+        // ----------------------------------------------------------------------------------------------------------------------------------------------
+        // SCHEDULED Tender Logic
 
         [HttpGet]
 
@@ -1521,6 +1660,9 @@ namespace SABC_Phase2.Controllers
             return View("EditScheduled", dto);
         }
 
+
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditScheduled(int id, TenderEditDto dto)
@@ -1536,6 +1678,22 @@ namespace SABC_Phase2.Controllers
 
             if (scheduledTender == null)
                 return Json(new { success = false, message = "Tender not found" });
+
+            // ✅ CAPTURE ORIGINAL STATE BEFORE ANY CHANGES
+            var originalScheduledTender = new ScheduledTender
+            {
+                TenderType = scheduledTender.TenderType,
+                TenderNumber = scheduledTender.TenderNumber,
+                Title = scheduledTender.Title,
+                Description = scheduledTender.Description,
+                ClosingDate = scheduledTender.ClosingDate,
+                ClosingTime = scheduledTender.ClosingTime,
+                Status = scheduledTender.Status,
+                ScheduledPublishDateTime = scheduledTender.ScheduledPublishDateTime
+            };
+
+            // ✅ TRACK DOCUMENT CHANGES
+            var originalDocs = scheduledTender.Documents.ToList();
 
             // --- UPDATE ENTITY ---
             scheduledTender.TenderType = dto.TenderType;
@@ -1614,16 +1772,52 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
+            // ✅ BUILD DETAILED AUDIT LOG
+            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+
+            // Track all document changes
+            var documentChanges = new List<string>();
+
+            // Track document deletions
+            if (dto.DocumentsToDelete != null && dto.DocumentsToDelete.Any())
+            {
+                var deletedFiles = originalDocs
+                    .Where(d => dto.DocumentsToDelete.Contains(d.Id))
+                    .Select(d => d.FileName)
+                    .ToList();
+
+                if (deletedFiles.Any())
+                {
+                    documentChanges.Add($"Documents Deleted: {string.Join(", ", deletedFiles)}");
+                }
+            }
+
+            // Track document additions
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                var newFileNames = dto.UploadedFiles.Select(f => f.FileName).ToList();
+                documentChanges.Add($"Documents Added: {string.Join(", ", newFileNames)}");
+            }
+
+            // Build comprehensive change log
+            string changeDescription = BuildScheduledTenderChangeLog(
+                originalScheduledTender,
+                scheduledTender,
+                dto,
+                adminFullName,
+                documentChanges
+            );
+
+            // Save changes to database
             await _context.SaveChangesAsync();
 
-            // --- AUDIT LOG: Log scheduled tender edit ---
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            // Log the detailed changes
             await _auditLogService.LogAsync(
                 adminId,
                 adminEmail,
                 adminFullName,
                 "EditScheduledTender",
-                $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was edited by {adminFullName} ({adminEmail})"
+                changeDescription
             );
 
             return Json(new
@@ -1634,9 +1828,164 @@ namespace SABC_Phase2.Controllers
             });
         }
 
+        /// <summary>
+        /// Helper method to build detailed change log for scheduled tenders
+        /// </summary>
+        private string BuildScheduledTenderChangeLog(
+            ScheduledTender originalTender,
+            ScheduledTender updatedTender,
+            TenderEditDto dto,
+            string adminFullName,
+            List<string> documentChanges)
+        {
+            var changes = new List<string>();
+
+            // Track tender type changes
+            if (originalTender.TenderType != updatedTender.TenderType)
+            {
+                changes.Add($"Tender Type: '{originalTender.TenderType}' → '{updatedTender.TenderType}'");
+            }
+
+            // Track tender number changes
+            if (originalTender.TenderNumber != updatedTender.TenderNumber)
+            {
+                changes.Add($"Tender Number: '{originalTender.TenderNumber}' → '{updatedTender.TenderNumber}'");
+            }
+
+            // Track title changes
+            if (originalTender.Title != updatedTender.Title)
+            {
+                changes.Add($"Title: '{originalTender.Title}' → '{updatedTender.Title}'");
+            }
+
+            // Track description changes
+            if (originalTender.Description != updatedTender.Description)
+            {
+                var oldDesc = originalTender.Description?.Length > 50
+                    ? originalTender.Description.Substring(0, 50) + "..."
+                    : originalTender.Description;
+                var newDesc = updatedTender.Description?.Length > 50
+                    ? updatedTender.Description.Substring(0, 50) + "..."
+                    : updatedTender.Description;
+                changes.Add($"Description: '{oldDesc}' → '{newDesc}'");
+            }
+
+            // Track closing date changes
+            if (originalTender.ClosingDate != updatedTender.ClosingDate)
+            {
+                changes.Add($"Closing Date: {originalTender.ClosingDate:yyyy-MM-dd} → {updatedTender.ClosingDate:yyyy-MM-dd}");
+            }
+
+            // Track closing time changes
+            if (originalTender.ClosingTime != updatedTender.ClosingTime)
+            {
+                changes.Add($"Closing Time: '{originalTender.ClosingTime}' → '{updatedTender.ClosingTime}'");
+            }
+
+            // Track status changes
+            if (originalTender.Status != updatedTender.Status)
+            {
+                changes.Add($"Status: '{originalTender.Status}' → '{updatedTender.Status}'");
+            }
+
+            // Track scheduled publish date/time changes
+            if (originalTender.ScheduledPublishDateTime != updatedTender.ScheduledPublishDateTime)
+            {
+                // Convert UTC to SAST for display
+                var oldSaTime = _saTimeService.ConvertUtcToSaLocal(originalTender.ScheduledPublishDateTime);
+                var newSaTime = _saTimeService.ConvertUtcToSaLocal(updatedTender.ScheduledPublishDateTime);
+
+                changes.Add($"Scheduled Publish: {oldSaTime:yyyy-MM-dd HH:mm} SAST → {newSaTime:yyyy-MM-dd HH:mm} SAST");
+            }
+
+            // Add document changes if provided
+            if (documentChanges != null && documentChanges.Any())
+            {
+                changes.AddRange(documentChanges);
+            }
+
+            // Get current South African time
+            var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+            var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Build final description with admin name and timestamp
+            if (changes.Any())
+            {
+                return $"Scheduled Tender '{updatedTender.TenderNumber}' modified by {adminFullName} on {timestamp} SAST: {string.Join("; ", changes)}";
+            }
+            else
+            {
+                return $"Scheduled Tender '{updatedTender.TenderNumber}' was accessed by {adminFullName} on {timestamp} SAST but no changes were detected";
+            }
+        }
 
 
+        [HttpPost]
+        public async Task<IActionResult> DeleteScheduled([FromBody] DeleteDraftReq request)
+        {
+            try
+            {
+                if (request == null || request.Id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid scheduled tender ID" });
 
+                var scheduledTender = await _context.ScheduledTenders
+                    .Include(t => t.Documents)
+                    .FirstOrDefaultAsync(t => t.Id == request.Id);
+
+                if (scheduledTender == null)
+                    return NotFound(new { success = false, message = "Scheduled tender not found" });
+
+                var sharePointService = new SharePointService(_configuration);
+
+                try
+                {
+                    // Delete the entire SharePoint folder for this scheduled tender
+                    await sharePointService.DeleteTenderFolderAsync(scheduledTender.TenderNumber);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue with DB cleanup
+                    Console.WriteLine($"Error deleting scheduled tender folder from SharePoint: {ex.Message}");
+                }
+
+                // Remove documents from database if any
+                if (scheduledTender.Documents != null && scheduledTender.Documents.Any())
+                {
+                    _context.ScheduledTendersDocuments.RemoveRange(scheduledTender.Documents);
+                }
+
+                // Remove the scheduled tender itself
+                _context.ScheduledTenders.Remove(scheduledTender);
+                await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log scheduled tender deletion with detailed info and timestamp ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+                var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                string deletedDocs = (scheduledTender.Documents != null && scheduledTender.Documents.Any())
+                    ? $"Documents deleted: {string.Join(", ", scheduledTender.Documents.Select(d => d.FileName))}"
+                    : "No documents were associated with this scheduled tender.";
+
+                string changeDescription = $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was deleted by {adminFullName} ({adminEmail}) on {timestamp} SAST.";
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "DeleteScheduledTender",
+                    changeDescription
+                );
+
+                return Ok(new { success = true, message = "Scheduled tender deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting scheduled tender: {ex}");
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the scheduled tender" });
+            }
+        }
+        // ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -1804,17 +2153,22 @@ namespace SABC_Phase2.Controllers
 
             // --- AUDIT LOG: Log supplier report generation ---
             var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            // Get South African time stamp
+            var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+            var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
             await _auditLogService.LogAsync(
                 adminId,
                 adminEmail,
                 adminFullName,
                 "GenerateTenderSupplierReport",
-                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated by {adminFullName} ({adminEmail})"
+                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated by {adminFullName} ({adminEmail}) on {timestamp} SAST"
             );
 
             // Return the PDF file as a download, naming it with the tender number
             return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
         }
+        
         [HttpGet]
         public async Task<IActionResult> GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
         {
@@ -1885,180 +2239,30 @@ namespace SABC_Phase2.Controllers
 
             // --- AUDIT LOG: Log closed tenders summary report generation ---
             var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+            var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
             await _auditLogService.LogAsync(
                 adminId,
                 adminEmail,
                 adminFullName,
                 "GenerateClosedTendersSummaryReport",
-                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated by {adminFullName} ({adminEmail})"
+                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated by {adminFullName} ({adminEmail}) on {timestamp} SAST"
             );
 
             // Return the PDF file as a download, naming it with the date range
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
-        // This deals with deleting entire draft
+        
 
 
-        [HttpPost]
-        public async Task<IActionResult> DeleteDraft([FromBody] DeleteDraftReq request)
-        {
-            try
-            {
-                if (request == null || request.Id <= 0)
-                {
-                    return BadRequest(new { success = false, message = "Invalid draft ID" });
-                }
+      
 
-                // Get the current user ID (optional, if you want to ensure users can only delete their own drafts)
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                // Find the draft with its documents
-                var draft = await _context.TenderAdminsDraft
-                    .Include(d => d.Documents)
-                    .FirstOrDefaultAsync(d => d.Id == request.Id);
-
-                if (draft == null)
-                {
-                    return NotFound(new { success = false, message = "Draft not found" });
-                }
-
-                var sharePointService = new SharePointService(_configuration);
-
-                // Delete the entire tender folder (including Admin docs and any other subfolders)
-                if (draft.Documents != null && draft.Documents.Any())
-                {
-                    try
-                    {
-                        string tenderNumber = draft.TenderNumber;
-
-                        // Use DeleteTenderFolderAsync instead of DeleteAdminDocsFolder
-                        await sharePointService.DeleteTenderFolderAsync(tenderNumber);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error deleting tender folder from SharePoint: {ex.Message}");
-                    }
-
-                    // Remove documents from database
-                    _context.TenderAdminsDraftDocuments.RemoveRange(draft.Documents);
-                }
-
-                // Remove the draft itself
-                _context.TenderAdminsDraft.Remove(draft);
-                await _context.SaveChangesAsync();
-
-                // --- AUDIT LOG: Log draft deletion ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
-                await _auditLogService.LogAsync(
-                    adminId,
-                    adminEmail,
-                    adminFullName,
-                    "DeleteDraft",
-                    $"Draft for Tender \"{draft.TenderNumber}\" (DraftId: {draft.Id}) was deleted by {adminFullName} ({adminEmail})"
-                );
-
-                return Ok(new { success = true, message = "Draft deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deleting draft: {ex}");
-                return StatusCode(500, new { success = false, message = "An error occurred while deleting the draft" });
-            }
-        }
-
-
-        // This method deal with deleting a draft via edit
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteDraftDocument([FromBody] DeleteDraftDocumentRequest req)
-        {
-            if (req == null || req.DocumentId <= 0)
-                return Json(new { success = false, message = "Invalid request." });
-
-            var doc = await _context.TenderAdminsDraftDocuments
-                .FirstOrDefaultAsync(d => d.Id == req.DocumentId);
-
-            if (doc == null)
-                return Json(new { success = false, message = "Document not found." });
-
-            var sharePointService = new SharePointService(_configuration);
-
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(doc.SharePointPath))
-                    await sharePointService.DeleteDocumentAsync(doc.SharePointPath);
-            }
-            catch (Exception ex)
-            {
-                // You might want to log this
-                return Json(new { success = false, message = "Error deleting from SharePoint: " + ex.Message });
-            }
-
-            _context.TenderAdminsDraftDocuments.Remove(doc);
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true });
-        }
-
-
-        [HttpPost]
-        public async Task<IActionResult> DeleteScheduled([FromBody] DeleteDraftReq request)
-        {
-            try
-            {
-                if (request == null || request.Id <= 0)
-                    return BadRequest(new { success = false, message = "Invalid scheduled tender ID" });
-
-                var scheduledTender = await _context.ScheduledTenders
-                    .Include(t => t.Documents)
-                    .FirstOrDefaultAsync(t => t.Id == request.Id);
-
-                if (scheduledTender == null)
-                    return NotFound(new { success = false, message = "Scheduled tender not found" });
-
-                var sharePointService = new SharePointService(_configuration);
-
-                try
-                {
-                    // Delete the entire SharePoint folder for this scheduled tender
-                    await sharePointService.DeleteTenderFolderAsync(scheduledTender.TenderNumber);
-                }
-                catch (Exception ex)
-                {
-                    // Log error but continue with DB cleanup
-                    Console.WriteLine($"Error deleting scheduled tender folder from SharePoint: {ex.Message}");
-                }
-
-                // Remove documents from database if any
-                if (scheduledTender.Documents != null && scheduledTender.Documents.Any())
-                {
-                    _context.ScheduledTendersDocuments.RemoveRange(scheduledTender.Documents);
-                }
-
-                // Remove the scheduled tender itself
-                _context.ScheduledTenders.Remove(scheduledTender);
-                await _context.SaveChangesAsync();
-
-                // --- AUDIT LOG: Log scheduled tender deletion ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
-                await _auditLogService.LogAsync(
-                    adminId,
-                    adminEmail,
-                    adminFullName,
-                    "DeleteScheduledTender",
-                    $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was deleted by {adminFullName} ({adminEmail})"
-                );
-
-                return Ok(new { success = true, message = "Scheduled tender deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deleting scheduled tender: {ex}");
-                return StatusCode(500, new { success = false, message = "An error occurred while deleting the scheduled tender" });
-            }
-        }
+       
 
         // ----------------------------------------------------------------------------------------------------------------------------------------------
+        // USER MANAGEMENT SECTION (IT ADMIN)
+        
         [HttpGet]
         public async Task<IActionResult> Users_Management(string search = "", string roleFilter = "all", string statusFilter = "all")
         {
@@ -2321,6 +2525,20 @@ namespace SABC_Phase2.Controllers
                 _context.Administrators.Add(newAdmin);
                 await _context.SaveChangesAsync();
 
+                // --- AUDIT LOG: Log admin who created the user, with date and time ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var timestamp = currentSaTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                string changeDescription = $"User account for \"{newAdmin.FirstName} {newAdmin.LastName}\" ({newAdmin.Email}) with role \"{newAdmin.Role}\" was created by {adminFullName} ({adminEmail}) on {timestamp} SAST.";
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "CreateUser",
+                    changeDescription
+                );
+
                 // Send welcome email with account details
                 try
                 {
@@ -2361,7 +2579,6 @@ namespace SABC_Phase2.Controllers
                 });
             }
         }
-
         private bool IsValidEmail(string email)
         {
             try
@@ -2443,6 +2660,7 @@ namespace SABC_Phase2.Controllers
                 return Json(new { success = false, message = "Error searching Azure AD users: " + ex.Message });
             }
         }
+       
         private GraphServiceClient GetGraphServiceClient()
         {
             // Using the current Azure.Identity package instead of deprecated Microsoft.Graph.Auth
@@ -2460,7 +2678,6 @@ namespace SABC_Phase2.Controllers
 
             return new GraphServiceClient(clientSecretCredential);
         }
-
 
         public class BulkDeleteUserModel
         {
@@ -2480,6 +2697,7 @@ namespace SABC_Phase2.Controllers
             try
             {
                 int totalAffected = 0;
+                List<string> deletedUserSummaries = new List<string>();
 
                 // Handle OVRS Users
                 var ovrsIds = selectedUsers.Where(x => x.Type == "OVRS_User").Select(x => x.Id).ToList();
@@ -2488,9 +2706,26 @@ namespace SABC_Phase2.Controllers
                     var ovrsUsers = await _context.Users
                         .Where(u => ovrsIds.Contains(u.Id) && u.Role == "OVRS_User")
                         .ToListAsync();
+
+                    // For each OVRS_User, get legacy info from Phase 1
                     foreach (var user in ovrsUsers)
                     {
                         user.AccountStatus = 0;
+                        string fullName = "Unknown";
+                        string email = "Unknown";
+                        // If user has LegacyUserId, try to get legacy info
+                        if (user.LegacyUserId.HasValue)
+                        {
+                            // Assume _legacyContext is available for Phase 1 DB context
+                            var legacyUser = await _legacyContext.TblUsers
+                                .FirstOrDefaultAsync(lu => lu.UserId == user.LegacyUserId.Value);
+                            if (legacyUser != null)
+                            {
+                                fullName = $"{legacyUser.FirstName ?? ""} {legacyUser.LastName ?? ""}".Trim();
+                                email = legacyUser.Email ?? "Unknown";
+                            }
+                        }
+                        deletedUserSummaries.Add($"OVRS_User: {fullName} ({email}) [Phase2Id: {user.Id}, LegacyId: {user.LegacyUserId?.ToString() ?? "N/A"}]");
                     }
                     totalAffected += ovrsUsers.Count;
                 }
@@ -2509,6 +2744,7 @@ namespace SABC_Phase2.Controllers
                     foreach (var admin in admins)
                     {
                         admin.AccountStatus = 0;
+                        deletedUserSummaries.Add($"{admin.Role}: {admin.FirstName} {admin.LastName} ({admin.Email}) [ID: {admin.Id}]");
                     }
                     totalAffected += admins.Count;
                 }
@@ -2518,6 +2754,22 @@ namespace SABC_Phase2.Controllers
 
                 if (totalAffected == 0)
                     return Json(new { success = false, message = "No matching users found." });
+
+                // --- AUDIT LOG: Log bulk user deletion with admin info, time/date, and details ---
+                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+                var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                string changeDescription = $"Bulk user deletion performed by {adminFullName} ({adminEmail}) on {timestamp} SAST. " +
+                    $"The following users were set to inactive:\n- {string.Join("\n- ", deletedUserSummaries)}";
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    "BulkDeleteUsers",
+                    changeDescription
+                );
 
                 return Json(new { success = true, message = $"{totalAffected} user(s) set to inactive." });
             }
@@ -2531,8 +2783,6 @@ namespace SABC_Phase2.Controllers
             public int Id { get; set; }
             public string Type { get; set; } // "Administrator" or "OVRS_User"
         }
-
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -2613,6 +2863,10 @@ namespace SABC_Phase2.Controllers
             }
         }
 
+
+
+        //------------------------------------------------------------------------------------------------------------------------------------
+        // ADMINISTRATOR VIEW PROFILE SECTION
         [HttpGet]
         public async Task<IActionResult> Administrator_Profiles()
         {
@@ -2755,9 +3009,7 @@ namespace SABC_Phase2.Controllers
 
             return RedirectToAction(nameof(Administrator_Profiles));
         }
-
-
-     
+ 
         // Step 1: Send Email OTP
         // Enhanced SendAdminEmailOtp method with session-based rate limiting
         [HttpPost]
@@ -2961,6 +3213,8 @@ namespace SABC_Phase2.Controllers
 
             return Ok(new { success = true, message = "Email updated successfully" });
         }
+       
+        
         // ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
