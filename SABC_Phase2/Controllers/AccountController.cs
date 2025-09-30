@@ -135,6 +135,7 @@ namespace SABC_Phase2.Controllers
             string legalName = null;
             string role = "OVRS_User";
             string supplierType = null;
+            string fullName = ""; // ✅ MOVE THIS DECLARATION TO OUTER SCOPE
 
             // Lookup supplier by email in the legacy Phase 1 database
             using (SqlConnection legacyConn = new SqlConnection(legacyConnString))
@@ -174,7 +175,7 @@ namespace SABC_Phase2.Controllers
 
                 // Now, retrieve the user's password hash and personal details
                 bool passwordMatch = false;
-                string fullName = legalName ?? "";
+                // ❌ REMOVE THIS LINE: string fullName = legalName ?? "";
 
                 using (SqlCommand cmd = new SqlCommand(
                     "SELECT [password], [first_name], [last_name] FROM tbl_users WHERE user_id = @userId", legacyConn))
@@ -192,7 +193,10 @@ namespace SABC_Phase2.Controllers
                             if (dbPassword == hashedInputPassword || dbPassword == password)
                             {
                                 passwordMatch = true;
-                                fullName = $"{reader["first_name"]} {reader["last_name"]}".Trim();
+                                // ✅ Build full name from user's first and last name
+                                string firstName = reader["first_name"]?.ToString() ?? "";
+                                string lastName = reader["last_name"]?.ToString() ?? "";
+                                fullName = $"{firstName} {lastName}".Trim();
                             }
                         }
                     }
@@ -230,7 +234,6 @@ namespace SABC_Phase2.Controllers
                 }
             }
 
-
             // ---------- 4. Retrieve the user's Phase 2 UserId and AccountStatus for claim setup ----------
             int newUserId;
             int accountStatus;
@@ -265,15 +268,15 @@ namespace SABC_Phase2.Controllers
                 return View("~/Views/Authentication/Login.cshtml");
             }
 
-
             // ---------- 5. Create authentication claims principal for the OVRS_User ----------
             var userClaims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, legalName ?? email), // User's full name or fallback to email
-                new Claim(ClaimTypes.Role, role), // Set role to OVRS_User
-                new Claim("UserId", newUserId.ToString()), // Internal Phase 2 UserId
-                new Claim("SupplierType", supplierType ?? "Unknown Supplier") // Supplier type for UI/logic
-            };
+{
+    new Claim(ClaimTypes.Name, fullName ?? email), // ✅ Now fullName is accessible here
+    new Claim(ClaimTypes.Role, role),
+    new Claim("UserId", newUserId.ToString()),
+    new Claim("SupplierType", supplierType ?? "Unknown Supplier"),
+    new Claim("CompanyName", legalName ?? "") // ✅ Optional: Add company name as separate claim
+};
             var userIdentity = new ClaimsIdentity(userClaims, CookieAuthenticationDefaults.AuthenticationScheme);
             var userPrincipal = new ClaimsPrincipal(userIdentity);
 
@@ -282,7 +285,10 @@ namespace SABC_Phase2.Controllers
 
             // Redirect OVRS_User to main dashboard
             return RedirectToAction("AllTenders", "OVRS_User");
+
         }
+
+
         [HttpPost]
         public async Task<IActionResult> ForgotPassword(string email)
         {

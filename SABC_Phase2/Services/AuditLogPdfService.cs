@@ -4,6 +4,7 @@ using QuestPDF.Infrastructure;
 using SABC_Phase2.Models.Tender;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace SABC_Phase2.Services
@@ -73,39 +74,35 @@ namespace SABC_Phase2.Services
                 column.Item().PaddingBottom(20).Text(new string('=', 130))
                     .FontSize(10).FontFamily("Courier New");
 
-                // Invisible table with audit log data
-                column.Item().PaddingBottom(20).Table(table =>
+                // Data section using column/row approach (ONLY this approach - removed the table)
+                if (auditLogs.Any())
                 {
-                    // Define columns - making borders invisible
-                    table.ColumnsDefinition(columns =>
+                    column.Item().PaddingBottom(20).Column(dataColumn =>
                     {
-                        columns.RelativeColumn(2);    // Time Stamp
-                        columns.RelativeColumn(3);    // User Full Name
-                        columns.RelativeColumn(2);    // User Role
-                        columns.RelativeColumn(1.5f); // Action
-                        columns.RelativeColumn(4);    // Description
-                    });
+                        // Header - only once
+                        dataColumn.Item().Row(headerRow =>
+                        {
+                            headerRow.RelativeColumn(2).Element(InvisibleCellStyle).Text("Time Stamp").Bold().FontSize(12);
+                            headerRow.RelativeColumn(3).Element(InvisibleCellStyle).Text("User").Bold().FontSize(12);
+                            headerRow.RelativeColumn(2).Element(InvisibleCellStyle).Text("User Role").Bold().FontSize(12);
+                            headerRow.RelativeColumn(1.5f).Element(InvisibleCellStyle).Text("Action").Bold().FontSize(12);
+                            headerRow.RelativeColumn(4).Element(InvisibleCellStyle).Text("Description").Bold().FontSize(12);
+                        });
 
-                    // Header row (invisible borders)
-                    table.Header(header =>
-                    {
-                        header.Cell().Element(InvisibleCellStyle).Text("Time Stamp").Bold().FontSize(12);
-                        header.Cell().Element(InvisibleCellStyle).Text("User").Bold().FontSize(12);
-                        header.Cell().Element(InvisibleCellStyle).Text("User Role").Bold().FontSize(12);
-                        header.Cell().Element(InvisibleCellStyle).Text("Action").Bold().FontSize(12);
-                        header.Cell().Element(InvisibleCellStyle).Text("Description").Bold().FontSize(12);
+                        // Data rows - each row is kept together with ShowEntire
+                        foreach (var log in auditLogs.OrderByDescending(l => l.Timestamp))
+                        {
+                            dataColumn.Item().ShowEntire().Row(dataRow =>
+                            {
+                                dataRow.RelativeColumn(2).Element(InvisibleCellStyle).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"));
+                                dataRow.RelativeColumn(3).Element(InvisibleCellStyle).Text(log.AdminFullName ?? "N/A");
+                                dataRow.RelativeColumn(2).Element(InvisibleCellStyle).Text(GetUserRole(log));
+                                dataRow.RelativeColumn(1.5f).Element(InvisibleCellStyle).Text(GetActionTypeDisplay(log.ActionType));
+                                dataRow.RelativeColumn(4).Element(InvisibleCellStyle).Text(log.Description ?? "N/A");
+                            });
+                        }
                     });
-
-                    // Data rows
-                    foreach (var log in auditLogs.OrderByDescending(l => l.Timestamp))
-                    {
-                        table.Cell().Element(InvisibleCellStyle).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"));
-                        table.Cell().Element(InvisibleCellStyle).Text(log.AdminFullName ?? "N/A");
-                        table.Cell().Element(InvisibleCellStyle).Text(GetUserRole(log)); // You'll need to add role logic
-                        table.Cell().Element(InvisibleCellStyle).Text(GetActionTypeDisplay(log.ActionType));
-                        table.Cell().Element(InvisibleCellStyle).Text(log.Description ?? "N/A");
-                    }
-                });
+                }
 
                 // Bottom separator line
                 column.Item().PaddingVertical(20).Text(new string('=', 130))
@@ -204,6 +201,7 @@ namespace SABC_Phase2.Services
                 "DeleteUser" => "Delete User",
                 "BulkDeleteUsers" => "Bulk Delete Users",
                 "ReactivateUser" => "Reactivate User", // Fixed typo from "ReacvateUser"
+                "ReacvateUser" => "Reactivate User", // Handle the typo case
                 "DeactivateUser" => "Deactivate User",
 
                 // Report Generation Actions
