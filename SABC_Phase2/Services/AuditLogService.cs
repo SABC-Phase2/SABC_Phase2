@@ -24,7 +24,8 @@ namespace SABC_Phase2.Services
             _saTimeService = saTimeService;
         }
 
-        public async Task LogAsync(int adminId, string adminEmail, string adminFullName, string actionType, string description)
+        // Updated to include role
+        public async Task LogAsync(int adminId, string adminEmail, string adminFullName, string role, string actionType, string description)
         {
             var ip = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
             var log = new AuditLog
@@ -32,6 +33,7 @@ namespace SABC_Phase2.Services
                 AdminId = adminId,
                 AdminEmail = adminEmail,
                 AdminFullName = adminFullName,
+                Role = role, // <-- new column
                 ActionType = actionType,
                 Description = description,
                 Timestamp = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified()
@@ -131,7 +133,7 @@ namespace SABC_Phase2.Services
             // Build final description with admin name and timestamp
             if (changes.Any())
             {
-                return $"Tender '{updatedDto.TenderNumber}' modified by {adminFullName} on {timestamp} SAST: {string.Join("; ", changes)}";
+                return $"Tender '{updatedDto.TenderNumber}' modified {string.Join("; ", changes)}";
             }
             else
             {

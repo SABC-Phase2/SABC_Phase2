@@ -1,6 +1,13 @@
 ﻿@model List<SABC_Phase2.Models.Tender.AdminUserRowViewModel>
 @{
     bool isOvrsUser = ViewBag.IsOVRSUser == true;
+    int pageSize = ViewBag.PageSize ?? 7;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? Model.Count;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string search = ViewBag.Search ?? "";
+    string roleFilter = ViewBag.RoleFilter ?? "";
+    string statusFilter = ViewBag.StatusFilter ?? "";
 }
 
 <div class="user-table-card">
@@ -34,7 +41,7 @@
                         }
                         <td>@user.Email</td>
                         <td>@user.Role</td>
-                        <td>@user.Status</td>
+                        <td class="user-status @(user.Status == "Active" ? "status-active" : "status-inactive")">@user.Status</td>
                         <td>
                             <div class="action-menu-container">
                                 <button class="action-menu-btn" data-user-id="@user.Id" title="More actions">
@@ -68,7 +75,5 @@
             </tbody>
         </table>
     </div>
+
 </div>
-
-
-  

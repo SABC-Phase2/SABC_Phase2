@@ -5,13 +5,18 @@
     string roleFilter = Context.Request.Query["roleFilter"];
     string statusFilter = Context.Request.Query["statusFilter"];
     bool isOvrsUser = ViewBag.IsOVRSUser == true;
+    int pageSize = ViewBag.PageSize ?? 7;
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalItems = ViewBag.TotalItems ?? Model.Count;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int emptyRows = pageSize - Model.Count;
 }
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="breadcrumb-custom">
-    <span class="breadcrumb-active">Home</span>
-    <span class="breadcrumb-arrow">&#x2794;</span>
-    <span>User Management</span>
+    <span>Home</span>
+    <span class="breadcrumb-arrow">&gt;</span>
+    <span class="breadcrumb-active">User Management</span>
 </div>
 
 <div class="user-action-bar">
@@ -25,10 +30,10 @@
                    style="padding-left: 38px;" />
         </span>
         <select name="roleFilter" class="filter-dropdown">
-            <option value="Administrator" selected="@(roleFilter == "Administrator" ? "selected" : null)">SABC USER</option>
+            <option value="all" selected="@(string.IsNullOrEmpty(roleFilter) || roleFilter == "all" ? "selected" : null)">SABC USER</option>
             <option value="OVRS_User" selected="@(roleFilter == "OVRS_User" ? "selected" : null)">OVRS USER</option>
         </select>
-        <button type="submit" class="refresh-btn"
+        <button type="button" class="refresh-btn"
                 title="Clear search and filters"
                 style="margin-left: 0;">
             <i class="fas fa-sync-alt"></i>
@@ -47,78 +52,74 @@
 </div>
 
 <div class="table-container">
-    <div class="user-table-card">
-        <div style="display: flex; justify-content: space-between; align-items: center;"></div>
-        <div class="table-scroll-container">
-            <table class="user-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">Selected</th>
-                        <th>FULL NAME</th>
-                        @if (isOvrsUser)
-                        {
-                            <th>COMPANY NAME</th>
-                        }
-                        <th>EMAIL</th>
-                        <th>TYPE OF USER</th>
-                        <th>STATUS</th>
-                        <th>ACTION</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in Model)
-                    {
-                        <tr>
-                            <td>
-                                <input type="checkbox" name="selectedUserIds" value="@user.Id" data-role="@user.Role" />
-                            </td>
-                            <td>@user.FullName</td>
-                            @if (isOvrsUser)
-                            {
-                                <td>@user.CompanyName</td>
-                            }
-                            <td>@user.Email</td>
-                            <td>@user.Role</td>
-                            <td>@user.Status</td>
-                            <td>
-                                <div class="action-menu-container">
-                                    <button class="action-menu-btn" data-user-id="@user.Id" title="More actions">
-                                        <i class="fas fa-ellipsis-h" style="color: #222;"></i>
-                                    </button>
-                                    <div class="action-dropdown">
-
-                                        @if (user.Status == "Active")
-                                        {
-                                            <button class="action-dropdown-item delete-user-btn delete-option"
-                                                    data-user-id="@user.Id"
-                                                    data-role="@user.Role">
-                                                <i class="fas fa-trash-alt"></i> Delete User
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button class="action-dropdown-item reactivate-user-btn"
-                                                    data-user-id="@user.Id"
-                                                    data-role="@user.Role">
-                                                <i class="fas fa-undo"></i> Reactivate User
-                                            </button>
-                                        }
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <partial name="_UsersTablePartial" model="Model" />
 </div>
-
+@if (totalPages > 1)
+{
+    <div class="custom-pagination">
+        <ul class="pagination-list">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("Users_Management", "TenderAdmin", new { page = currentPage - 1, pageSize, search })"
+                   tabindex="@(currentPage == 1 ? "-1" : "0")" aria-label="Previous">
+                    <span aria-hidden="true">&#8592;</span>
+                </a>
+            </li>
+            @if (currentPage > 3)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       href="@Url.Action("Users_Management", "TenderAdmin", new { page = 1, pageSize, search })">1</a>
+                </li>
+                @if (currentPage > 4)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                if (i == currentPage)
+                {
+                    <li class="page-item active">
+                        <span class="page-link"><span class="page-number">@i</span></span>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="@Url.Action("Users_Management", "TenderAdmin", new { page = i, pageSize, search })">@i</a>
+                    </li>
+                }
+            }
+            @if (currentPage < totalPages - 2)
+            {
+                if (currentPage < totalPages - 3)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link"
+                       href="@Url.Action("Users_Management", "TenderAdmin", new { page = totalPages, pageSize, search })">@totalPages</a>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link arrow-link"
+                   href="@Url.Action("Users_Management", "TenderAdmin", new { page = currentPage + 1, pageSize, search })"
+                   tabindex="@(currentPage == totalPages ? "-1" : "0")" aria-label="Next">
+                    <span aria-hidden="true">&#8594;</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+}
 <!-- New User Modal -->
 <div id="newUserModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
-    <div class="modal-content" style="background:#fff; border-radius:8px; padding:32px 24px; min-width:350px; max-width:95vw; margin:auto; position:relative;">
-        <span class="close-modal" style="position:absolute; right:18px; top:10px; font-size:2rem; font-weight:bold; color:#333; cursor:pointer;">&times;</span>
-        <h2 style="margin-bottom: 24px;">Add New User</h2>
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Add New User</span>
+            <span class="close-modal">&times;</span>
+        </div>
         <form id="newUserForm">
             <!-- 🔒 SECURITY: Hidden field to store Azure AD ID for server validation -->
             <input type="hidden" id="azureAdId" name="azureAdId" value="" />
@@ -156,7 +157,7 @@
                     <label for="displayEmail" style="font-weight:500; margin-bottom:5px; display:block;">Email Address</label>
                     <input type="text" id="displayEmail" readonly style="width:100%; background:#f8f9fa; border:1px solid #ccc; border-radius:6px; padding:10px; color:#333;" value="-" tabindex="-1" />
                 </div>
-             
+
             </div>
 
             <!-- 🔒 SECURITY: Hidden inputs that store the validated data -->
@@ -198,23 +199,23 @@
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
+
             </div>
 
             <!-- Create Account Button -->
-            <div id="submitSection" style="display:none; justify-content:center; margin-top: 24px;">
-                <button type="button" id="changeUserBtn" style="margin-top:15px; padding:5px 10px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    Clear User
+            <div id="submitSection" style="display:flex; justify-content:center; margin-top: 32px; gap:18px;">
+                <button type="button" id="changeUserBtn" class="clear-user-btn">
+                    <i class="fas fa-times"></i> Clear User
                 </button>
-                <button type="submit" class="btn"
-                        style="background:#28a745; color:#fff; font-weight:bold; border:none; border-radius:6px; padding:12px 36px; font-size:1.1rem; cursor:pointer;">
-                    Create Account
+                <button type="submit" class="create-account-btn">
+                    <i class="fas fa-user-plus"></i> Create Account
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Add the tamper detection modal before your existing modals -->
+<!-- Tamper Detection Modal -->
 <div id="tamperDetectedModal" style="
     display:none;
     position:fixed;
@@ -285,7 +286,7 @@
         width:90%;
     ">
         <i class="fas fa-times-circle" style="color:#dc3545; font-size:3rem; margin-bottom:15px;"></i>
-        <h3 style="margin:0 0 10px; color:#333;">Cannot Create User!</h3>
+        <h3 style="margin:0 0 10px; color:#333;">Error</h3>
         <p id="errorPopupMsg" style="margin:0 0 20px; color:#666;">The account could not be created.</p>
         <button id="closeErrorPopup" style="
             background:#dc3545;
@@ -322,22 +323,85 @@
         max-width:400px;
         width:90%;
     ">
-        <i class="fas fa-check-circle" style="color:#28a745; font-size:3rem; margin-bottom:15px;"></i>
-        <h3 style="margin:0 0 10px; color:#333;">User Created!</h3>
+        <img src="~/lib/Images/Tick-Box.png" alt="Success" style="width:80px; height:80px; margin:0 auto 20px auto; display:block;" />
+        <h3 style="margin:0 0 10px; color:#333;">Success</h3>
         <p style="margin:0 0 20px; color:#666;">The account was created successfully.</p>
-        <button id="closeSuccessPopup" style="
-            background:#28a745;
-            color:#fff;
-            border:none;
-            border-radius:6px;
-            padding:10px 20px;
-            font-size:1rem;
-            cursor:pointer;
-        ">
-            OK
-        </button>
+        <button id="closeSuccessPopup" class="btn btn-success green-effect" style="min-width:110px; font-size:1.05rem; padding:8px 16px;">OK</button>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; border:2px solid #009344;">
+        <div style="background:#009344; color:#fff; padding:20px 0 16px 0; text-align:center;">
+            <span style="font-size:1.8rem; font-weight:700;">Delete Confirmation</span>
+        </div>
+        <div style="padding:20px 10px 0 10px; text-align:center;">
+            <span style="font-size:1.2rem; color:#444;">Are you sure you want to delete?</span>
+        </div>
+        <div style="display:flex; justify-content:center; gap:20px; margin:28px 0 20px 0;">
+            <button id="deleteCancelBtn" style="background:#009344; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #007a3d; cursor:pointer;">Cancel</button>
+            <button id="deleteConfirmBtn" style="background:#e74c3c; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #c0392b; cursor:pointer;">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reactivate Confirmation Modal -->
+<div id="reactivateConfirmModal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; border:2px solid #28a745;">
+        <div style="background:#28a745; color:#fff; padding:20px 0 16px 0; text-align:center;">
+            <span style="font-size:1.8rem; font-weight:700;">Reactivate User</span>
+        </div>
+        <div style="padding:20px 10px 0 10px; text-align:center;">
+            <span style="font-size:1.2rem; color:#444;">Are you sure you want to reactivate this user?</span>
+        </div>
+        <div style="display:flex; justify-content:center; gap:20px; margin:28px 0 20px 0;">
+            <button id="reactivateCancelBtn" style="background:#6c757d; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #545b62; cursor:pointer;">Cancel</button>
+            <button id="reactivateConfirmBtn" style="background:#28a745; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #1e7e34; cursor:pointer;">Yes, Reactivate</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal (matches Delete Confirmation Modal) -->
+<div id="bulkDeleteConfirmModal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; border:2px solid #009344;">
+        <div style="background:#009344; color:#fff; padding:20px 0 16px 0; text-align:center;">
+            <span style="font-size:1.8rem; font-weight:700;">Delete Users</span>
+        </div>
+        <div style="padding:20px 10px 0 10px; text-align:center;">
+            <span style="font-size:1.2rem; color:#444;">Are you sure you want to delete the selected users?</span>
+        </div>
+        <div style="display:flex; justify-content:center; gap:20px; margin:28px 0 20px 0;">
+            <button id="bulkDeleteCancelBtn" style="background:#009344; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #007a3d; cursor:pointer;">Cancel</button>
+            <button id="bulkDeleteConfirmBtn" style="background:#e74c3c; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #c0392b; cursor:pointer;">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- No Selection Warning Modal -->
+<!-- No Selection Warning Modal (styled like emptyDraftModal) -->
+<div id="noSelectionModal" class="modal fade" tabindex="-1" aria-labelledby="noSelectionModalLabel" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header d-block border-0" style="padding-bottom: 0;">
+                <!-- No title, just icon -->
+            </div>
+            <div class="modal-body">
+                <!-- Large X icon -->
+                <img src="~/lib/Images/X-Box.png" alt="Error" style="width: 80px; height: 80px; margin: 0 auto 20px auto; display: block;" />
+                <!-- Large "Submission Error" text -->
+                <p style="font-size:1.6rem; font-weight:700; color:#e11d48; margin-bottom: 16px;">Error</p>
+                <!-- Explanatory text -->
+                <p style="font-size:1.15rem; margin-bottom: 0;">Please select at least one user to delete.</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <!-- Larger button -->
+                <button type="button" id="noSelectionOkBtn" class="btn btn-success green-effect" style="min-width:110px; font-size:1.05rem; padding:8px 16px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
     <script>
@@ -346,7 +410,11 @@
         let securityData = null;
         let originalFormData = {};
         let tamperCheckInterval = null;
-        let tamperDetectionActive = false; // NEW FLAG
+        let tamperDetectionActive = false;
+        let currentDeleteUserId = null;
+        let currentDeleteUserRole = null;
+        let currentReactivateUserId = null;
+        let currentReactivateUserRole = null;
 
         const generatePasswordBtn = document.getElementById("generatePasswordBtn");
         const passwordInput = document.getElementById("password");
@@ -387,7 +455,6 @@
         }
 
         function startTamperDetection() {
-            // Store the CURRENT state as the baseline (after legitimate user selection)
             originalFormData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
@@ -395,19 +462,18 @@
                 azureAdId: document.getElementById('azureAdId').value
             };
 
-            // Set the hidden fields as readonly to prevent tampering
             const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
             readOnlyFields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
                 field.readOnly = true;
             });
 
-            tamperDetectionActive = true; // Enable detection ONLY after legitimate setup
-            tamperCheckInterval = setInterval(checkForTampering, 2000); // Check every 2 seconds
+            tamperDetectionActive = true;
+            tamperCheckInterval = setInterval(checkForTampering, 2000);
         }
 
         function checkForTampering() {
-            if (!tamperDetectionActive) return; // Don't check during legitimate operations
+            if (!tamperDetectionActive) return;
 
             const currentFormData = {
                 firstName: document.getElementById('firstName').value,
@@ -416,13 +482,11 @@
                 azureAdId: document.getElementById('azureAdId').value
             };
 
-            // Check if hidden fields have been modified
             if (JSON.stringify(originalFormData) !== JSON.stringify(currentFormData)) {
                 showTamperDetectedModal('FORM_FIELD_MODIFIED', 'Hidden form fields have been modified using developer tools.');
                 return;
             }
 
-            // Check if readonly attributes have been removed from hidden fields
             const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
             for (const fieldId of readOnlyFields) {
                 const field = document.getElementById(fieldId);
@@ -432,7 +496,6 @@
                 }
             }
 
-            // Check if security data has been tampered with
             if (securityData) {
                 const currentHash = document.getElementById('dataHash').value;
                 const currentNonce = document.getElementById('nonce').value;
@@ -448,7 +511,7 @@
         }
 
         function showTamperDetectedModal(tamperType, message) {
-            tamperDetectionActive = false; // Stop checking
+            tamperDetectionActive = false;
             clearInterval(tamperCheckInterval);
 
             const modal = document.getElementById('tamperDetectedModal');
@@ -461,19 +524,6 @@
             typeEl.textContent = tamperType;
 
             modal.style.display = 'flex';
-
-            console.warn('🚨 TAMPERING DETECTED:', {
-                type: tamperType,
-                message: message,
-                timestamp: new Date().toISOString(),
-                originalData: originalFormData,
-                currentData: {
-                    firstName: document.getElementById('firstName').value,
-                    lastName: document.getElementById('lastName').value,
-                    email: document.getElementById('email').value,
-                    azureAdId: document.getElementById('azureAdId').value
-                }
-            });
 
             const submitBtn = document.querySelector('#newUserForm button[type="submit"]');
             if (submitBtn) {
@@ -513,284 +563,92 @@
             return password.join('');
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const newUserBtn = document.querySelector('.big-newuser-btn');
-            const modal = document.getElementById('newUserModal');
-            const closeModal = modal.querySelector('.close-modal');
-            const newUserForm = document.getElementById('newUserForm');
-            const adUserSearch = document.getElementById('adUserSearch');
-            const searchResults = document.getElementById('searchResults');
-            const searchSpinner = document.getElementById('searchSpinner');
-
-            // Tamper detection modal handler
-            document.getElementById('closeTamperModal').addEventListener('click', function() {
-                document.getElementById('tamperDetectedModal').style.display = 'none';
-                modal.style.display = 'none';
-                resetForm();
-                location.reload();
-            });
-
-            // Show modal
-            newUserBtn.addEventListener('click', function () {
-                modal.style.display = 'flex';
-                resetForm();
-            });
-
-            // Close modal on X
-            closeModal.addEventListener('click', function () {
-                modal.style.display = 'none';
-                resetForm();
-            });
-
-            // Close modal when clicking outside
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                    resetForm();
-                }
-            });
-
-            // Change user selection button
-            document.getElementById('changeUserBtn').addEventListener('click', function() {
-                showSearchSection();
-                clearUserFields();
-            });
-
-            // Azure AD User Search
-            adUserSearch.addEventListener('input', function(e) {
-                const searchTerm = e.target.value.trim();
-                clearTimeout(searchTimeout);
-
-                if (searchTerm.length < 3) {
-                    hideSearchResults();
-                    return;
-                }
-
-                searchSpinner.style.display = 'block';
-                searchTimeout = setTimeout(function() {
-                    searchAzureAdUsers(searchTerm);
-                }, 500);
-            });
-
-            // Hide search results when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('#adUserSearch') && !e.target.closest('#searchResults')) {
-                    hideSearchResults();
-                }
-            });
-
-
-        function isFormTampered() {
-            if (!tamperDetectionActive || !originalFormData || !securityData) {
-                return null; // Can't validate if not properly initialized
-            }
-
-            // Check if any required data is missing
-            if (!document.getElementById('firstName').value ||
-                !document.getElementById('lastName').value ||
-                !document.getElementById('email').value) {
-                return {
-                    type: 'MISSING_DATA',
-                    message: 'Required form data is missing.'
-                };
-            }
-
-            // Compare hidden field values to their original values
-            const currentFormData = {
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email').value,
-                azureAdId: document.getElementById('azureAdId').value
-            };
-
-            if (JSON.stringify(originalFormData) !== JSON.stringify(currentFormData)) {
-                console.error('Field tampering detected:', {
-                    original: originalFormData,
-                    current: currentFormData
-                });
-                return {
-                    type: 'FORM_FIELD_MODIFIED',
-                    message: 'Form data has been tampered with using developer tools.'
-                };
-            }
-
-            // Check readonly attributes
-            const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
-            for (const fieldId of readOnlyFields) {
-                const field = document.getElementById(fieldId);
-                if (field && originalFormData[fieldId] && !field.readOnly) {
-                    return {
-                        type: 'READONLY_REMOVED',
-                        message: 'Form security attributes have been tampered with.'
-                    };
-                }
-            }
-
-            // Check security data integrity
-            const currentHash = document.getElementById('dataHash').value;
-            const currentNonce = document.getElementById('nonce').value;
-            const currentTimestamp = document.getElementById('timestamp').value;
-
-            if (currentHash !== securityData.hash ||
-                currentNonce !== securityData.nonce ||
-                currentTimestamp !== securityData.timestamp.toString()) {
-                return {
-                    type: 'SECURITY_DATA_MODIFIED',
-                    message: 'Security validation data has been compromised.'
-                };
-            }
-
-            return null; // No tampering detected
-        }
-
-
-
-
-                    // Enhanced form submit handler
-        newUserForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Always prevent default first
-
-            // CRITICAL: Run tamper check immediately before submit
-            const tamperResult = isFormTampered();
-            if (tamperResult) {
-                console.error('🚨 TAMPERING DETECTED ON SUBMIT:', tamperResult);
-                showTamperDetectedModal(tamperResult.type, tamperResult.message);
-                return false; // Explicitly stop execution
-            }
-
-            // Additional validation checks
-            if (!selectedAdUser) {
-                showErrorPopup('Please search and select a user from Azure AD first.');
-                return false;
-            }
-
-            if (!securityData) {
-                showErrorPopup('Security validation failed. Please select a user again.');
-                return false;
-            }
-
-            const password = document.getElementById('password').value;
-            if (!password) {
-                showErrorPopup('Please generate a password first.');
-                return false;
-            }
-
-            const role = document.getElementById('role').value;
-            if (!role) {
-                showErrorPopup('Please select a role.');
-                return false;
-            }
-
-            // Proceed with form submission only if all checks pass
-            submitFormData();
-        });
-
-        // Separate function for actual form submission
-        function submitFormData() {
-            const formData = {
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email').value,
-                role: document.getElementById('role').value,
-                password: document.getElementById('password').value,
-                azureAdId: selectedAdUser.Id || selectedAdUser.id,
-                dataHash: securityData.hash,
-                nonce: securityData.nonce,
-                timestamp: securityData.timestamp
-            };
-
-            const submitBtn = newUserForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Creating Account...';
-
-            fetch('@Url.Action("CreateUser")', {
+        // Delete user function
+        function deleteUser(userId, role) {
+            fetch('@Url.Action("DeleteUser")', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ id: userId, type: role })
             })
-            .then(response => response.json())
+            .then(resp => resp.json())
             .then(data => {
-                if (data.success) {
-                    modal.style.display = 'none';
-                    resetForm();
-                    showSuccessPopup();
-                    resetUserFilters();
+                if(data.success) {
+                    showSuccessPopup(data.message || 'User deleted successfully');
                     submitUserForm(true);
-                } else if (data.tampered) {
-                    // Server detected tampering
-                    showTamperDetectedModal(data.tamperType, data.message);
                 } else {
-                    showErrorPopup(data.message || 'Unknown error');
+                    showErrorPopup('Delete failed: ' + (data.message || 'Unknown error'));
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showErrorPopup('Network error occurred. Please try again.');
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                console.error('Delete error:', error);
+                showErrorPopup('Delete failed: Network error');
             });
         }
 
-            // Password functions
-            generatePasswordBtn.addEventListener("click", function () {
-                passwordInput.value = generatePassword();
-            });
-
-            togglePasswordBtn.addEventListener("click", function () {
-                const icon = this.querySelector("i");
-                if (passwordInput.type === "password") {
-                    passwordInput.type = "text";
-                    icon.classList.remove("fa-eye");
-                    icon.classList.add("fa-eye-slash");
+        // Reactivate user function
+        function reactivateUser(userId, role) {
+            fetch('@Url.Action("ReactivateUser")', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ id: userId, type: role })
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if(data.success) {
+                    showSuccessPopup(data.message || 'User reactivated successfully');
+                    submitUserForm(true);
                 } else {
-                    passwordInput.type = "password";
-                    icon.classList.remove("fa-eye-slash");
-                    icon.classList.add("fa-eye");
+                    showErrorPopup('Reactivation failed: ' + (data.message || 'Unknown error'));
                 }
+            })
+            .catch(error => {
+                console.error('Reactivation error:', error);
+                showErrorPopup('Reactivation failed: Network error');
             });
+        }
 
-            copyPasswordBtn.addEventListener("click", function () {
-                if (!passwordInput.value) {
-                    alert("No password to copy!");
-                    return;
+        // Bulk delete users function
+        function bulkDeleteUsers() {
+            const selected = Array.from(document.querySelectorAll('input[name="selectedUserIds"]:checked'))
+                .map(cb => ({
+                    id: parseInt(cb.value),
+                    type: cb.getAttribute('data-role')
+                }));
+
+            if (selected.length === 0) {
+                        var modal = new bootstrap.Modal(document.getElementById('noSelectionModal'));
+        modal.show();
+                return;
+            }
+
+            fetch('@Url.Action("BulkDeleteUsers")', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(selected)
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessPopup(data.message || 'Users deleted successfully');
+                    submitUserForm(true);
+                } else {
+                    showErrorPopup("Delete failed: " + (data.message || "Unknown error"));
                 }
-
-                navigator.clipboard.writeText(passwordInput.value).then(() => {
-                    copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    setTimeout(() => {
-                        copyPasswordBtn.innerHTML = '<i class="fas fa-copy"></i>';
-                    }, 1500);
-                }).catch(err => {
-                    console.error("Clipboard error:", err);
-                    alert("Failed to copy password.");
-                });
+            })
+            .catch(error => {
+                console.error('Bulk delete error:', error);
+                showErrorPopup('Delete failed: Network error');
             });
-
-            // Initialize existing handlers
-            document.querySelector('.search-input').addEventListener('input', debouncedUserSubmit);
-            document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
-                dd.addEventListener('change', () => submitUserForm(false));
-            });
-            document.querySelector('.refresh-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                submitUserForm(true);
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.action-menu-container')) {
-                    closeAllDropdowns();
-                }
-            });
-
-            hookDeleteBtns();
-            initActionMenus();
-        });
+        }
 
         // Show/hide sections
         function showSearchSection() {
@@ -809,23 +667,24 @@
             document.getElementById('submitSection').style.display = 'flex';
         }
 
-        function showSuccessPopup() {
+        function showSuccessPopup(message) {
             const successPopup = document.getElementById('successPopup');
             const closeBtn = document.getElementById('closeSuccessPopup');
+            const messageEl = successPopup.querySelector('p');
+
+            if (message) {
+                messageEl.textContent = message;
+            }
 
             successPopup.style.display = 'flex';
 
             closeBtn.onclick = function() {
                 successPopup.style.display = 'none';
-                resetUserFilters();
-                submitUserForm(true);
             };
 
             successPopup.onclick = function(e) {
                 if (e.target === successPopup) {
                     successPopup.style.display = 'none';
-                    resetUserFilters();
-                    submitUserForm(true);
                 }
             };
         }
@@ -851,8 +710,11 @@
 
         function resetUserFilters() {
             document.querySelector('.search-input').value = '';
-            document.querySelector('select[name="roleFilter"]').value = 'Administrator';
+            document.querySelector('select[name="roleFilter"]').value = 'all';
             document.querySelector('select[name="statusFilter"]').value = 'all';
+            // Reset page to 1 if a page input exists
+            let pageInput = document.querySelector('input[name="page"]');
+            if (pageInput) pageInput.value = '1';
         }
 
         function searchAzureAdUsers(searchTerm) {
@@ -929,7 +791,7 @@
         }
 
         function selectUser(user) {
-            tamperDetectionActive = false; // Disable detection during legitimate user selection
+            tamperDetectionActive = false;
 
             selectedAdUser = user;
 
@@ -938,12 +800,10 @@
             const lastName = user.LastName || user.lastName || user.Surname || user.surname || '';
             const email = user.Email || user.email || user.Mail || user.mail || '';
 
-            // Update display fields
-                document.getElementById('displayFirstName').value = firstName;
-        document.getElementById('displayLastName').value = lastName;
-        document.getElementById('displayEmail').value = email;
+            document.getElementById('displayFirstName').value = firstName;
+            document.getElementById('displayLastName').value = lastName;
+            document.getElementById('displayEmail').value = email;
 
-            // Populate hidden form fields
             document.getElementById('firstName').value = firstName;
             document.getElementById('lastName').value = lastName;
             document.getElementById('email').value = email;
@@ -951,7 +811,6 @@
 
             hideSearchResults();
 
-            // Generate security data
             const userData = {
                 Id: user.Id || user.id,
                 FirstName: firstName,
@@ -964,13 +823,13 @@
                 if (success) {
                     showUserInfoSection();
                 } else {
-                    alert('Security initialization failed. Please try selecting the user again.');
+                    showErrorPopup('Security initialization failed. Please try selecting the user again.');
                 }
             });
         }
 
         function clearUserFields() {
-            tamperDetectionActive = false; // Disable detection during clearing
+            tamperDetectionActive = false;
             selectedAdUser = null;
             securityData = null;
 
@@ -983,7 +842,7 @@
             fields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
                 field.value = '';
-                field.readOnly = false; // Remove readonly during clearing
+                field.readOnly = false;
             });
 
             document.getElementById('displayFirstName').textContent = '-';
@@ -996,7 +855,7 @@
         }
 
         function resetForm() {
-            tamperDetectionActive = false; // Disable detection during reset
+            tamperDetectionActive = false;
 
             if (tamperCheckInterval) {
                 clearInterval(tamperCheckInterval);
@@ -1006,7 +865,7 @@
             securityData = null;
             originalFormData = {};
 
-            newUserForm.reset();
+            document.getElementById('newUserForm').reset();
             clearUserFields();
             hideSearchResults();
             showSearchSection();
@@ -1019,44 +878,6 @@
             }
         }
 
-        // Keep all your existing functions below...
-        document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
-            e.preventDefault();
-
-            const selected = Array.from(document.querySelectorAll('input[name="selectedUserIds"]:checked'))
-                .map(cb => ({
-                    id: parseInt(cb.value),
-                    type: cb.getAttribute('data-role')
-                }));
-
-            if (selected.length === 0) {
-                alert("Please select at least one user to delete.");
-                return;
-            }
-
-            if (!confirm("Are you sure you want to delete the selected users?")) {
-                return;
-            }
-
-            fetch('@Url.Action("BulkDeleteUsers")', {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
-                },
-                body: JSON.stringify(selected)
-            })
-            .then(resp => resp.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    submitUserForm(true);
-                } else {
-                    alert("Delete failed: " + (data.message || "Unknown error"));
-                }
-            });
-        });
-
         function debounce(fn, delay) {
             let timer = null;
             return function(...args) {
@@ -1068,7 +889,11 @@
         function submitUserForm(keepPage = false) {
             const form = document.getElementById('userFilterForm');
             if(!keepPage) {
-                let pageInput = document.createElement('input');
+                // Remove any existing page input
+                let pageInput = form.querySelector('input[name="page"]');
+                if (pageInput) pageInput.remove();
+                // Add a new page input set to 1
+                pageInput = document.createElement('input');
                 pageInput.type = "hidden";
                 pageInput.name = "page";
                 pageInput.value = "1";
@@ -1084,6 +909,7 @@
                 hookDeleteBtns();
                 hookReactivateBtns();
                 initActionMenus();
+                hookPaginationLinks();
             });
         }
 
@@ -1091,62 +917,73 @@
 
         function hookDeleteBtns() {
             document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
-                btn.onclick = function(e) {
+                // Remove any existing event listeners first
+                btn.replaceWith(btn.cloneNode(true));
+            });
+
+            // Re-attach event listeners
+            document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const userId = parseInt(btn.getAttribute('data-user-id'));
                     const role = btn.getAttribute('data-role');
-                    if(confirm('Are you sure you want to delete this user?')) {
-                        fetch('@Url.Action("DeleteUser")', {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
-                            },
-                            body: JSON.stringify({ id: userId, type: role })
-                        })
-                        .then(resp => resp.json())
-                        .then(data => {
-                            if(data.success) {
-                                alert(data.message);
-                                submitUserForm(true);
-                            } else {
-                                alert('Delete failed: ' + (data.message || 'Unknown error'));
-                            }
-                        });
-                    }
+
+                    console.log('Delete button clicked:', userId, role); // Debug log
+
+                    currentDeleteUserId = userId;
+                    currentDeleteUserRole = role;
+                    document.getElementById('deleteConfirmModal').style.display = 'flex';
+
                     closeAllDropdowns();
-                };
+                });
             });
         }
 
         function hookReactivateBtns() {
             document.querySelectorAll('.reactivate-user-btn').forEach(function(btn) {
-                btn.onclick = function(e) {
+                // Remove any existing event listeners first
+                btn.replaceWith(btn.cloneNode(true));
+            });
+
+            // Re-attach event listeners
+            document.querySelectorAll('.reactivate-user-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const userId = parseInt(btn.getAttribute('data-user-id'));
                     const role = btn.getAttribute('data-role');
-                    if(confirm('Are you sure you want to reactivate this user?')) {
-                        fetch('@Url.Action("ReactivateUser")', {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
-                            },
-                            body: JSON.stringify({ id: userId, type: role })
-                        })
-                        .then(resp => resp.json())
-                        .then(data => {
-                            if(data.success) {
-                                alert(data.message);
-                                submitUserForm(true);
-                            } else {
-                                alert('Reactivation failed: ' + (data.message || 'Unknown error'));
-                            }
-                        });
-                    }
+
+                    console.log('Reactivate button clicked:', userId, role); // Debug log
+
+                    currentReactivateUserId = userId;
+                    currentReactivateUserRole = role;
+                    document.getElementById('reactivateConfirmModal').style.display = 'flex';
+
                     closeAllDropdowns();
+                });
+            });
+        }
+
+        function hookPaginationLinks() {
+            document.querySelectorAll('.pagination-list .page-link').forEach(function(link) {
+                link.onclick = function(e) {
+                    e.preventDefault();
+                    var page = parseInt(this.getAttribute('data-page'));
+                    var totalPages = parseInt(this.closest('.pagination-list').getAttribute('data-total-pages')) || 1;
+                    var currentPage = parseInt(this.closest('.pagination-list').getAttribute('data-current-page')) || 1;
+                    if (!isNaN(page) && page > 0 && page <= totalPages && page !== currentPage) {
+                        var form = document.getElementById('userFilterForm');
+                        var pageInput = form.querySelector('input[name="page"]');
+                        if (!pageInput) {
+                            pageInput = document.createElement('input');
+                            pageInput.type = "hidden";
+                            pageInput.name = "page";
+                            form.appendChild(pageInput);
+                        }
+                        pageInput.value = page;
+                        form.dispatchEvent(new Event('submit', { cancelable: true }));
+                    }
                 };
             });
         }
@@ -1184,6 +1021,345 @@
                 btn.nextElementSibling.classList.remove('show');
             });
         }
+
+        function submitFormData() {
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                password: document.getElementById('password').value,
+                azureAdId: selectedAdUser.Id || selectedAdUser.id,
+                dataHash: securityData.hash,
+                nonce: securityData.nonce,
+                timestamp: securityData.timestamp
+            };
+
+            const submitBtn = document.querySelector('#newUserForm button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            fetch('@Url.Action("CreateUser")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('newUserModal').style.display = 'none';
+                    resetForm();
+                    showSuccessPopup('User created successfully!');
+                    resetUserFilters();
+                    submitUserForm(true);
+                } else if (data.tampered) {
+                    showTamperDetectedModal(data.tamperType, data.message);
+                } else {
+                    showErrorPopup(data.message || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorPopup('Network error occurred. Please try again.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            });
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            const newUserBtn = document.querySelector('.big-newuser-btn');
+            const modal = document.getElementById('newUserModal');
+            const closeModal = modal.querySelector('.close-modal');
+            const newUserForm = document.getElementById('newUserForm');
+            const adUserSearch = document.getElementById('adUserSearch');
+            const searchResults = document.getElementById('searchResults');
+            const searchSpinner = document.getElementById('searchSpinner');
+
+            // Modal event handlers
+            document.getElementById('closeTamperModal').addEventListener('click', function() {
+                document.getElementById('tamperDetectedModal').style.display = 'none';
+                modal.style.display = 'none';
+                resetForm();
+                location.reload();
+            });
+
+            // Delete modal handlers
+            document.getElementById('deleteCancelBtn').addEventListener('click', function() {
+                document.getElementById('deleteConfirmModal').style.display = 'none';
+                currentDeleteUserId = null;
+                currentDeleteUserRole = null;
+            });
+
+            document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+                if (currentDeleteUserId && currentDeleteUserRole) {
+                    deleteUser(currentDeleteUserId, currentDeleteUserRole);
+                }
+                document.getElementById('deleteConfirmModal').style.display = 'none';
+            });
+
+            // Reactivate modal handlers
+            document.getElementById('reactivateCancelBtn').addEventListener('click', function() {
+                document.getElementById('reactivateConfirmModal').style.display = 'none';
+                currentReactivateUserId = null;
+                currentReactivateUserRole = null;
+            });
+
+            document.getElementById('reactivateConfirmBtn').addEventListener('click', function() {
+                if (currentReactivateUserId && currentReactivateUserRole) {
+                    reactivateUser(currentReactivateUserId, currentReactivateUserRole);
+                }
+                document.getElementById('reactivateConfirmModal').style.display = 'none';
+            });
+
+            // Bulk delete modal handlers
+            document.getElementById('bulkDeleteCancelBtn').addEventListener('click', function() {
+                document.getElementById('bulkDeleteConfirmModal').style.display = 'none';
+            });
+
+            document.getElementById('bulkDeleteConfirmBtn').addEventListener('click', function() {
+                bulkDeleteUsers();
+                document.getElementById('bulkDeleteConfirmModal').style.display = 'none';
+            });
+
+            // No selection modal handler
+                 document.getElementById('noSelectionOkBtn').addEventListener('click', function() {
+            var modal = bootstrap.Modal.getInstance(document.getElementById('noSelectionModal'));
+            if (modal) modal.hide();
+        });
+
+            // Bulk delete button handler - MOVE THIS HERE
+         document.querySelector('.big-delete-btn').addEventListener('click', function (e) {
+            e.preventDefault();
+            const selected = document.querySelectorAll('input[name="selectedUserIds"]:checked');
+            if (selected.length === 0) {
+                var modal = new bootstrap.Modal(document.getElementById('noSelectionModal'));
+                modal.show();
+            } else {
+                document.getElementById('bulkDeleteConfirmModal').style.display = 'flex';
+            }
+        });
+
+            // Show modal
+            newUserBtn.addEventListener('click', function () {
+                modal.style.display = 'flex';
+                resetForm();
+            });
+
+            // Close modal on X
+            closeModal.addEventListener('click', function () {
+                modal.style.display = 'none';
+                resetForm();
+            });
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    resetForm();
+                }
+            });
+
+            // Change user selection button
+            document.getElementById('changeUserBtn').addEventListener('click', function() {
+                showSearchSection();
+                clearUserFields();
+            });
+
+            // Azure AD User Search
+            adUserSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.trim();
+                clearTimeout(searchTimeout);
+
+                if (searchTerm.length < 3) {
+                    hideSearchResults();
+                    return;
+                }
+
+                searchSpinner.style.display = 'block';
+                searchTimeout = setTimeout(function() {
+                    searchAzureAdUsers(searchTerm);
+                }, 500);
+            });
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#adUserSearch') && !e.target.closest('#searchResults')) {
+                    hideSearchResults();
+                }
+            });
+
+            function isFormTampered() {
+                if (!tamperDetectionActive || !originalFormData || !securityData) {
+                    return null;
+                }
+
+                if (!document.getElementById('firstName').value ||
+                    !document.getElementById('lastName').value ||
+                    !document.getElementById('email').value) {
+                    return {
+                        type: 'MISSING_DATA',
+                        message: 'Required form data is missing.'
+                    };
+                }
+
+                const currentFormData = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    email: document.getElementById('email').value,
+                    azureAdId: document.getElementById('azureAdId').value
+                };
+
+                if (JSON.stringify(originalFormData) !== JSON.stringify(currentFormData)) {
+                    console.error('Field tampering detected:', {
+                        original: originalFormData,
+                        current: currentFormData
+                    });
+                    return {
+                        type: 'FORM_FIELD_MODIFIED',
+                        message: 'Form data has been tampered with using developer tools.'
+                    };
+                }
+
+                const readOnlyFields = ['firstName', 'lastName', 'email', 'azureAdId'];
+                for (const fieldId of readOnlyFields) {
+                    const field = document.getElementById(fieldId);
+                    if (field && originalFormData[fieldId] && !field.readOnly) {
+                        return {
+                            type: 'READONLY_REMOVED',
+                            message: 'Form security attributes have been tampered with.'
+                        };
+                    }
+                }
+
+                const currentHash = document.getElementById('dataHash').value;
+                const currentNonce = document.getElementById('nonce').value;
+                const currentTimestamp = document.getElementById('timestamp').value;
+
+                if (currentHash !== securityData.hash ||
+                    currentNonce !== securityData.nonce ||
+                    currentTimestamp !== securityData.timestamp.toString()) {
+                    return {
+                        type: 'SECURITY_DATA_MODIFIED',
+                        message: 'Security validation data has been compromised.'
+                    };
+                }
+
+                return null;
+            }
+
+            // Enhanced form submit handler
+            newUserForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const tamperResult = isFormTampered();
+                if (tamperResult) {
+                    console.error('🚨 TAMPERING DETECTED ON SUBMIT:', tamperResult);
+                    showTamperDetectedModal(tamperResult.type, tamperResult.message);
+                    return false;
+                }
+
+                if (!selectedAdUser) {
+                    showErrorPopup('Please search and select a user from Azure AD first.');
+                    return false;
+                }
+
+                if (!securityData) {
+                    showErrorPopup('Security validation failed. Please select a user again.');
+                    return false;
+                }
+
+                const password = document.getElementById('password').value;
+                if (!password) {
+                    showErrorPopup('Please generate a password first.');
+                    return false;
+                }
+
+                const role = document.getElementById('role').value;
+                if (!role) {
+                    showErrorPopup('Please select a role.');
+                    return false;
+                }
+
+                submitFormData();
+            });
+
+            // Password functions
+            generatePasswordBtn.addEventListener("click", function () {
+                passwordInput.value = generatePassword();
+            });
+
+            togglePasswordBtn.addEventListener("click", function () {
+                const icon = this.querySelector("i");
+                if (passwordInput.type === "password") {
+                    passwordInput.type = "text";
+                    icon.classList.remove("fa-eye");
+                    icon.classList.add("fa-eye-slash");
+                } else {
+                    passwordInput.type = "password";
+                    icon.classList.remove("fa-eye-slash");
+                    icon.classList.add("fa-eye");
+                }
+            });
+
+            copyPasswordBtn.addEventListener("click", function () {
+                if (!passwordInput.value) {
+                    alert("No password to copy!");
+                    return;
+                }
+
+                navigator.clipboard.writeText(passwordInput.value).then(() => {
+                    copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        copyPasswordBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 1500);
+                }).catch(err => {
+                    console.error("Clipboard error:", err);
+                    alert("Failed to copy password.");
+                });
+            });
+
+            // Initialize existing handlers
+            document.querySelector('.search-input').addEventListener('input', function() {
+                submitUserForm(false);
+            });
+
+            document.querySelectorAll('.filter-dropdown').forEach(function(dd) {
+                dd.addEventListener('change', () => submitUserForm(false));
+            });
+
+        document.querySelector('.refresh-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Clear all filters
+            document.querySelector('.search-input').value = '';
+            document.querySelector('select[name="roleFilter"]').value = 'all';
+
+            // Remove any existing page input to reset to page 1
+            let pageInput = document.querySelector('input[name="page"]');
+            if (pageInput) pageInput.remove();
+
+            // Submit the form to reload the table with cleared filters
+            submitUserForm(false); // false = don't keep current page, reset to page 1
+        });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.action-menu-container')) {
+                    closeAllDropdowns();
+                }
+            });
+
+            // Initialize button handlers
+            hookDeleteBtns();
+            hookReactivateBtns();
+            initActionMenus();
+        });
     </script>
 }
 
@@ -1191,25 +1367,140 @@
 <style>
 
     @@keyframes fadeInScale {
-        from
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
 
-    {
-        opacity: 0;
-        transform: scale(0.8);
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
-    to {
-        opacity: 1;
-        transform: scale(1);
+    /* Green button with 3rd effect for modal */
+    .green-effect {
+        background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        box-shadow: 0 4px 0 0 #007a3d, 0 8px 16px -4px rgba(0,147,68,0.18);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
     }
 
+        .green-effect:hover, .green-effect:focus {
+            background: linear-gradient(to bottom, #007a3d 90%, #009344 100%);
+            box-shadow: 0 2px 0 0 #007a3d, 0 4px 8px -2px rgba(0,147,68,0.18);
+            transform: translateY(2px);
+            color: #fff;
+        }
+    /* Delete Confirmation Modal Styles */
+    #deleteConfirmModal {
+        display: none;
+        position: fixed;
+        z-index: 10001;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.4);
+        align-items: center;
+        justify-content: center;
+    }
+    /* Use the same modal dialog and content styles as Create.cshtml */
+    #noSelectionModal .modal-dialog {
+        max-width: 400px;
+        min-width: 320px;
+        width: 90%;
+        margin: auto;
     }
 
+    #noSelectionModal .modal-content {
+        padding: 24px 18px;
+        box-sizing: border-box;
+        word-break: break-word;
+        border-radius: 12px;
+    }
+
+    #noSelectionModal .modal-body p,
+    #noSelectionModal .modal-footer button {
+        font-size: 1.1rem;
+    }
+
+    #deleteConfirmModal > div {
+        background: #fff;
+        border-radius: 24px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        max-width: 500px;
+        width: 95%;
+        margin: auto;
+        overflow: hidden;
+        border: 2px solid #009344;
+    }
+
+    #deleteConfirmModal .modal-header {
+        background: #009344;
+        color: #fff;
+        padding: 32px 0 24px 0;
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    #deleteConfirmModal .modal-body {
+        padding: 38px 0 0 0;
+        text-align: center;
+        font-size: 2rem;
+        color: #444;
+    }
+
+    #deleteConfirmModal .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 48px;
+        margin: 48px 0 40px 0;
+    }
+
+    #deleteCancelBtn {
+        background: #009344;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 500;
+        border: none;
+        border-radius: 6px;
+        padding: 22px 64px;
+        box-shadow: 0 6px 0 0 #007a3d;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+        #deleteCancelBtn:hover {
+            background: #007a3d;
+        }
+
+    #deleteConfirmBtn {
+        background: #e74c3c;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 500;
+        border: none;
+        border-radius: 6px;
+        padding: 22px 64px;
+        box-shadow: 0 6px 0 0 #c0392b;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+        #deleteConfirmBtn:hover {
+            background: #c0392b;
+        }
 
     /* Action Menu Styles */
     .action-menu-container {
         position: relative;
         display: inline-block;
+        overflow: visible; /* Ensure dropdown is not clipped */
     }
 
     .action-menu-btn {
@@ -1241,15 +1532,20 @@
             }
 
     .action-dropdown {
-        position: fixed; /* Changed from absolute to fixed */
+        position: absolute;
+        top: 100%;
+        left: -120px; /* Move dropdown 120px to the left of the button */
         background: white;
         border: 1px solid #ddd;
         border-radius: 6px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         min-width: 140px;
-        z-index: 9999; /* Increased z-index */
+        z-index: 9999;
         display: none;
-        overflow: hidden;
+        overflow: visible;
+        white-space: nowrap;
+        max-height: 300px;
+        overflow-y: auto;
     }
 
         .action-dropdown.show {
@@ -1481,4 +1777,437 @@
         align-items: center;
         justify-content: center;
     }
+
+    .breadcrumb-custom {
+        color: #888;
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-bottom: 18px;
+        margin-top: 32px;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.2em;
+        max-width: 900px;
+        margin-left: 0px;
+        margin-right: auto;
+        /* Remove: margin-left: 0; */
+    }
+
+    .breadcrumb-active {
+        color: #1a7f37;
+        font-weight: 500;
+    }
+
+    .page-item:first-child .page-link,
+    .page-item:last-child .page-link {
+        border-radius: 50%;
+    }
+
+
+    .custom-pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: -90px; /* Pull up closer to card */
+        z-index: 1;
+    }
+
+    .pagination-list {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: #fff;
+        padding: 8px 20px;
+        border-radius: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+    }
+
+    .page-item {
+        margin: 0;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .page-item.active .page-link {
+        background-color: #000;
+        color: white;
+        border-color: #000;
+        font-weight: 700;
+        transform: rotate(45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        padding: 0;
+        transition: background 0.2s, color 0.2s;
+        cursor: pointer;
+    }
+
+        .page-item.active .page-link .page-number {
+            display: inline-block;
+            transform: rotate(-45deg);
+            font-size: 1rem;
+            width: 100%;
+            text-align: center;
+            color: white;
+            transition: color 0.2s;
+        }
+
+        .page-item.active .page-link:hover,
+        .page-item.active .page-link:focus {
+            background: #fff;
+            color: #000;
+            border-color: #000;
+        }
+
+            .page-item.active .page-link:hover .page-number,
+            .page-item.active .page-link:focus .page-number {
+                color: #000;
+            }
+
+    .page-link.arrow-link {
+        font-size: 1.5rem;
+        font-weight: bold;
+        background: #f5f5f5;
+        color: #000;
+        text-decoration: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+        .page-link.arrow-link:hover:not(.disabled) {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+
+    .page-item.active .page-link span {
+        transform: rotate(-45deg);
+        display: inline-block;
+    }
+
+
+    .page-item.disabled .page-link {
+        color: #ccc !important;
+        pointer-events: none;
+        background: #f5f5f5 !important;
+        border-color: #eee !important;
+    }
+
+    .page-link:hover:not(.active):not(.disabled) {
+        background-color: #f1f1f1;
+        color: #000;
+        border-color: #000;
+    }
+
+    /* --- New User Modal Styling --- */
+    #newUserModal .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 0;
+        min-width: 420px;
+        max-width: 72vw;
+        margin: auto;
+        position: relative;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+        border: 2px solid #e0e0e0;
+    }
+
+    #newUserModal .modal-header {
+        background: #009344;
+        color: #fff;
+        padding: 28px 32px 18px 32px;
+        font-size: 2rem;
+        font-weight: 700;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    #newUserModal .close-modal {
+        color: #fff !important;
+        font-size: 2rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-left: 16px;
+        background: none;
+        border: none;
+    }
+
+    #newUserModal form {
+        padding: 32px;
+    }
+
+    #newUserModal .search-wrapper {
+        width: 100%;
+        margin-bottom: 32px;
+    }
+
+    #newUserModal .search-input,
+    #newUserModal #adUserSearch {
+        width: 100%;
+        padding: 14px 16px 14px 44px;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 6px;
+        background: #f8f9fa;
+        color: #333;
+        font-size: 1.1rem;
+        font-family: 'Segoe UI', sans-serif;
+        margin-bottom: 0;
+    }
+
+        #newUserModal .search-input::placeholder,
+        #newUserModal #adUserSearch::placeholder {
+            color: #aaa;
+            font-size: 1rem;
+        }
+
+    #newUserModal label {
+        font-weight: 500;
+        margin-bottom: 6px;
+        display: block;
+        color: #333;
+        font-size: 1rem;
+    }
+
+    #newUserModal .form-row {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    #newUserModal .form-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #newUserModal input[readonly],
+    #newUserModal input[disabled] {
+        background: #e0e0e0;
+        color: #888;
+        border: 1.5px solid #e0e0e0;
+    }
+
+    #newUserModal input,
+    #newUserModal select {
+        padding: 14px 16px;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 6px;
+        background: #f8f9fa;
+        color: #333;
+        font-size: 1.1rem;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        #newUserModal select:required:invalid {
+            color: #aaa;
+        }
+
+    #newUserModal select {
+        background: #fff;
+        border: 1.5px solid #b3b3b3;
+        color: #333;
+        font-size: 1.1rem;
+        font-family: 'Segoe UI', sans-serif;
+        min-width: 180px;
+    }
+
+    #newUserModal .form-group.required label:after {
+        content: " *";
+        color: #e74c3c;
+        font-weight: bold;
+    }
+
+    #newUserModal #passwordSection input {
+        background: #f8f9fa;
+        border: 1.5px solid #e0e0e0;
+        color: #333;
+    }
+
+        #newUserModal #passwordSection input::placeholder {
+            color: #aaa;
+        }
+
+    #newUserModal #submitSection {
+        display: flex;
+        justify-content: center;
+        margin-top: 32px;
+        gap: 18px;
+    }
+
+    #newUserModal #changeUserBtn {
+        background: #e0e0e0;
+        color: #333;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 18px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        margin-right: 12px;
+        transition: background 0.2s;
+    }
+
+        #newUserModal #changeUserBtn:hover {
+            background: #d0d0d0;
+        }
+
+    #newUserModal .btn,
+    #newUserModal button[type="submit"] {
+        background: #009344;
+        color: #fff;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        padding: 14px 38px;
+        font-size: 1.15rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,147,68,0.08);
+        transition: background 0.2s;
+    }
+
+        #newUserModal .btn:hover,
+        #newUserModal button[type="submit"]:hover {
+            background: #007a3d;
+        }
+
+    #newUserModal .form-control:focus {
+        outline: none;
+        border-color: #009344;
+        box-shadow: 0 0 0 2px #00934422;
+    }
+
+    #newUserModal .search-wrapper i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        font-size: 1.2rem;
+    }
+
+    #newUserModal #searchResults {
+        border-radius: 0 0 6px 6px;
+        border: 1.5px solid #e0e0e0;
+        border-top: none;
+        background: #fff;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .user-status.status-active {
+        color: #00a651;
+        font-weight: 600;
+    }
+
+    .user-status.status-inactive {
+        color: #e74c3c;
+        font-weight: 600;
+    }
+
+    .user-table thead th {
+        background-color: #f5c012;
+        color: #fff;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 0;
+    }
+
+        /* Example: Make FULL NAME and ACTION columns dark */
+        .user-table thead th:nth-child(2),
+        .user-table thead th:last-child {
+            background-color: #333;
+        }
+
+        /* If OVRS user, COMPANY NAME is column 3, so you may want to style it too */
+        .user-table thead th:nth-child(3) {
+            background-color: #f5c012;
+        }
+
+        .user-table thead th:nth-child(4) {
+            background-color: #333;
+        }
+
+    #newUserModal .search-result-item {
+        background: #fff;
+        color: #333;
+        font-size: 1rem;
+    }
+
+        #newUserModal .search-result-item:hover {
+            background: #f8f9fa;
+        }
+
+    @@media (max-width: 600px) {
+        #newUserModal .modal-content {
+            min-width: 98vw;
+            padding: 0;
+        }
+
+        #newUserModal form {
+            padding: 16px;
+        }
+
+        #newUserModal .form-row {
+            flex-direction: column;
+            gap: 12px;
+        }
+    }
+    /* Create Account button hover styling */
+    #createUserModal .create-account-btn,
+    #createUserModal button.create-account-btn,
+    #createUserModal button[type="submit"].create-account-btn,
+    #newUserModal .create-account-btn,
+    #newUserModal button.create-account-btn,
+    #newUserModal button[type="submit"].create-account-btn {
+        background: #009344;
+        color: #fff;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        padding: 14px 38px;
+        font-size: 1.15rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,147,68,0.08);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+
+        #createUserModal .create-account-btn:hover,
+        #createUserModal button.create-account-btn:hover,
+        #createUserModal button[type="submit"].create-account-btn:hover,
+        #newUserModal .create-account-btn:hover,
+        #newUserModal button.create-account-btn:hover,
+        #newUserModal button[type="submit"].create-account-btn:hover {
+            background: #00918d;
+            box-shadow: 0 4px 12px rgba(0,147,68,0.18);
+        }
 </style>

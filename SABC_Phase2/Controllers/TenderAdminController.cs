@@ -60,7 +60,7 @@ namespace SABC_Phase2.Controllers
         }
 
         // Helper to get current admin info
-        private async Task<(int adminId, string adminEmail, string adminFullName)> GetCurrentAdminAsync()
+        private async Task<(int adminId, string adminEmail, string adminFullName, string adminRole)> GetCurrentAdminAsync()
         {
             var idStr = User.FindFirst("UserId")?.Value ?? User.FindFirst("AdminId")?.Value;
             int adminId = 0;
@@ -70,18 +70,25 @@ namespace SABC_Phase2.Controllers
                 ?? User.FindFirst(ClaimTypes.Email)?.Value
                 ?? User.Identity?.Name;
 
-            // Get full name from DB using adminId
             string fullName = email; // fallback
+            string role = "Unknown"; // fallback
+
             if (adminId > 0)
             {
                 var admin = await _context.Administrators.FindAsync(adminId);
-                if (admin != null && !string.IsNullOrWhiteSpace(admin.FirstName) && !string.IsNullOrWhiteSpace(admin.LastName))
+                if (admin != null)
                 {
-                    fullName = $"{admin.FirstName} {admin.LastName}";
+                    if (!string.IsNullOrWhiteSpace(admin.FirstName) && !string.IsNullOrWhiteSpace(admin.LastName))
+                    {
+                        fullName = $"{admin.FirstName} {admin.LastName}";
+                    }
+                    if (!string.IsNullOrWhiteSpace(admin.Role))
+                    {
+                        role = admin.Role;
+                    }
                 }
             }
-
-            return (adminId, email, fullName);
+            return (adminId, email, fullName, role);
         }
 
 
@@ -107,7 +114,7 @@ namespace SABC_Phase2.Controllers
                 return Forbid();
 
             // --- Get Admin Info ONCE for audit logging ---
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
 
             // --- TENDER NUMBER UNIQUENESS VALIDATION ---
             if (!string.IsNullOrWhiteSpace(model.TenderNumber))
@@ -183,14 +190,19 @@ namespace SABC_Phase2.Controllers
                     _context.ScheduledTenders.Add(scheduledTender);
                     await _context.SaveChangesAsync();
 
-                    // --- AUDIT LOG: Log scheduled tender creation ---
+                    // --- AUDIT LOG: Log scheduled tender creation WITH ROLE ---
+                    var sastime = _saTimeService.GetCurrentSouthAfricanTime();
+                    var timestamp = sastime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
                     await _auditLogService.LogAsync(
                         adminId,
                         adminEmail,
                         adminFullName,
+                        adminRole, // <--- Pass the role here
                         "ScheduleTender",
-                        $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was created by {adminFullName} ({adminEmail})"
+                        $"Scheduled Tender \"{scheduledTender.TenderNumber}\" was scheduled"
                     );
+
 
                     var delay = scheduledUtc - DateTime.UtcNow;
                     if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
@@ -288,14 +300,18 @@ namespace SABC_Phase2.Controllers
             _context.Tenders.Add(tender);
             await _context.SaveChangesAsync();
 
-            // --- AUDIT LOG: Log immediate tender creation ---
+            // --- AUDIT LOG: Log immediate tender creation WITH ROLE ---
+            var timestamp2 = saNow.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             await _auditLogService.LogAsync(
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole, // <--- Pass the role here
                 "CreateTender",
-                $"Tender \"{tender.TenderNumber}\" was published by {adminFullName} ({adminEmail})"
+                $"Tender \"{tender.TenderNumber}\" was published"
             );
+
+
 
             if (model.DraftId.HasValue)
             {
@@ -313,12 +329,13 @@ namespace SABC_Phase2.Controllers
 
                     // --- AUDIT LOG: Log draft deletion after publish ---
                     await _auditLogService.LogAsync(
-                        adminId,
-                        adminEmail,
-                        adminFullName,
-                        "DeleteDraftAfterPublish",
-                        $"Draft for tender \"{tender.TenderNumber}\" was published by {adminFullName} ({adminEmail})."
-                    );
+               adminId,
+               adminEmail,
+               adminFullName,
+               adminRole, // <--- Pass the role here
+               "DeleteDraftAfterPublish",
+               $"Draft for tender \"{tender.TenderNumber}\" was published"
+           );
                 }
             }
 
@@ -579,15 +596,16 @@ namespace SABC_Phase2.Controllers
             await _context.SaveChangesAsync();
 
             // --- AUDIT LOG: Log draft save ---
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
             string actionType = isNewDraft ? "CreateDraft" : "EditDraft";
             string description = isNewDraft
-                ? $"Draft for Tender \"{draft.TenderNumber}\" was created by {adminFullName} ({adminEmail})"
-                : $"Draft for Tender \"{draft.TenderNumber}\" was edited by {adminFullName} ({adminEmail})";
+                ? $"Draft for Tender \"{draft.TenderNumber}\" was created"
+                : $"Draft for Tender \"{draft.TenderNumber}\" was edited";
             await _auditLogService.LogAsync(
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole,
                 actionType,
                 description
             );
@@ -652,13 +670,14 @@ namespace SABC_Phase2.Controllers
                 await _context.SaveChangesAsync();
 
                 // --- AUDIT LOG: Log draft deletion ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
                 await _auditLogService.LogAsync(
                     adminId,
                     adminEmail,
                     adminFullName,
+                    adminRole,
                     "DeleteDraft",
-                    $"Draft for Tender \"{draft.TenderNumber}\" (DraftId: {draft.Id}) was deleted by {adminFullName} ({adminEmail})"
+                    $"Draft for Tender \"{draft.TenderNumber}\" was deleted"
                 );
 
                 return Ok(new { success = true, message = "Draft deleted successfully" });
@@ -1485,7 +1504,7 @@ namespace SABC_Phase2.Controllers
             }
 
             // ✅ BUILD DETAILED AUDIT LOG
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
 
             // Track all document changes
             var documentChanges = new List<string>();
@@ -1524,6 +1543,7 @@ namespace SABC_Phase2.Controllers
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole,
                 "EditTender",
                 changeDescription
             );
@@ -1773,7 +1793,7 @@ namespace SABC_Phase2.Controllers
             }
 
             // ✅ BUILD DETAILED AUDIT LOG
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
 
             // Track all document changes
             var documentChanges = new List<string>();
@@ -1816,6 +1836,7 @@ namespace SABC_Phase2.Controllers
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole,
                 "EditScheduledTender",
                 changeDescription
             );
@@ -1911,7 +1932,7 @@ namespace SABC_Phase2.Controllers
             // Build final description with admin name and timestamp
             if (changes.Any())
             {
-                return $"Scheduled Tender '{updatedTender.TenderNumber}' modified by {adminFullName} on {timestamp} SAST: {string.Join("; ", changes)}";
+                return $"Scheduled Tender '{updatedTender.TenderNumber}' modified {string.Join("; ", changes)}";
             }
             else
             {
@@ -1959,7 +1980,7 @@ namespace SABC_Phase2.Controllers
                 await _context.SaveChangesAsync();
 
                 // --- AUDIT LOG: Log scheduled tender deletion with detailed info and timestamp ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
                 var saTime = _saTimeService.GetCurrentSouthAfricanTime();
                 var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -1973,6 +1994,7 @@ namespace SABC_Phase2.Controllers
                     adminId,
                     adminEmail,
                     adminFullName,
+                    adminRole,
                     "DeleteScheduledTender",
                     changeDescription
                 );
@@ -2152,7 +2174,7 @@ namespace SABC_Phase2.Controllers
             var pdfBytes = _pdfService.GenerateSupplierReport(tender, pdfInfos);
 
             // --- AUDIT LOG: Log supplier report generation ---
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
             // Get South African time stamp
             var saTime = _saTimeService.GetCurrentSouthAfricanTime();
             var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
@@ -2161,8 +2183,9 @@ namespace SABC_Phase2.Controllers
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole,
                 "GenerateTenderSupplierReport",
-                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated by {adminFullName} ({adminEmail}) on {timestamp} SAST"
+                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated"
             );
 
             // Return the PDF file as a download, naming it with the tender number
@@ -2238,7 +2261,7 @@ namespace SABC_Phase2.Controllers
             var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
 
             // --- AUDIT LOG: Log closed tenders summary report generation ---
-            var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
             var saTime = _saTimeService.GetCurrentSouthAfricanTime();
             var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -2246,28 +2269,29 @@ namespace SABC_Phase2.Controllers
                 adminId,
                 adminEmail,
                 adminFullName,
+                adminRole,
                 "GenerateClosedTendersSummaryReport",
-                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated by {adminFullName} ({adminEmail}) on {timestamp} SAST"
+                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated"
             );
 
             // Return the PDF file as a download, naming it with the date range
             return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
-        
 
 
-      
 
-       
+
+
+
 
         // ----------------------------------------------------------------------------------------------------------------------------------------------
         // USER MANAGEMENT SECTION (IT ADMIN)
-        
+
         [HttpGet]
-        public async Task<IActionResult> Users_Management(string search = "", string roleFilter = "all", string statusFilter = "all")
+        public async Task<IActionResult> Users_Management(string search = "",string roleFilter = "all",string statusFilter = "all",int page = 1,int pageSize = 7)
         {
-            List<AdminUserRowViewModel> users;
             bool isOvrsUser = roleFilter == "OVRS_User";
+            IEnumerable<AdminUserRowViewModel> result;
 
             if (isOvrsUser)
             {
@@ -2277,27 +2301,24 @@ namespace SABC_Phase2.Controllers
                     .ToListAsync();
 
                 var legacyIds = ovrsPhase2Users.Select(u => u.LegacyUserId.Value).ToList();
-
-                // PHASE 1: Get legacy users and suppliers
                 var legacyUsers = await _legacyContext.TblUsers.ToListAsync();
                 var suppliers = await _legacyContext.TblSuppliers.ToListAsync();
 
-                var result = from phase2 in ovrsPhase2Users
-                             join legacy in legacyUsers on phase2.LegacyUserId equals legacy.UserId
-                             join supplier in suppliers on legacy.UserId equals supplier.UserId into supplierJoin
-                             from supplier in supplierJoin.DefaultIfEmpty()
-                             select new AdminUserRowViewModel
-                             {
-                                 Id = phase2.Id,
-                                 Email = legacy.Email ?? "",
-                                 FullName = $"{legacy.FirstName} {legacy.LastName}",
-                                 Role = "OVRS_User",
-                                 // Show "Active"/"Inactive" based on AccountStatus
-                                 Status = phase2.AccountStatus == 1 ? "Active" : "Inactive",
-                                 CompanyName = supplier?.TradingName ?? ""
-                             };
+                result = from phase2 in ovrsPhase2Users
+                         join legacy in legacyUsers on phase2.LegacyUserId equals legacy.UserId
+                         join supplier in suppliers on legacy.UserId equals supplier.UserId into supplierJoin
+                         from supplier in supplierJoin.DefaultIfEmpty()
+                         select new AdminUserRowViewModel
+                         {
+                             Id = phase2.Id,
+                             Email = legacy.Email ?? "",
+                             FullName = $"{legacy.FirstName} {legacy.LastName}",
+                             Role = "OVRS_User",
+                             Status = phase2.AccountStatus == 1 ? "Active" : "Inactive",
+                             CompanyName = supplier?.TradingName ?? ""
+                         };
 
-                // Apply search filter (optional)
+                // Search filter
                 if (!string.IsNullOrEmpty(search))
                 {
                     result = result.Where(a =>
@@ -2307,13 +2328,11 @@ namespace SABC_Phase2.Controllers
                     );
                 }
 
-                // Optional: filter by status dropdown if you implement one
+                // Status filter
                 if (statusFilter == "Active")
                     result = result.Where(a => a.Status == "Active");
                 else if (statusFilter == "Inactive")
                     result = result.Where(a => a.Status == "Inactive");
-
-                users = result.OrderBy(a => a.FullName).ToList();
             }
             else
             {
@@ -2333,7 +2352,12 @@ namespace SABC_Phase2.Controllers
                     );
                 }
 
-                users = await query
+                if (statusFilter == "Active")
+                    query = query.Where(a => a.AccountStatus == 1);
+                else if (statusFilter == "Inactive")
+                    query = query.Where(a => a.AccountStatus == 0);
+
+                result = await query
                     .OrderBy(a => a.Id)
                     .Select(a => new AdminUserRowViewModel
                     {
@@ -2342,19 +2366,36 @@ namespace SABC_Phase2.Controllers
                         FullName = $"{a.FirstName} {a.LastName}",
                         Role = a.Role,
                         Status = a.AccountStatus == 1 ? "Active" : "Inactive",
-                        CompanyName = "" // Not relevant for admins
+                        CompanyName = ""
                     })
                     .ToListAsync();
             }
 
+            // Pagination logic
+            int totalItems = result.Count();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var pagedUsers = result
+                .OrderBy(u => u.FullName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // Set ViewBag values for pagination and filters
             ViewBag.IsOVRSUser = isOvrsUser;
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.Search = search;
+            ViewBag.RoleFilter = roleFilter;
+            ViewBag.StatusFilter = statusFilter;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
-                return PartialView("_UsersTablePartial", users);
+                return PartialView("_UsersTablePartial", pagedUsers);
             }
 
-            return View(users);
+            return View(pagedUsers);
         }
 
         // Add a new endpoint to generate secure form data
@@ -2526,15 +2567,16 @@ namespace SABC_Phase2.Controllers
                 await _context.SaveChangesAsync();
 
                 // --- AUDIT LOG: Log admin who created the user, with date and time ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
                 var timestamp = currentSaTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
-                string changeDescription = $"User account for \"{newAdmin.FirstName} {newAdmin.LastName}\" ({newAdmin.Email}) with role \"{newAdmin.Role}\" was created by {adminFullName} ({adminEmail}) on {timestamp} SAST.";
+                string changeDescription = $"User account for \"{newAdmin.FirstName} {newAdmin.LastName}\" ({newAdmin.Email}) with role \"{newAdmin.Role}\" was created";
 
                 await _auditLogService.LogAsync(
                     adminId,
                     adminEmail,
                     adminFullName,
+                    adminRole,
                     "CreateUser",
                     changeDescription
                 );
@@ -2725,7 +2767,7 @@ namespace SABC_Phase2.Controllers
                                 email = legacyUser.Email ?? "Unknown";
                             }
                         }
-                        deletedUserSummaries.Add($"OVRS_User: {fullName} ({email}) [Phase2Id: {user.Id}, LegacyId: {user.LegacyUserId?.ToString() ?? "N/A"}]");
+                        deletedUserSummaries.Add($"OVRS_User: {fullName} ({email})");
                     }
                     totalAffected += ovrsUsers.Count;
                 }
@@ -2744,7 +2786,7 @@ namespace SABC_Phase2.Controllers
                     foreach (var admin in admins)
                     {
                         admin.AccountStatus = 0;
-                        deletedUserSummaries.Add($"{admin.Role}: {admin.FirstName} {admin.LastName} ({admin.Email}) [ID: {admin.Id}]");
+                        deletedUserSummaries.Add($"{admin.Role}: {admin.FirstName} {admin.LastName} ({admin.Email})");
                     }
                     totalAffected += admins.Count;
                 }
@@ -2756,17 +2798,18 @@ namespace SABC_Phase2.Controllers
                     return Json(new { success = false, message = "No matching users found." });
 
                 // --- AUDIT LOG: Log bulk user deletion with admin info, time/date, and details ---
-                var (adminId, adminEmail, adminFullName) = await GetCurrentAdminAsync();
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
                 var saTime = _saTimeService.GetCurrentSouthAfricanTime();
                 var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
-                string changeDescription = $"Bulk user deletion performed by {adminFullName} ({adminEmail}) on {timestamp} SAST. " +
-                    $"The following users were set to inactive:\n- {string.Join("\n- ", deletedUserSummaries)}";
+                string changeDescription = $"Bulk user deletion performed by" +
+                    $"The following users were deleted from the system:\n- {string.Join("\n- ", deletedUserSummaries)}";
 
                 await _auditLogService.LogAsync(
                     adminId,
                     adminEmail,
                     adminFullName,
+                    adminRole,
                     "BulkDeleteUsers",
                     changeDescription
                 );
@@ -2793,19 +2836,39 @@ namespace SABC_Phase2.Controllers
 
             try
             {
+                string deletedUserSummary = null;
+
                 if (model.Type == "OVRS_User")
                 {
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == model.Id && u.Role == "OVRS_User");
                     if (user == null)
                         return Json(new { success = false, message = "User not found." });
+
                     user.AccountStatus = 0;
+
+                    // Get legacy info if available
+                    string fullName = "Unknown";
+                    string email = "Unknown";
+                    if (user.LegacyUserId.HasValue)
+                    {
+                        var legacyUser = await _legacyContext.TblUsers
+                            .FirstOrDefaultAsync(lu => lu.UserId == user.LegacyUserId.Value);
+                        if (legacyUser != null)
+                        {
+                            fullName = $"{legacyUser.FirstName ?? ""} {legacyUser.LastName ?? ""}".Trim();
+                            email = legacyUser.Email ?? "Unknown";
+                        }
+                    }
+                    deletedUserSummary = $"OVRS_User: {fullName} ({email})";
                 }
                 else if (model.Type == "IT_Admin" || model.Type == "Tender_Administrator" || model.Type == "Vendor_Administrator" || model.Type == "Administrator")
                 {
                     var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
                     if (admin == null)
                         return Json(new { success = false, message = "User not found." });
+
                     admin.AccountStatus = 0;
+                    deletedUserSummary = $"{admin.Role}: {admin.FirstName} {admin.LastName} ({admin.Email}) ";
                 }
                 else
                 {
@@ -2813,6 +2876,24 @@ namespace SABC_Phase2.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log individual user deletion with admin info, time/date, and details ---
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
+                var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+                var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                string changeDescription = $"User deletion executed.\n" +
+                    $"The following user was deleted from the system:\n- {deletedUserSummary}";
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    adminRole,
+                    "DeleteUser",
+                    changeDescription
+                );
+
                 return Json(new { success = true, message = "User deleted." });
             }
             catch (Exception ex)
@@ -2826,6 +2907,7 @@ namespace SABC_Phase2.Controllers
             public string Type { get; set; } // "Administrator" or "OVRS_User"
         }
 
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReactivateUser([FromBody] ReactivateUserModel model)
@@ -2835,19 +2917,39 @@ namespace SABC_Phase2.Controllers
 
             try
             {
+                string reactivatedUserSummary = null;
+
                 if (model.Type == "OVRS_User")
                 {
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == model.Id && u.Role == "OVRS_User");
                     if (user == null)
                         return Json(new { success = false, message = "User not found." });
+
                     user.AccountStatus = 1;
+
+                    // Get legacy info if available
+                    string fullName = "Unknown";
+                    string email = "Unknown";
+                    if (user.LegacyUserId.HasValue)
+                    {
+                        var legacyUser = await _legacyContext.TblUsers
+                            .FirstOrDefaultAsync(lu => lu.UserId == user.LegacyUserId.Value);
+                        if (legacyUser != null)
+                        {
+                            fullName = $"{legacyUser.FirstName ?? ""} {legacyUser.LastName ?? ""}".Trim();
+                            email = legacyUser.Email ?? "Unknown";
+                        }
+                    }
+                    reactivatedUserSummary = $"OVRS_User: {fullName} ({email})";
                 }
                 else if (model.Type == "IT_Admin" || model.Type == "Tender_Administrator" || model.Type == "Vendor_Administrator" || model.Type == "Administrator")
                 {
                     var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == model.Id);
                     if (admin == null)
                         return Json(new { success = false, message = "User not found." });
+
                     admin.AccountStatus = 1;
+                    reactivatedUserSummary = $"{admin.Role}: {admin.FirstName} {admin.LastName} ({admin.Email})";
                 }
                 else
                 {
@@ -2855,6 +2957,24 @@ namespace SABC_Phase2.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // --- AUDIT LOG: Log individual user reactivation with admin info, time/date, and details ---
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
+                var saTime = _saTimeService.GetCurrentSouthAfricanTime();
+                var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                string changeDescription = $"User reactivation executed.\n" +
+                    $"The following user account was reactivated:\n- {reactivatedUserSummary}";
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    adminEmail,
+                    adminFullName,
+                    adminRole,
+                    "ReactivateUser",
+                    changeDescription
+                );
+
                 return Json(new { success = true, message = "User reactivated." });
             }
             catch (Exception ex)

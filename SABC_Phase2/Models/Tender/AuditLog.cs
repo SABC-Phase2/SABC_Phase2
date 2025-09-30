@@ -9,5 +9,7 @@
         public string ActionType { get; set; } // e.g. "CreateTender", "EditTender", etc.
         public string Description { get; set; } // More details (Tender #, User affected, etc.)
         public DateTime Timestamp { get; set; }
+
+        public string Role { get; set; } // <--- Added this line
     }
 }
