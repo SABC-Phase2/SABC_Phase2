@@ -72,6 +72,27 @@
         }
     });
 
+    // Auto-uncheck radio buttons when custom dates are used
+    document.querySelectorAll('input[name="fromDate"], input[name="toDate"]').forEach(function(input) {
+        input.addEventListener('input', function() {
+            if (this.value) {
+                document.querySelectorAll('input[name="dateRange"]').forEach(function(radio) {
+                    radio.checked = false;
+                });
+            }
+        });
+    });
+
+    // Auto-clear custom dates when radio button is selected
+    document.querySelectorAll('input[name="dateRange"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                document.querySelector('input[name="fromDate"]').value = '';
+                document.querySelector('input[name="toDate"]').value = '';
+            }
+        });
+    });
+
     document.querySelector(".generate-report-btn").addEventListener("click", function() {
         // Get selected radio value
         var radio = document.querySelector('input[name="dateRange"]:checked');
