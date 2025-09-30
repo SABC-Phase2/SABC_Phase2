@@ -23,9 +23,6 @@ namespace SABC_Phase2.Services
                     page.Margin(30);
                     page.DefaultTextStyle(x => x.FontSize(10));
 
-                    // Header
-                    page.Header().Element(ComposeHeader);
-
                     // Content
                     page.Content().Element(content => ComposeContent(content, auditLogs, fromDate, toDate));
 
@@ -42,121 +39,96 @@ namespace SABC_Phase2.Services
             return document.GeneratePdf();
         }
 
-        private void ComposeHeader(IContainer container)
-        {
-            container.Column(column =>
-            {
-                column.Item().BorderBottom(2).BorderColor(Colors.Green.Darken2).PaddingBottom(10).Row(row =>
-                {
-                    row.RelativeItem().Column(col =>
-                    {
-                        col.Item().Text("SABC Audit Log Report").FontSize(20).Bold().FontColor(Colors.Green.Darken2);
-                        col.Item().Text($"Generated on: {DateTime.Now:dd MMMM yyyy HH:mm}").FontSize(10).FontColor(Colors.Grey.Darken2);
-                    });
-                });
-
-                column.Item().PaddingTop(5);
-            });
-        }
-
         private void ComposeContent(IContainer container, List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate)
         {
             container.Column(column =>
             {
-                // Date Range Info
-                column.Item().PaddingBottom(10).Row(row =>
+                // === Heading Row with Logo + True Centered Title ===
+                column.Item().PaddingBottom(20).Row(row =>
                 {
-                    row.RelativeItem().Text(text =>
+                    // Left: Logo (60px wide)
+                    var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "lib", "Images", "cropped_logoblack.png");
+                    if (File.Exists(logoPath))
                     {
-                        text.Span("Report Period: ").Bold();
-                        if (fromDate.HasValue && toDate.HasValue)
-                        {
-                            text.Span($"{fromDate.Value:dd MMM yyyy} to {toDate.Value:dd MMM yyyy}");
-                        }
-                        else
-                        {
-                            text.Span("All Records");
-                        }
-                    });
+                        var logoBytes = File.ReadAllBytes(logoPath);
 
-                    row.RelativeItem().AlignRight().Text(text =>
+                        row.ConstantItem(60)
+                            .AlignMiddle()
+                            .Element(c => c.Image(logoBytes));
+                    }
+                    else
                     {
-                        text.Span("Total Records: ").Bold();
-                        text.Span(auditLogs.Count.ToString());
-                    });
+                        row.ConstantItem(60); // empty if no logo
+                    }
+
+                    // Middle: Title (centered)
+                    row.RelativeItem().AlignMiddle().AlignCenter().Text("Audit Log Report")
+                        .FontSize(24).Bold().FontColor(Colors.Black);
+
+                    // Right: Spacer (same width as logo to keep symmetry)
+                    row.ConstantItem(60);
                 });
 
-                // Summary Statistics
-                column.Item().PaddingBottom(15).Background(Colors.Grey.Lighten3).Padding(10).Column(summaryCol =>
+                // Separator line
+                column.Item().PaddingBottom(20).Text(new string('=', 130))
+                    .FontSize(10).FontFamily("Courier New");
+
+                // Invisible table with audit log data
+                column.Item().PaddingBottom(20).Table(table =>
                 {
-                    summaryCol.Item().Text("Summary Statistics").FontSize(12).Bold().FontColor(Colors.Green.Darken2);
-                    summaryCol.Item().PaddingTop(5).Row(summaryRow =>
-                    {
-                        var actionGroups = auditLogs.GroupBy(a => a.ActionType).OrderByDescending(g => g.Count());
-
-                        summaryRow.RelativeItem().Column(col =>
-                        {
-                            col.Item().Text("Actions Breakdown:").Bold().FontSize(9);
-                            foreach (var group in actionGroups)
-                            {
-                                col.Item().Text($"• {group.Key}: {group.Count()}").FontSize(8);
-                            }
-                        });
-
-                        summaryRow.RelativeItem().Column(col =>
-                        {
-                            var uniqueAdmins = auditLogs.Select(a => a.AdminEmail).Distinct().Count();
-                            col.Item().Text($"Unique Administrators: {uniqueAdmins}").Bold().FontSize(9);
-
-                            var topAdmin = auditLogs.GroupBy(a => a.AdminFullName)
-                                .OrderByDescending(g => g.Count())
-                                .FirstOrDefault();
-                            if (topAdmin != null)
-                            {
-                                col.Item().Text($"Most Active: {topAdmin.Key} ({topAdmin.Count()} actions)").FontSize(8);
-                            }
-                        });
-                    });
-                });
-
-                // Audit Logs Table
-                column.Item().Table(table =>
-                {
-                    // Define columns with appropriate widths
+                    // Define columns - making borders invisible
                     table.ColumnsDefinition(columns =>
                     {
-                        columns.ConstantColumn(40);  // ID
-                        columns.RelativeColumn(2);    // Admin Name
-                        columns.RelativeColumn(2);    // Email
-                        columns.RelativeColumn(1.5f); // Action Type
+                        columns.RelativeColumn(2);    // Time Stamp
+                        columns.RelativeColumn(3);    // User Full Name
+                        columns.RelativeColumn(2);    // User Role
+                        columns.RelativeColumn(1.5f); // Action
                         columns.RelativeColumn(4);    // Description
-                        columns.RelativeColumn(1.5f); // Timestamp
                     });
 
-                    // Header
+                    // Header row (invisible borders)
                     table.Header(header =>
                     {
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("ID").FontColor(Colors.White).Bold();
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("Admin Name").FontColor(Colors.White).Bold();
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("Email").FontColor(Colors.White).Bold();
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("Action Type").FontColor(Colors.White).Bold();
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("Description").FontColor(Colors.White).Bold();
-                        header.Cell().Element(CellStyle).Background(Colors.Green.Darken2).Text("Timestamp").FontColor(Colors.White).Bold();
+                        header.Cell().Element(InvisibleCellStyle).Text("Time Stamp").Bold().FontSize(12);
+                        header.Cell().Element(InvisibleCellStyle).Text("User").Bold().FontSize(12);
+                        header.Cell().Element(InvisibleCellStyle).Text("User Role").Bold().FontSize(12);
+                        header.Cell().Element(InvisibleCellStyle).Text("Action").Bold().FontSize(12);
+                        header.Cell().Element(InvisibleCellStyle).Text("Description").Bold().FontSize(12);
                     });
 
-                    // Rows
+                    // Data rows
                     foreach (var log in auditLogs.OrderByDescending(l => l.Timestamp))
                     {
-                        var rowColor = auditLogs.IndexOf(log) % 2 == 0 ? Colors.White : Colors.Grey.Lighten4;
-
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(log.Id.ToString());
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(log.AdminFullName ?? "N/A");
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(log.AdminEmail ?? "N/A").FontSize(8);
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(GetActionTypeDisplay(log.ActionType));
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(log.Description ?? "N/A").FontSize(8);
-                        table.Cell().Element(CellStyle).Background(rowColor).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm")).FontSize(8);
+                        table.Cell().Element(InvisibleCellStyle).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"));
+                        table.Cell().Element(InvisibleCellStyle).Text(log.AdminFullName ?? "N/A");
+                        table.Cell().Element(InvisibleCellStyle).Text(GetUserRole(log)); // You'll need to add role logic
+                        table.Cell().Element(InvisibleCellStyle).Text(GetActionTypeDisplay(log.ActionType));
+                        table.Cell().Element(InvisibleCellStyle).Text(log.Description ?? "N/A");
                     }
                 });
+
+                // Bottom separator line
+                column.Item().PaddingVertical(20).Text(new string('=', 130))
+                    .FontSize(10).FontFamily("Courier New");
+
+                // Date generated
+                column.Item().PaddingBottom(10).Text($"Date generated: {DateTime.Now:dd MMMM yyyy HH:mm}")
+                    .FontSize(12).Bold();
+
+                // Time range information
+                if (fromDate.HasValue && toDate.HasValue)
+                {
+                    var timeRangeText = GetTimeRangeDescription(fromDate.Value, toDate.Value);
+                    column.Item().Text($"Time Range: {timeRangeText}")
+                        .FontSize(12);
+                }
+                else if (fromDate.HasValue || toDate.HasValue)
+                {
+                    // Handle cases where only one date is provided
+                    var dateText = fromDate?.ToString("dd MMMM yyyy") ?? toDate?.ToString("dd MMMM yyyy");
+                    column.Item().Text($"Time Range: From {dateText}")
+                        .FontSize(12);
+                }
 
                 // No records message
                 if (!auditLogs.Any())
@@ -167,9 +139,38 @@ namespace SABC_Phase2.Services
             });
         }
 
-        private IContainer CellStyle(IContainer container)
+        private IContainer InvisibleCellStyle(IContainer container)
         {
-            return container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(5);
+            // No borders, just padding for spacing
+            return container.Padding(8);
+        }
+
+        private string GetUserRole(AuditLog log)
+        {
+            if (string.IsNullOrWhiteSpace(log.Role))
+                return "User"; // fallback if role is missing
+
+            return log.Role switch
+            {
+                "Tender_Administrator" => "Tender Administrator",
+                "IT_Admin" => "IT Administrator",
+                "Vendor_Administrator" => "Vendor Administrator",
+                _ => log.Role // default to raw DB value if not mapped
+            };
+        }
+
+        private string GetTimeRangeDescription(DateTime fromDate, DateTime toDate)
+        {
+            var timeDifference = toDate - fromDate;
+
+            if (timeDifference.Days == 7)
+                return "Last 7 days";
+            else if (timeDifference.Days == 30 || timeDifference.Days == 31)
+                return "Last 30 days";
+            else if (timeDifference.Days == 1)
+                return "Last 24 hours";
+            else
+                return $"{fromDate:dd MMM yyyy} to {toDate:dd MMM yyyy}";
         }
 
         private string GetActionTypeDisplay(string actionType)
@@ -179,14 +180,79 @@ namespace SABC_Phase2.Services
 
             return actionType switch
             {
-                "CreateDraft" => "Create Draft",
-                "EditDraft" => "Edit Draft",
-                "DeleteDraft" => "Delete Draft",
+                // Tender Actions
+                "CreateTender" => "Create Tender",
+                "EditTender" => "Edit Tender",
+                "DeleteTender" => "Delete Tender",
                 "PublishTender" => "Publish Tender",
                 "CloseTender" => "Close Tender",
                 "AwardTender" => "Award Tender",
-                _ => actionType
+                "ScheduleTender" => "Schedule Tender",
+                "EditScheduledTender" => "Edit Scheduled Tender",
+                "DeleteScheduledTender" => "Delete Scheduled Tender",
+
+                // Draft Actions
+                "CreateDraft" => "Create Draft",
+                "EditDraft" => "Edit Draft",
+                "DeleteDraft" => "Delete Draft",
+                "Create" => "Create Draft", // Handle the generic "Create" case
+                "Edit" => "Edit Draft", // Handle the generic "Edit" case
+
+                // User Management Actions
+                "CreateUser" => "Create User",
+                "EditUser" => "Edit User",
+                "DeleteUser" => "Delete User",
+                "BulkDeleteUsers" => "Bulk Delete Users",
+                "ReactivateUser" => "Reactivate User", // Fixed typo from "ReacvateUser"
+                "DeactivateUser" => "Deactivate User",
+
+                // Report Generation Actions
+                "GenerateTenderSupplierReport" => "Generate Supplier Report",
+                "GenerateClosedTendersSummaryReport" => "Generate Summary Report",
+                "GenerateReport" => "Generate Report",
+
+                // Authentication & System Actions
+                "Login" => "Login",
+                "Logout" => "Logout",
+                "PasswordReset" => "Password Reset",
+                "PasswordChange" => "Password Change",
+                "AccountLocked" => "Account Locked",
+                "AccountUnlocked" => "Account Unlocked",
+
+                // System Configuration
+                "SystemConfiguration" => "System Configuration",
+                "UpdateSettings" => "Update Settings",
+                "BackupDatabase" => "Backup Database",
+                "RestoreDatabase" => "Restore Database",
+
+                // Security Actions
+                "SecurityAlert" => "Security Alert",
+                "UnauthorizedAccess" => "Unauthorized Access",
+                "DataExport" => "Data Export",
+                "DataImport" => "Data Import",
+
+                // Default fallback - convert PascalCase to readable format
+                _ => ConvertPascalCaseToReadable(actionType)
             };
+        }
+
+        private string ConvertPascalCaseToReadable(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "N/A";
+
+            // Add space before capital letters (except the first one)
+            var result = "";
+            for (int i = 0; i < input.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(input[i]) && !char.IsUpper(input[i - 1]))
+                {
+                    result += " ";
+                }
+                result += input[i];
+            }
+
+            return result;
         }
     }
 }
