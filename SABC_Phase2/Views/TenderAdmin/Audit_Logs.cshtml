@@ -1,0 +1,325 @@
+﻿@model IEnumerable<SABC_Phase2.Models.Tender.AuditLog>
+
+@{
+    ViewBag.Title = "Audit Logs";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Breadcrumb -->
+<div class="container-fluid" style="margin-top: 10px;">
+    <div class="row">
+        <div class="col-12">
+            <a href="@Url.Action("Index", "OVRS_User")" style="color:#888; text-decoration:none;">Home</a>
+            <span style="color:#888;"> &gt; </span>
+            <a href="#" style="color:#17994d; text-decoration:none;">Audit Logs</a>
+        </div>
+    </div>
+</div>
+
+<!-- Audit Logs Section (Toggle + Card) -->
+<div class="audit-section">
+    <div class="audit-toggle" id="auditToggle">
+        <span class="audit-title">Audit Logs</span>
+        <span class="toggle-arrow" id="toggleArrow">&#9660;</span>
+    </div>
+    <div class="audit-card" id="auditCard">
+        <!-- Filter Card Row -->
+        <div class="audit-filter-row">
+            <!-- Left Side: Date Picker -->
+            <div class="audit-filter-left">
+                <div class="audit-filter-heading">Date Picker</div>
+                <div class="audit-filter-underline"></div>
+                <div class="audit-filter-radios">
+                    <label><input type="radio" name="dateRange" value="7"> Last 7 days</label><br />
+                    <label><input type="radio" name="dateRange" value="30"> Last 30 days</label><br />
+                    <label><input type="radio" name="dateRange" value="60"> Last 60 days</label>
+                </div>
+            </div>
+            <!-- Vertical Green Divider -->
+            <div class="audit-filter-divider"></div>
+            <!-- Right Side: Custom Calendar -->
+            <div class="audit-filter-right">
+                <div class="audit-filter-heading">Custom Calendar</div>
+                <div class="audit-filter-underline"></div>
+                <div class="audit-filter-calendar">
+                    <label>From: <input type="date" name="fromDate" style="margin-right: 1.2em;" /></label>
+                    <label>To: <input type="date" name="toDate" /></label>
+                </div>
+            </div>
+        </div>
+        <!-- End Filter Card Row -->
+        <!-- Your audit logs table goes here -->
+    </div>
+    <!-- Generate report button - shown only when card is open -->
+    <div id="generateReportWrapper" style="display: none;">
+        <button type="button" class="generate-report-btn">Generate report</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById("auditToggle").addEventListener("click", function() {
+        var card = document.getElementById("auditCard");
+        var arrow = document.getElementById("toggleArrow");
+        var reportBtn = document.getElementById("generateReportWrapper");
+        if (card.style.display === "none" || card.style.display === "") {
+            card.style.display = "block";
+            arrow.innerHTML = "&#9650;"; // Up arrow
+            reportBtn.style.display = "flex";
+        } else {
+            card.style.display = "none";
+            arrow.innerHTML = "&#9660;"; // Down arrow
+            reportBtn.style.display = "none";
+        }
+    });
+
+    document.querySelector(".generate-report-btn").addEventListener("click", function() {
+        // Get selected radio value
+        var radio = document.querySelector('input[name="dateRange"]:checked');
+        var dateRange = radio ? radio.value : null;
+        var fromDate = document.querySelector('input[name="fromDate"]').value;
+        var toDate = document.querySelector('input[name="toDate"]').value;
+
+        // Validate input
+        if (!dateRange && (!fromDate || !toDate)) {
+            alert("Please select a date range or specify custom dates");
+            return;
+        }
+
+        // Show loading state
+        var button = this;
+        var originalText = button.textContent;
+        button.textContent = "Generating...";
+        button.disabled = true;
+
+        // Build form data
+        var formData = new FormData();
+        if (dateRange) formData.append("dateRange", dateRange);
+        if (fromDate) formData.append("fromDate", fromDate);
+        if (toDate) formData.append("toDate", toDate);
+
+        // Debug log
+        console.log("Sending request with:", {
+            dateRange: dateRange,
+            fromDate: fromDate,
+            toDate: toDate
+        });
+
+        // FIXED: Changed controller name from "AuditLog" to "TenderAdmin"
+        fetch('@Url.Action("GenerateAuditLogReport", "TenderAdmin")', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log("Response status:", response.status);
+            console.log("Response headers:", response.headers);
+
+            if (!response.ok) {
+                // Try to get error message from response
+                return response.text().then(text => {
+                    throw new Error(`Server error (${response.status}): ${text}`);
+                });
+            }
+
+            return response.blob();
+        })
+        .then(blob => {
+            console.log("Blob size:", blob.size);
+
+            if (blob.size === 0) {
+                throw new Error("Generated PDF is empty. Please check your date range.");
+            }
+
+            // Download the PDF file
+            var link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = `AuditLogReport_${new Date().toISOString().slice(0,10)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up
+            window.URL.revokeObjectURL(link.href);
+        })
+        .catch(error => {
+            console.error('Error details:', error);
+            alert("Failed to generate report: " + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    });
+</script>
+
+<style>
+    .audit-toggle {
+        background: #17994d;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin: 2rem auto 0.2rem auto;
+        max-width: 1200px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .toggle-arrow {
+        font-size: 1.2em;
+        color: #fff;
+        transition: transform 0.2s;
+    }
+
+    .audit-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 2rem;
+        margin: 1rem auto 2rem auto;
+        max-width: 1200px;
+        display: none;
+    }
+    /* Generate Report Button */
+    #generateReportWrapper {
+        justify-content: center;
+        align-items: center;
+        margin: 1rem auto 2rem auto;
+        max-width: 1200px;
+    }
+
+    .generate-report-btn {
+        background: #17994d;
+        color: #fff;
+        border: none;
+        padding: 0.75em 2.5em;
+        font-size: 1.18em;
+        font-weight: 600;
+        border-radius: 7px;
+        box-shadow: 0 2px 6px rgba(23,153,77,0.12);
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+        margin-top: 0;
+        margin-bottom: 0;
+        letter-spacing: 0.5px;
+        display: block;
+    }
+
+        .generate-report-btn:hover,
+        .generate-report-btn:focus {
+            background: #117838;
+            box-shadow: 0 4px 16px rgba(23,153,77,0.18);
+        }
+    /* Filter Card Layout */
+    .audit-filter-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 100%;
+        margin-bottom: 2.5rem;
+    }
+
+    .audit-filter-left, .audit-filter-right {
+        flex: 1 1 0;
+        padding: 0 2rem;
+        min-width: 260px;
+    }
+
+    .audit-filter-divider {
+        width: 3px;
+        background: #17994d;
+        height: 110px;
+        margin: 0 1.5rem;
+        border-radius: 4px;
+        align-self: center;
+    }
+
+    .audit-filter-heading {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #17994d;
+        margin-bottom: 0.15em;
+        letter-spacing: 1px;
+    }
+
+    .audit-filter-underline {
+        width: 90px;
+        height: 4px;
+        background: #17994d;
+        margin-bottom: 1.2em;
+        border-radius: 2px;
+    }
+
+    .audit-filter-radios label {
+        font-size: 1em;
+        font-weight: 500;
+        color: #444;
+        display: block;
+        margin-bottom: 0.5em;
+        cursor: pointer;
+    }
+
+    .audit-filter-radios input[type="radio"] {
+        accent-color: #17994d;
+        margin-right: 0.5em;
+    }
+
+    .audit-filter-calendar label {
+        font-size: 1em;
+        font-weight: 500;
+        color: #444;
+        margin-right: 1em;
+        margin-bottom: 1em;
+        display: inline-block;
+    }
+
+    .audit-filter-calendar input[type="date"] {
+        border: 1px solid #17994d;
+        border-radius: 6px;
+        padding: 0.3em 0.6em;
+        font-size: 1em;
+        outline: none;
+        margin-bottom: 0.8em;
+    }
+    /* Rest of audit log styles unchanged */
+    .audit-title {
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: #fff;
+        letter-spacing: 1px;
+    }
+
+    .audit-table th, .audit-table td {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 1rem;
+    }
+
+        .audit-table th {
+            background: #f7f7f7;
+            color: #555;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .audit-table tr:last-child td {
+            border-bottom: none;
+        }
+
+    .audit-role-badge {
+        display: inline-block;
+        background: #e3e7fd;
+        color: #284cbb;
+        padding: 0.1em 0.7em;
+        border-radius: 12px;
+        font-size: 0.9em;
+        margin-right: 0.5em;
+    }
+</style>

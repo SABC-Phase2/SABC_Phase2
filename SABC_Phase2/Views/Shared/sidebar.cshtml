@@ -79,6 +79,15 @@
                 </a>
             </div>
             <div class="menu-section">
+                <a asp-controller="TenderAdmin" asp-action="Audit_Logs" class="icon-link" title="Users">
+                    <i class="fas fa-user-shield fa-2x"></i>
+                </a>
+                <a asp-controller="TenderAdmin" asp-action="Audit_Logs" class="label"
+                   style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
+                    Audit Logs
+                </a>
+            </div>
+            <div class="menu-section">
                 <a asp-controller="Home" asp-action="Help" class="icon-link" title="Help">
                     <i class="fas fa-question fa-2x"></i>
                 </a>
@@ -258,17 +267,13 @@
                     </a>
                 </div>
             </div>
-            <div class="menu-section">
-                <a href="https://etender.sabc.co.za/login.aspx"
-                   target="_blank"
-                   class="icon-link" title="Company Details">
+            <div class="menu-section company-docs-section">
+                <a href="#" class="icon-link" title="Company Details" id="companyDocsTab">
                     <i class="fas fa-handshake fa-2x" style="color: white;"></i>
                 </a>
-                <a href="https://etender.sabc.co.za/login.aspx"
-                   target="_blank"
-                   class="label"
+                <a href="#" class="label" id="companyDocsTabLabel"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
-                    Company Details
+                    Company Documents
                 </a>
             </div>
             <div class="menu-section">
@@ -343,7 +348,52 @@
         }
     </div>
 </div>
-
+<!-- Company Documents Redirect Modal -->
+<div id="companyDocsModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100vw; height:100vh;
+    background:rgba(0,0,0,0.4);
+    z-index:11000;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:#fff;
+        border-radius:12px;
+        padding:30px 40px 24px 40px;
+        text-align:center;
+        box-shadow:0 8px 20px rgba(0,0,0,0.2);
+        max-width:400px;
+        width:90%;
+        margin:auto;
+        position:relative;
+    ">
+        <!-- Close X button -->
+        <button id="companyDocsCloseBtn" style="
+            position:absolute;
+            top:18px;
+            right:18px;
+            background:none;
+            border:none;
+            font-size:1.6rem;
+            color:#888;
+            cursor:pointer;
+            z-index:2;
+        " aria-label="Close">
+            &times;
+        </button>
+        <!-- Info icon -->
+        <i class="fas fa-info-circle" style="color:#fbbd08; font-size:4rem; margin:0 auto 20px auto; display:block;"></i>
+        <h3 style="margin:0 0 10px; color:#333;">Redirect Notice</h3>
+        <p style="margin:0 0 20px; color:#666;">
+            You are about to be redirected to the login screen.<br>
+            You will need to log in with your supplier credentials to view your company documents.
+        </p>
+        <button id="companyDocsOkBtn" class="btn btn-success green-effect" style="min-width:110px; font-size:1.05rem; padding:8px 16px;">OK</button>
+    </div>
+</div>
 <script>
     // Clock Javascript
     function updateSASTClock() {
@@ -470,15 +520,15 @@
             }
         });
 
-        // Handle non-submenu active states
-        if (!foundActive) {
-            document.querySelectorAll('.menu-section:not(.sub-item) a').forEach(function(link) {
-                if (link.pathname && link.pathname.toLowerCase() === currentPath) {
-                    link.parentElement.classList.add('active');
-                    foundActive = true;
-                }
-            });
+           // Handle non-submenu active states
+    if (!foundActive) {
+     document.querySelectorAll('.menu-section:not(.sub-item):not(.company-docs-section) a').forEach(function(link) {
+        if (link.pathname && link.pathname.toLowerCase() === currentPath) {
+            link.parentElement.classList.add('active');
+            foundActive = true;
         }
+    });
+    }
     }
 
     function toggleProfileDropdown(e) {
@@ -513,7 +563,6 @@
     // Initialize on DOM load
     document.addEventListener("DOMContentLoaded", function()  {
         manageSubmenus();
-
         const sidebar = document.getElementById("sidebar");
         const chevrons = document.querySelectorAll('.chevron-toggle');
 
@@ -532,7 +581,41 @@
                 chevron.style.display = "inline";
             });
         }
+
+
+        function showCompanyDocsModal() {
+            document.getElementById('companyDocsModal').style.display = 'flex';
+        }
+        function hideCompanyDocsModal() {
+            document.getElementById('companyDocsModal').style.display = 'none';
+        }
+
+        document.getElementById('companyDocsTab').addEventListener('click', function(e) {
+            e.preventDefault();
+            showCompanyDocsModal();
+        });
+        document.getElementById('companyDocsTabLabel').addEventListener('click', function(e) {
+            e.preventDefault();
+            showCompanyDocsModal();
+        });
+
+        // OK button: redirect
+        document.getElementById('companyDocsOkBtn').addEventListener('click', function() {
+            window.open('https://etender.sabc.co.za/login.aspx', '_blank');
+            hideCompanyDocsModal();
+        });
+
+        // Close X button
+        document.getElementById('companyDocsCloseBtn').addEventListener('click', function() {
+            hideCompanyDocsModal();
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('companyDocsModal').addEventListener('click', function(e) {
+            if (e.target === this) hideCompanyDocsModal();
+        });
     });
+
 
 
     // Close dropdown when clicking outside
@@ -588,6 +671,11 @@
 
 
 <style>
+
+    .company-docs-section.active {
+        background-color: inherit !important;
+        color: inherit !important;
+    }
     /* --------------------------------- */
     .icon-link {
         display: inline-block;
@@ -901,8 +989,8 @@
     }
 
     /*     .sidebar.collapsed .submenu-icon {
-                                display: none !important;
-                            } */
+                                    display: none !important;
+                                } */
 
     @*---------------------------------------------
 

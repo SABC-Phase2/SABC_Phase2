@@ -205,7 +205,7 @@ ViewData["BannerText"] = "Tenders";
 
 
 <div class="action-buttons">
-    <button type="button" id="cancelBtn" class="action-btn cancel-btn" onclick="window.location.href='@Url.Action("Index", "TenderAdmin")'">Cancel</button>
+    <button type="button" id="cancelBtn" class="action-btn cancel-btn">Cancel</button>
     <button type="button" id="doneBtn" class="action-btn continue-btn" onclick="submitForm()">
         <span class="btn-text">Done</span>
         <span class="arrow-icon"></span>
@@ -347,7 +347,36 @@ ViewData["BannerText"] = "Tenders";
         </div>
     </div>
 </div>
+<!-- Cancel Confirmation Modal -->
+<div id="cancelConfirmModal" style="display:none; position:fixed; z-index:11000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; border:2px solid #009344;">
+        <div style="background:#009344; color:#fff; padding:20px 0 16px 0; text-align:center;">
+            <span style="font-size:1.8rem; font-weight:700;">Cancel Confirmation</span>
+        </div>
+        <div style="padding:20px 10px 0 10px; text-align:center;">
+            <span style="font-size:1.2rem; color:#444;">Are you sure you want to cancel?</span>
+        </div>
+        <div style="display:flex; justify-content:center; gap:20px; margin:28px 0 20px 0;">
+            <button id="cancelCancelBtn" style="background:#009344; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #007a3d; cursor:pointer;">No</button>
+            <button id="cancelConfirmBtn" style="background:#e74c3c; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #c0392b; cursor:pointer;">Yes, Cancel</button>
+        </div>
+    </div>
+</div>
 
+<!-- Caution Cancelled Modal -->
+<div id="cancelledCautionModal" style="display:none; position:fixed; z-index:12000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; text-align:center; padding:32px 24px;">
+        <div>
+            <svg width="96" height="96" viewBox="0 0 96 96" fill="none" style="margin-bottom:18px;">
+                <circle cx="48" cy="48" r="40" stroke="#ffc107" stroke-width="8" />
+                <text x="48" y="62" text-anchor="middle" font-size="56" fill="#ffc107" font-family="Arial">&#33;</text>
+            </svg>
+        </div>
+        <div style="font-size:2rem; color:#ffc107; font-weight:600; margin-bottom:12px;">Caution</div>
+        <div style="font-size:1.2rem; color:#444; margin-bottom:28px;">The action was cancelled.</div>
+        <button id="cancelledCautionOkBtn" style="background:#009344; color:#fff; font-size:1.1rem; font-weight:500; border:none; border-radius:6px; padding:12px 48px; cursor:pointer;">OK</button>
+    </div>
+</div>
 @section Scripts {
     <script>
         // Pass current SA date and time to JavaScript
@@ -377,7 +406,35 @@ ViewData["BannerText"] = "Tenders";
             }
 
         });
+                // Cancel button opens modal
+        // Cancel button opens confirmation modal
+        document.getElementById('cancelBtn').addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('cancelConfirmModal').style.display = 'flex';
+        });
+                // "No" closes the modal
+        document.getElementById('cancelCancelBtn').addEventListener('click', function () {
+            document.getElementById('cancelConfirmModal').style.display = 'none';
+        });
+        // "Yes, Cancel" shows caution modal
+        document.getElementById('cancelConfirmBtn').addEventListener('click', function () {
+            document.getElementById('cancelConfirmModal').style.display = 'none';
+            document.getElementById('cancelledCautionModal').style.display = 'flex';
+        });
 
+        // "OK" on caution modal navigates away
+        document.getElementById('cancelledCautionOkBtn').addEventListener('click', function () {
+            document.getElementById('cancelledCautionModal').style.display = 'none';
+            window.location.href = '/TenderAdmin/Index';
+        });
+
+        // Close caution modal when clicking outside
+        document.getElementById('cancelledCautionModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+                window.location.href = '/TenderAdmin/Index';
+            }
+        });
         // MAIN INITIALIZATION FUNCTION
         function initializeFormHandlers() {
             initializeDocumentDeleteHandlers();

@@ -31,6 +31,7 @@ namespace SABC_Phase2.Controllers
         private readonly EmailService _emailService;
         private readonly ISecurityService _securityService;
         private readonly ILogger<TenderAdminController> _logger; // ✅ add logger
+        private readonly AuditLogPdfService _auditLogPdfService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
@@ -45,7 +46,8 @@ namespace SABC_Phase2.Controllers
             AuditLogService auditLogService,
             EmailService emailService,
             ISecurityService securityService,
-            ILogger<TenderAdminController> logger) // ✅ inject logger
+            ILogger<TenderAdminController> logger,
+            AuditLogPdfService auditLogPdfService) // ✅ inject logger
         {
             _context = context;
             _legacyContext = legacyContext;
@@ -57,6 +59,7 @@ namespace SABC_Phase2.Controllers
             _emailService = emailService;
             _securityService = securityService;
             _logger = logger; // ✅ assign logger
+            _auditLogPdfService = auditLogPdfService;
         }
 
         // Helper to get current admin info
@@ -2286,6 +2289,89 @@ namespace SABC_Phase2.Controllers
 
         // ----------------------------------------------------------------------------------------------------------------------------------------------
         // USER MANAGEMENT SECTION (IT ADMIN)
+
+        [HttpGet]
+        public async Task<IActionResult> Audit_Logs()
+        {
+            // Optionally, you can pass audit logs to the view for display
+            var auditLogs = await _context.AuditLogs
+                .OrderByDescending(a => a.Timestamp)
+                .Take(100) // Show last 100 for performance
+                .ToListAsync();
+
+            return View(auditLogs);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GenerateAuditLogReport(int? dateRange, string fromDate, string toDate)
+        {
+            try
+            {
+                DateTime? startDate = null;
+                DateTime? endDate = null;
+
+                // Handle predefined date ranges
+                if (dateRange.HasValue)
+                {
+                    endDate = DateTime.Now;
+                    startDate = endDate.Value.AddDays(-dateRange.Value);
+                }
+                // Handle custom date range
+                else if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
+                {
+                    if (DateTime.TryParse(fromDate, out DateTime parsedFromDate) &&
+                        DateTime.TryParse(toDate, out DateTime parsedToDate))
+                    {
+                        startDate = parsedFromDate;
+                        endDate = parsedToDate.Date.AddDays(1).AddSeconds(-1); // End of day
+                    }
+                    else
+                    {
+                        return BadRequest("Invalid date format");
+                    }
+                }
+                else
+                {
+                    return BadRequest("Please select a date range or specify custom dates");
+                }
+
+                // Fetch audit logs from database
+                var query = _context.AuditLogs.AsQueryable();
+
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    query = query.Where(a => a.Timestamp >= startDate.Value && a.Timestamp <= endDate.Value);
+                }
+
+                var auditLogs = await query
+                    .OrderByDescending(a => a.Timestamp)
+                    .ToListAsync();
+
+                // Generate PDF
+                var pdfBytes = _auditLogPdfService.GenerateAuditLogReport(auditLogs, startDate, endDate);
+
+                if (pdfBytes == null || pdfBytes.Length == 0)
+                {
+                    return StatusCode(500, "Failed to generate PDF");
+                }
+
+                // Return PDF file
+                var fileName = $"AuditLogReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Console.WriteLine($"Error generating audit report: {ex.Message}");
+                return StatusCode(500, $"An error occurred while generating the report: {ex.Message}");
+            }
+        }
+
+        // Helper method to check if method exists
+        private bool HasMethod(string methodName)
+        {
+            return this.GetType().GetMethod(methodName) != null;
+        }
 
         [HttpGet]
         public async Task<IActionResult> Users_Management(string search = "",string roleFilter = "all",string statusFilter = "all",int page = 1,int pageSize = 7)

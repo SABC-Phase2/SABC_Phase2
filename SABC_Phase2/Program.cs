@@ -42,6 +42,8 @@ builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();
 
 builder.Services.AddTransient<TenderReportPdfService>();
 
+builder.Services.AddTransient<AuditLogPdfService>();
+
 // --------- Add this block for authentication ---------
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
