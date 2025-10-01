@@ -1,5 +1,9 @@
 ﻿@model List<SABC_Phase2.Models.OVRS.SubmissionViewModel>
 @using SABC_Phase2.Models.OVRS
+
+﻿@{
+    ViewData["BannerText"] = "Documents";
+}
 @{
     int pageSize = ViewBag.PageSize ?? 5;
     int currentPage = ViewBag.CurrentPage ?? 1;
@@ -18,7 +22,7 @@
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="row">
         <div class="col-12">
-            <a href="@Url.Action("Index", "OVRS_User")" style="color:#888; text-decoration:none;">Home</a>
+            <a href="@Url.Action("Index", "OVRS_User")" style="color:#888;; text-decoration:none;">Home</a>
             <span style="color:#888;"> &gt; </span>
             <a href="#" style="color:#17994d; text-decoration:none;">My Documents</a>
         </div>
@@ -1770,31 +1774,31 @@
         }
     }
 
-        .btn-edit:hover {
-            background: #f0f9f3;
-            color: #0d6e35;
-            box-shadow: 0 3px 0 rgba(0,0,0,0.1);
-            top: -1px;
-        }
+    .btn-edit:hover {
+        background: #f0f9f3;
+        color: #0d6e35;
+        box-shadow: 0 3px 0 rgba(0,0,0,0.1);
+        top: -1px;
+    }
 
-        .btn-edit:active {
-            top: 1px;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.1);
-        }
+    .btn-edit:active {
+        top: 1px;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+    }
 
-        .btn-edit.disabled {
-            background: white;
-            color: #cccccc;
-            border-color: #cccccc;
-            box-shadow: none;
-            cursor: not-allowed;
-            top: 0;
-        }
+    .btn-edit.disabled {
+        background: white;
+        color: #cccccc;
+        border-color: #cccccc;
+        box-shadow: none;
+        cursor: not-allowed;
+        top: 0;
+    }
 
-        /* Edit icon styling */
-        .btn-edit i {
-            font-size: 0.9em;
-        }
+    /* Edit icon styling */
+    .btn-edit i {
+        font-size: 0.9em;
+    }
 
     /* Hover effects for table rows */
     .submissions-table tbody tr:hover {

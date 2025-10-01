@@ -53,7 +53,7 @@
         </div>
         <br />
         <div class="tender-meta">
-            <span>@Model.TenderType</span>,
+            <span>@Model.TenderType</span>
             <span>Published: @Model.DatePublished.ToString("dd MMM yyyy")</span>
         </div>
         <div class="tender-closing">
@@ -89,12 +89,16 @@
                 <tbody>
                     @foreach (var doc in Model.Documents.Where(d => d.AwardedTenderId == null))
                     {
+                        var maxLen = 55;
+                        var displayName = doc.FileName.Length > maxLen
+                        ? doc.FileName.Substring(0, maxLen) + "..."
+                        : doc.FileName;
                         <tr>
                             <td style="width:36px;">
                                 <img src="~/lib/Images/pdficon.png" style="width:32px;" />
                             </td>
-                            <td>
-                                @doc.FileName
+                            <td class="pdf-filename-cell" title="@doc.FileName">
+                                <span class="filename-ellipsis">@displayName</span>
                             </td>
                             <td class="action-buttons">
                                 <a href="@doc.SharePointPath" target="_blank" class="icon-btn view-btn" title="View">
@@ -120,12 +124,16 @@
                 <tbody>
                     @foreach (var doc in Model.AwardedTender.Documents)
                     {
+                        var maxLen = 55;
+                        var displayName = doc.FileName.Length > maxLen
+                        ? doc.FileName.Substring(0, maxLen) + "..."
+                        : doc.FileName;
                         <tr>
                             <td style="width:36px;">
                                 <img src="~/lib/Images/pdficon.png" style="width:32px;" />
                             </td>
-                            <td>
-                                @doc.FileName
+                            <td class="pdf-filename-cell" title="@doc.FileName">
+                                <span class="filename-ellipsis">@displayName</span>
                             </td>
                             <td class="action-buttons">
                                 <a href="@doc.SharePointPath" target="_blank" class="icon-btn view-btn" title="View">
@@ -141,41 +149,44 @@
             </table>
         </div>
     }
-</div>
 
-<!-- Respond Button -->
-<div class="tender-respond-row">
-    @if (isOpen)
-    {
-        @if (isAuthenticated)
+    <!-- Respond Button -->
+    <div class="tender-respond-row">
+        @if (isOpen)
         {
-            if (alreadyApplied)
+            @if (isAuthenticated)
             {
-                <button type="button" class="respond-btn disabled-respond" disabled title="You have already applied for this tender.">
-                    <i class="fas fa-check-circle"></i> Already Applied
-                </button>
+                if (alreadyApplied)
+                {
+                    <button type="button" class="respond-btn disabled-respond" disabled title="You have already applied for this tender.">
+                        <i class="fas fa-check-circle"></i> Already Applied
+                    </button>
+                }
+                else
+                {
+                    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">
+                        <i class="fas fa-paper-plane"></i> Respond
+                    </a>
+                }
             }
             else
             {
-                <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">
-                    <i class="fas fa-paper-plane"></i> Respond
-                </a>
+                <button type="button" class="respond-btn" onclick="showLoginModal()">
+                    <i class="fas fa-sign-in-alt"></i> Respond
+                </button>
             }
         }
-        else
+        else if (showGreyButton)
         {
-            <button type="button" class="respond-btn" onclick="showLoginModal()">
-                <i class="fas fa-sign-in-alt"></i> Respond
+            <button type="button" class="respond-btn disabled-respond" disabled title="You cannot respond to this tender.">
+                <i class="fas fa-ban"></i> Respond
             </button>
         }
-    }
-    else if (showGreyButton)
-    {
-        <button type="button" class="respond-btn disabled-respond" disabled title="You cannot respond to this tender.">
-            <i class="fas fa-ban"></i> Respond
-        </button>
-    }
+    </div>
+
+
 </div>
+
 
 <!-- Modal Popup -->
 <div id="loginModal" class="modal" style="display:none;">
@@ -410,6 +421,8 @@
         padding: 38px 34px 30px 34px;
         box-shadow: 0 2px 12px rgba(0,0,0,0.09);
         position: relative;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
 
     .back-arrow {
@@ -445,19 +458,39 @@
     .tender-meta {
         color: #444;
         font-size: 1.02rem;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
 
     .tender-closing {
         color: #e74c3c;
         font-weight: 500;
         font-size: 1.04rem;
+        margin-bottom: 10px;
+    }
+
+    .tender-awarded-to label {
+        display: block;
+        font-size: 1.06em;
+        margin-bottom: 10px;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* For attachments, ensure long filenames wrap */
+    .tender-attachments td,
+    .tender-attachments .pdf-filename-cell {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     .tender-description {
         margin-left: 42px;
         color: #222;
         font-size: 1.04rem;
+        white-space: pre-line;
+        word-break: break-word;
+        overflow-wrap: break-word;
         margin-bottom: 22px;
         line-height: 1.6;
     }
@@ -465,8 +498,13 @@
     .tender-respond-row {
         display: flex;
         justify-content: center;
-        margin-top: 28px;
-        margin-bottom: 20px;
+        align-items: center;
+        width: 100%;
+        margin-top: 32px;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
     /* Mobile responsiveness */
@@ -502,6 +540,30 @@
         .tender-description,
         .tender-attachments {
             margin-left: 0 !important;
+        }
+
+        .tender-title b {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .tender-meta span,
+        .tender-closing span {
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .tender-main-info,
+        .tender-title,
+        .tender-meta,
+        .tender-closing,
+        .tender-description,
+        .tender-awarded-to {
+            display: block;
+            width: 100%;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .tender-title {
@@ -586,7 +648,7 @@
     @@media (min-width: 768px) {
         .tender-respond-row {
             justify-content: center; /* align button to the left */
-            padding-right: 120px; /* optional spacing from card edge */
+            padding-right: 0; /* optional spacing from card edge */
         }
     }
 
@@ -613,6 +675,20 @@
             display: block;
             width: 100%;
         }
+        @@media (max-width: 767px) {
+            .tender-respond-row
+
+    {
+        margin-top: 22px;
+    }
+
+    .respond-btn {
+        width: 100%;
+        font-size: 1.1rem;
+        padding: 12px 0;
+    }
+
+    }
 
         .tender-attachments td {
             display: block;
@@ -661,6 +737,54 @@
             margin-left: 0;
             margin-right: 8px;
             margin-bottom: 4px;
+        }
+
+        .pdf-filename-cell,
+        .filename-ellipsis {
+            cursor: pointer;
+        }
+
+            .pdf-filename-cell:hover,
+            .filename-ellipsis:hover {
+                cursor: pointer;
+            }
+
+
+        .pdf-filename-cell {
+            max-width: 220px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .filename-ellipsis {
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+        /* Optional: Custom tooltip styling for better appearance */
+        .pdf-filename-cell[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 0;
+            top: 110%;
+            z-index: 10;
+            background: #222;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            white-space: pre-line;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            min-width: 120px;
+            max-width: 320px;
+            word-break: break-all;
+            pointer-events: none;
         }
     }
 </style>

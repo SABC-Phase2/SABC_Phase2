@@ -1,5 +1,8 @@
 ﻿@model IEnumerable<SABC_Phase2.Models.Tender.AuditLog>
-
+@{
+    // Set the banner text for the page (used in the layout or header)
+    ViewData["BannerText"] = "Audit Logs";
+}
 @{
     ViewBag.Title = "Audit Logs";
     Layout = "~/Views/Shared/_Layout.cshtml";

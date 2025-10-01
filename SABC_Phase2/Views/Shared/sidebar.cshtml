@@ -20,9 +20,25 @@
         </div>
     }
     <div class="profile profile-dropdown" id="profileDropdown" onclick="toggleProfileDropdown(event)">
-        <a href="@Url.Action("Administrator_Profiles", "TenderAdmin")" class="icon-link" title="Profile">
+        @{
+            string profileUrl;
+            if (!User.Identity.IsAuthenticated)
+            {
+                profileUrl = Url.Action("Login", "Account");
+            }
+            else if (User.IsInRole("IT_Admin") || User.IsInRole("Tender_Administrator") || User.IsInRole("Vendor_Administrator"))
+            {
+                profileUrl = Url.Action("Administrator_Profiles", "TenderAdmin");
+            }
+            else
+            {
+                profileUrl = Url.Action("OVRS_Profiles", "OVRS_User");
+            }
+        }
+        <a href="@profileUrl" class="icon-link" title="Profile">
             <i class="fas fa-user-circle fa-2x"></i>
         </a>
+
         <div class="info">
             @if (User.Identity.IsAuthenticated)
             {

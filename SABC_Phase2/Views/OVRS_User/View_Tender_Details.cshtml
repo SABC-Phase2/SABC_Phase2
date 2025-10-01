@@ -40,7 +40,7 @@
         </div>
         <br />
         <div class="tender-meta">
-            <span>@Model.TenderType</span>,
+            <span>@Model.TenderType</span>
             <span>Published: @Model.DatePublished.ToString("dd MMM yyyy")</span>
         </div>
         <div class="tender-closing">
@@ -94,34 +94,35 @@
         </div>
     }
 
-</div>
 
-<!-- Respond Button always visible, but may be disabled/greyed out -->
-<div class="tender-respond-row">
-    @if (isOpen)
-    {
-        if (isAuthenticated)
+
+    <!-- Respond Button always visible, but may be disabled/greyed out -->
+    <div class="tender-respond-row">
+        @if (isOpen)
         {
-            if (alreadyApplied)
+            if (isAuthenticated)
             {
-                // Show a button that triggers the modal
-                <button type="button" class="respond-btn" onclick="showAlreadyAppliedModal()">Respond</button>
+                if (alreadyApplied)
+                {
+                    // Show a button that triggers the modal
+                    <button type="button" class="respond-btn" onclick="showAlreadyAppliedModal()">Respond</button>
+                }
+                else
+                {
+                    // Normal respond link
+                    <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+                }
             }
             else
             {
-                // Normal respond link
-                <a href="@Url.Action("Tender_Application", "OVRS_User", new { id = Model.Id })" class="respond-btn">Respond</a>
+                <button type="button" class="respond-btn" onclick="showLoginModal()">Respond</button>
             }
         }
-        else
+        else if (showGreyButton)
         {
-            <button type="button" class="respond-btn" onclick="showLoginModal()">Respond</button>
+            <button type="button" class="respond-btn disabled-respond" disabled title="You cannot respond to this tender.">Respond</button>
         }
-    }
-    else if (showGreyButton)
-    {
-        <button type="button" class="respond-btn disabled-respond" disabled title="You cannot respond to this tender.">Respond</button>
-    }
+    </div>
 </div>
 
 <!-- Login To Respond to Tender Popup -->
@@ -133,9 +134,9 @@
         <!-- Error in red -->
         <div style="font-size:1.5rem; font-weight:700; color:#ef4444; margin-bottom: 6px;">Error</div>
         <!-- Grey message -->
-        <div style="font-size:1.1rem; color:#888;">Please login to respond to a tender</div>
+        <div style="font-size:1.1rem; color:#888; margin-bottom: 32px;">Please login to respond to a tender</div>
         <!-- Close button (optional, can use the X in top right if needed) -->
-        <div class="modal-btn-container">
+        <div class="modal-btn-container login-btn-container">
             <a href="@Url.Action("Login", "Account")" class="modal-login-btn">
                 Login
             </a>
@@ -196,7 +197,13 @@
 </script>
 
 <style>
-
+    /* Add this to your style block */
+    .login-btn-container {
+        margin-top: 32px !important;
+        margin-bottom: 0 !important;
+        display: flex;
+        justify-content: center;
+    }
     /* Make Already Applied Modal Smaller */
     .already-applied-modal-content {
         width: 480px !important;
@@ -448,6 +455,8 @@
         padding: 38px 34px 30px 34px;
         box-shadow: 0 2px 12px rgba(0,0,0,0.09);
         position: relative;
+        word-break: break-word; /* force long words to break */
+        overflow-wrap: break-word; /* handle really long content/URLs */
     }
 
     .back-arrow {
@@ -487,13 +496,14 @@
     .tender-meta {
         color: #444;
         font-size: 1.02rem;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
 
     .tender-closing {
         color: #e74c3c;
         font-weight: 500;
         font-size: 1.04rem;
+        margin-bottom: 10px;
     }
 
     .tender-description {
@@ -543,7 +553,7 @@
     }
 
     .pdf-filename-cell {
-        max-width: 60vw;
+        max-width: 10vw;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -626,11 +636,6 @@
             transform: translateY(2px);
         }
 
-    .tender-respond-row {
-        display: flex;
-        justify-content: center;
-        margin-top: 28px;
-    }
 
     .respond-btn {
         background: #1a7f37;
@@ -730,6 +735,12 @@
             font-size: 1.2rem !important;
         }
 
+        .tender-meta span,
+        .tender-closing span {
+            display: block;
+            margin-bottom: 3px;
+        }
+
         .back-arrow {
             font-size: 1.2rem;
             margin-right: 6px;
@@ -740,6 +751,25 @@
         .tender-description,
         .tender-attachments {
             margin-left: 0 !important;
+        }
+
+        .tender-title b {
+            display: block;
+            /* Optional: add spacing below the title */
+            margin-bottom: 8px;
+        }
+
+
+        .tender-main-info,
+        .tender-title,
+        .tender-meta,
+        .tender-closing,
+        .tender-description {
+            display: block;
+            width: 100%;
+            white-space: pre-line; /* preserves line breaks in description */
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .tender-title {
@@ -809,23 +839,43 @@
 
     /* Adjust content spacing when sidebar is visible */
     @@media (min-width: 768px) {
-        body .tender-details-card, body .breadcrumb-custom, body .tender-respond-row {
+        body .tender-details-card, body .breadcrumb-custom {
             margin-left: 120px; /* match your sidebar width */
         }
     }
 
-    /* On mobile, reset so it's centered */
-    @@media (max-width: 767px) {
-        body .tender-details-card, body .breadcrumb-custom, body .tender-respond-row {
-            margin-left: 60px;
+
+    .tender-respond-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 32px;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    @@media (min-width: 768px) {
+        body .tender-respond-row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
         }
     }
 
-    /* Desktop only: move respond button more left inside card */
-    @@media (min-width: 768px) {
-        .tender-respond-row {
-            justify-content: center; /* align button to the left */
-            padding-right: 140px; /* optional spacing from card edge */
+    @@media (max-width: 767px) {
+        body .tender-respond-row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        .respond-btn {
+            width: 100%;
+            font-size: 1.1rem;
+            padding: 12px 0;
         }
     }
 

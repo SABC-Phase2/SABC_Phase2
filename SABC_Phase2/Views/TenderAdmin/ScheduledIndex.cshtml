@@ -55,18 +55,22 @@
 </div>
 
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteScheduledModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
-    <div class="modal-content" style="background-color: #fff; margin: 15% auto; padding: 25px; width: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-        <h3 style="margin-top: 0; color: #333;">Confirm Deletion</h3>
-        <p>Are you sure you want to delete this scheduled tender?</p>
-        <div id="deleteScheduledLoading" style="display: none; text-align: center; margin: 15px 0;">
-            <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #d9534f; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Deleting scheduled tender...</p>
+<!-- Delete Confirmation Modal (Styled like EditScheduled deleteDocModal) -->
+<div id="deleteScheduledModal" style="display:none; position:fixed; z-index:11000; left:0; top:200px; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.15); max-width:400px; width:90%; margin:auto; overflow:hidden; border:2px solid #009344;">
+        <div style="background:#009344; color:#fff; padding:20px 0 16px 0; text-align:center;">
+            <span style="font-size:1.8rem; font-weight:700;">Delete Confirmation</span>
         </div>
-        <div id="scheduledModalButtons" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-            <button id="cancelScheduledDelete" class="cancel-btn" style="padding: 8px 16px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-            <button id="confirmScheduledDelete" class="confirm-btn" style="padding: 8px 16px; background: #d9534f; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+        <div style="padding:20px 10px 0 10px; text-align:center;">
+            <span style="font-size:1.2rem; color:#444;">Are you sure you want to delete this scheduled tender?</span>
+        </div>
+        <div id="deleteScheduledLoading" style="display:none; text-align:center; margin:15px 0;">
+            <div style="display:inline-block; width:20px; height:20px; border:3px solid #f3f3f3; border-top:3px solid #e74c3c; border-radius:50%; animation:spin 1s linear infinite;"></div>
+            <p style="margin:10px 0 0 0; color:#666; font-size:14px;">Deleting scheduled tender...</p>
+        </div>
+        <div id="scheduledModalButtons" style="display:flex; justify-content:center; gap:20px; margin:28px 0 20px 0;">
+            <button id="cancelScheduledDelete" style="background:#009344; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #007a3d; cursor:pointer;">No</button>
+            <button id="confirmScheduledDelete" style="background:#e74c3c; color:#fff; font-size:1rem; font-weight:500; border:none; border-radius:6px; padding:10px 28px; box-shadow:0 4px 0 0 #c0392b; cursor:pointer;">Yes, Delete</button>
         </div>
     </div>
 </div>
