@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Claims;
 
+
 namespace SABC_Phase2.Controllers
 {
     /// <summary>
@@ -1299,13 +1300,7 @@ namespace SABC_Phase2.Controllers
             legacyUser.Email = model.Email;
             legacyUser.Phone = $"{model.CountryCode} {model.PhoneNumber}".Trim();
 
-            // Update company name if you store it in TblUsers (if not, update in suppliers table below)
-            var supplier = await _legacyContext.TblSuppliers.FirstOrDefaultAsync(s => s.UserId == legacyUserId);
-            if (supplier != null)
-            {
-                supplier.TradingName = model.CompanyName;
-                supplier.LegalName = model.CompanyName;
-            }
+    
 
             // Save changes to legacy DB
             await _legacyContext.SaveChangesAsync();

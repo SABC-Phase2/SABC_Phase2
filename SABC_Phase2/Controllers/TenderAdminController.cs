@@ -2707,6 +2707,8 @@ namespace SABC_Phase2.Controllers
                 });
             }
         }
+       
+        
         private bool IsValidEmail(string email)
         {
             try
@@ -3198,9 +3200,8 @@ namespace SABC_Phase2.Controllers
                 admin.PasswordLastUpdated = DateTime.UtcNow;
             }
 
-            // ========== Other profile fields ==========
-            admin.FirstName = model.FirstName;
-            admin.LastName = model.LastName;
+          
+         
             // Note: Email is updated via OTP flow, not here
 
             await _context.SaveChangesAsync();
