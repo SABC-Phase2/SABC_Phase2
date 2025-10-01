@@ -4,6 +4,8 @@ using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
+
+// This method deals with OVRS OTP Email Phone number and Email changes
 namespace SABC_Phase2.Services
 {
     public class EmailDeliveryResult
@@ -44,18 +46,7 @@ namespace SABC_Phase2.Services
 
             var body = $@"Dear {userName},
 
-You have requested to change your phone number to {newPhoneNumber}.
-
-Your verification code is: {otpCode}
-
-This code will expire in 5 minutes for security reasons.
-
-If you did not request this change, please ignore this email and contact support immediately.
-
-For any queries, please email Tendersqueries@SABC.co.za
-
-Yours Sincerely,
-SABC SCM Team";
+Your OTP is {otpCode} to confirm your phone number change. This OTP expires in 5 minutes. If you did not request this, contact SABC support immediately.";
 
             using var mailMessage = new MailMessage(fromEmail, new MailAddress(userEmail))
             {
@@ -92,15 +83,9 @@ SABC SCM Team";
 
                 var body = $@"Dear {userName},
 
-You have requested to change your email address to this email address.
+You have requested to change your email address to {newEmail}. Please enter the below 6-digit OTP to verify and update you email. The OTP code will expire in 5 minutes. 
+OTP: {otpCode}
 
-Your verification code is: {otpCode}
-
-This code will expire in 5 minutes for security reasons.
-
-If you did not request this change, please ignore this email.
-
-For any queries, please email Tendersqueries@SABC.co.za
 
 Yours Sincerely,
 SABC SCM Team";

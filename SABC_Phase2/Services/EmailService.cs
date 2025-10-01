@@ -36,8 +36,7 @@ namespace SABC_Phase2.Services
 
             var body = $@"Dear {userName},
 
-Thank you for submitting your application, SABC has received your application and it is now under review.
-For any further queries, please visit the SABC Help site or email Tendersqueries@SABC.co.za
+Thank you for your submission. The SABC has received your application and it is currently under review. For any further queries, please visit the SABC Help Site or email Tendersqueries@sabc.co.za 
 
 Tender Number: {tenderNumber}
 Tender Name: {tenderName}
@@ -48,7 +47,7 @@ SABC SCM";
 
             using var mailMessage = new MailMessage(fromEmail, new MailAddress(toEmail))
             {
-                Subject = "SABC Tender Application Confirmation",
+                Subject = "SABC Tender Submission Confirmation",
                 Body = body,
                 IsBodyHtml = false
             };
@@ -94,11 +93,13 @@ SABC SCM";
 
             var body = $@"Dear {companyName}
 
-Below is the link to reset password for your account. Link will expire in 24 hours,
+We’ve received a request to reset the password for your account. Please use the link below to proceed. For your security, the link will expire in 24 hours:
 
 {resetLink}
 
-Thanks & Regards
+If you did not request a password reset, please ignore this message or contact support.
+
+Yours Sincerely,
 SABC Support Team";
 
             using var mailMessage = new MailMessage(fromEmail, new MailAddress(toEmail))
@@ -140,7 +141,7 @@ Closed At: {closingDateTime:yyyy-MM-dd HH:mm:ss}
 If this was unexpected, please review the tender's configuration.
 
 Yours Sincerely,
-SABC SCM System";
+SABC SCM";
 
             foreach (var adminEmail in adminEmails.Distinct())
             {
@@ -187,28 +188,19 @@ SABC SCM System";
 
             var body = $@"Dear {firstName} {lastName},
 
-Welcome to the SABC SCM System!
-
-Your administrator account has been successfully created with the following details:
+Your account has been created on the OVRS Platform as a {roleDisplay}. Below are your login credentials:
 
 Email: {toEmail}
-Role: {roleDisplay}
 Temporary Password: {temporaryPassword}
 
-IMPORTANT SECURITY NOTICE:
-For your account security, please log in and change your password immediately upon first access.
-Do not share these credentials with anyone.
-
-To access the system, please visit the SABC SCM portal and log in using the credentials provided above.
-
-If you have any questions or need assistance, please contact the IT support team.
+For security reasoans, please log in as soon as possible and update your password.
 
 Best regards,
-SABC SCM Administration Team";
+IT Admin | SABC";
 
             using var mailMessage = new MailMessage(fromEmail, new MailAddress(toEmail))
             {
-                Subject = "SABC SCM - New Administrator Account Created",
+                Subject = "Your New Internal User Account Has Been Created",
                 Body = body,
                 IsBodyHtml = false
             };

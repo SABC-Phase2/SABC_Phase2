@@ -22,7 +22,9 @@ namespace SABC_Phase2.Services
                 // Clean phone number format for SMS (remove spaces, ensure proper format)
                 string cleanPhoneNumber = CleanPhoneNumber(phoneNumber);
 
-                string message = $"Hello {userName}, you requested to change your email to {newEmailAddress}. Your verification code is: {otpCode}. This code expires in 5 minutes. - SABC SCM";
+                //string message = $"Hello {userName}, you requested to change your email to {newEmailAddress}. Your verification code is: {otpCode}. This code expires in 5 minutes. - SABC SCM";
+                string message = $"You have requested to change your email address to {newEmailAddress}. Please enter the below 6-digit OTP to verify and update. The code will expire in 5 minutes. \nOTP: {otpCode}";
+
 
                 await SendSmsAsync(cleanPhoneNumber, message);
             }
@@ -41,7 +43,8 @@ namespace SABC_Phase2.Services
                 // Clean phone number format for SMS
                 string cleanPhoneNumber = CleanPhoneNumber(phoneNumber);
 
-                string message = $"Hello {userName}, your phone verification code is: {otpCode}. This code expires in 5 minutes. - SABC SCM";
+                //string message = $"Hello {userName}, your phone verification code is: {otpCode}. This code expires in 5 minutes. - SABC SCM";
+                string message = $"Your OTP is {otpCode} to confirm your phone number change. It expires in 5 minutes. If you did not request this, contact SABC support immediately";
 
                 await SendSmsAsync(cleanPhoneNumber, message);
             }
@@ -62,9 +65,7 @@ namespace SABC_Phase2.Services
 
             if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
             {
-                // For development - just log the SMS
-                Console.WriteLine($"SMS to {phoneNumber}: {message}");
-                Console.WriteLine("Note: Twilio settings not configured. Message logged instead of sent.");
+               
                 return;
             }
 
