@@ -1323,17 +1323,6 @@ namespace SABC_Phase2.Controllers
             if (string.IsNullOrWhiteSpace(newEmail))
                 return BadRequest(new { success = false, message = "Email is required" });
 
-            // Get email validation service
-            var emailValidationService = HttpContext.RequestServices.GetRequiredService<EmailValidationService>();
-
-            // Comprehensive email validation
-            var validationResult = await emailValidationService.ValidateEmailAsync(newEmail);
-            if (!validationResult.IsValid)
-            {
-                return BadRequest(new { success = false, message = validationResult.ErrorMessage });
-            }
-
-            // Get logged in Phase2 user
             var userIdClaim = User.FindFirst("UserId")?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
                 return Unauthorized();
@@ -1341,41 +1330,82 @@ namespace SABC_Phase2.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
             if (user == null) return Unauthorized();
 
-            // Get their legacy user (to check current email)
+            // ✅ CHECK IF BLOCKED FIRST
+            if (user.EmailOtpBlockedUntil.HasValue && user.EmailOtpBlockedUntil.Value > DateTime.UtcNow)
+            {
+                var secondsLeft = (int)(user.EmailOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Too many failed attempts. Please try again later.",
+                    isBlocked = true,
+                    secondsLeft = secondsLeft
+                });
+            }
+
+            // ✅ CHECK IF ALREADY AT MAX ATTEMPTS (3) BEFORE SENDING
+            var maxAttempts = 3;
+            if (user.EmailOtpAttempts >= maxAttempts)
+            {
+                // Block for 15 minutes
+                user.EmailOtpBlockedUntil = DateTime.UtcNow.AddMinutes(15);
+                await _context.SaveChangesAsync();
+
+                var secondsLeft = (int)(user.EmailOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Too many OTP requests. Please try again later.",
+                    isBlocked = true,
+                    secondsLeft = secondsLeft
+                });
+            }
+
+            // Email validation logic
+            var emailValidationService = HttpContext.RequestServices.GetRequiredService<EmailValidationService>();
+            var validationResult = await emailValidationService.ValidateEmailAsync(newEmail);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(new { success = false, message = validationResult.ErrorMessage });
+            }
+
+            // Check existing user logic
             var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
             if (legacyUser == null)
                 return BadRequest(new { success = false, message = "User not found." });
 
-            // --- NEW: Block if changing to own current email ---
             if (legacyUser.Email != null && legacyUser.Email.Trim().ToLower() == newEmail.Trim().ToLower())
             {
                 return BadRequest(new { success = false, message = "You are already using this email address." });
             }
 
-            // Check if email is already in use by another account
             var existingUser = await _legacyContext.TblUsers
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == newEmail.ToLower() && u.UserId != user.LegacyUserId);
 
             if (existingUser != null)
                 return BadRequest(new { success = false, message = "This email address is already in use by another account." });
 
-            // Generate OTP
+            // ✅ INCREMENT ATTEMPTS ONLY AFTER VALIDATIONS PASS
+            user.EmailOtpAttempts++;
+            user.EmailOtpLastAttempt = DateTime.UtcNow;
+
+            // Generate OTP and save
             var otpCode = _otpService.GenerateOtpCode();
             var expiry = _otpService.GetOtpExpiration();
 
-            // Save OTP + pending email
             user.OtpCode = otpCode;
             user.OtpExpiration = expiry;
             user.PendingEmail = newEmail;
             user.OtpType = "email";
+
             await _context.SaveChangesAsync();
 
-            // Send OTP email with error handling
+            // Send OTP email
             var emailResult = await _phoneOtpEmailService.SendEmailOtpAsync(newEmail, user.OriginalEmail ?? "User", otpCode);
 
             if (!emailResult.Success)
             {
-                // Clear the OTP data since email failed
+                // Clear the OTP data since email failed, but keep the attempt count
                 user.OtpCode = null;
                 user.OtpExpiration = null;
                 user.PendingEmail = null;
@@ -1389,8 +1419,18 @@ namespace SABC_Phase2.Controllers
                 });
             }
 
-            return Ok(new { success = true, message = "OTP sent successfully" });
+            // ✅ Calculate remaining attempts for UI
+            var remainingAttempts = Math.Max(0, maxAttempts - user.EmailOtpAttempts);
+
+            return Ok(new
+            {
+                success = true,
+                message = "OTP sent successfully",
+                remainingAttempts = remainingAttempts
+            });
         }
+
+
 
         // Step 2: Verify OTP and update email
         [HttpPost]
@@ -1407,10 +1447,19 @@ namespace SABC_Phase2.Controllers
             if (user == null) return Unauthorized();
 
             bool valid = _otpService.ValidateOtp(user.OtpCode, user.OtpExpiration, request.Otp);
-            if (!valid)
-                return BadRequest(new { success = false, message = "Invalid or expired OTP" });
 
-            // ✅ Update both DBs
+            if (!valid)
+            {
+                // ✅ DON'T INCREMENT ATTEMPTS ON VERIFICATION FAILURE
+                // Only increment on Send attempts, not verification attempts
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid or expired OTP"
+                });
+            }
+
+            // ✅ SUCCESS - RESET ALL RATE LIMITING
             if (!string.IsNullOrEmpty(user.PendingEmail))
             {
                 var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
@@ -1418,7 +1467,6 @@ namespace SABC_Phase2.Controllers
                 {
                     legacyUser.Email = user.PendingEmail;
 
-                    // Update email in tbl_suppliers as well
                     var supplier = await _legacyContext.TblSuppliers.FirstOrDefaultAsync(s => s.UserId == legacyUser.UserId);
                     if (supplier != null)
                     {
@@ -1434,11 +1482,60 @@ namespace SABC_Phase2.Controllers
                 user.OtpExpiration = null;
                 user.OtpType = null;
 
+                // ✅ RESET ALL RATE LIMITING ON SUCCESS
+                user.EmailOtpAttempts = 0;
+                user.EmailOtpLastAttempt = null;
+                user.EmailOtpBlockedUntil = null;
+
                 await _context.SaveChangesAsync();
             }
 
             return Ok(new { success = true, message = "Email updated successfully" });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> GetEmailOtpStatus()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+                return Unauthorized();
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (user == null) return Unauthorized();
+
+            // Check if blocked
+            if (user.EmailOtpBlockedUntil.HasValue && user.EmailOtpBlockedUntil.Value > DateTime.UtcNow)
+            {
+                var secondsLeft = (int)(user.EmailOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return Ok(new
+                {
+                    isBlocked = true,
+                    secondsLeft = secondsLeft,
+                    attempts = user.EmailOtpAttempts
+                });
+            }
+
+            // Check if block period has expired - reset if so
+            if (user.EmailOtpBlockedUntil.HasValue && user.EmailOtpBlockedUntil.Value <= DateTime.UtcNow)
+            {
+                user.EmailOtpAttempts = 0;
+                user.EmailOtpLastAttempt = null;
+                user.EmailOtpBlockedUntil = null;
+                await _context.SaveChangesAsync();
+            }
+
+            var maxAttempts = 3;
+            var remainingAttempts = Math.Max(0, maxAttempts - user.EmailOtpAttempts);
+
+            return Ok(new
+            {
+                isBlocked = false,
+                secondsLeft = 0,
+                attempts = user.EmailOtpAttempts,
+                remainingAttempts = remainingAttempts
+            });
+        }
+
         public class VerifyOtpRequest
         {
             public string Otp { get; set; }
@@ -1459,6 +1556,37 @@ namespace SABC_Phase2.Controllers
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
             if (user == null) return Unauthorized();
+
+            // ✅ CHECK IF BLOCKED FIRST
+            if (user.PhoneOtpBlockedUntil.HasValue && user.PhoneOtpBlockedUntil.Value > DateTime.UtcNow)
+            {
+                var secondsLeft = (int)(user.PhoneOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Too many failed attempts. Please try again later.",
+                    isBlocked = true,
+                    secondsLeft = secondsLeft
+                });
+            }
+
+            // ✅ CHECK IF ALREADY AT MAX ATTEMPTS (3) BEFORE SENDING
+            var maxAttempts = 3;
+            if (user.PhoneOtpAttempts >= maxAttempts)
+            {
+                // Block for 15 minutes
+                user.PhoneOtpBlockedUntil = DateTime.UtcNow.AddMinutes(15);
+                await _context.SaveChangesAsync();
+
+                var secondsLeft = (int)(user.PhoneOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Too many OTP requests. Please try again later.",
+                    isBlocked = true,
+                    secondsLeft = secondsLeft
+                });
+            }
 
             // Get their legacy user (to get current name)
             var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
@@ -1487,6 +1615,10 @@ namespace SABC_Phase2.Controllers
                     return BadRequest(new { success = false, message = "You are already using this phone number." });
             }
 
+            // ✅ INCREMENT ATTEMPTS ONLY AFTER VALIDATIONS PASS
+            user.PhoneOtpAttempts++;
+            user.PhoneOtpLastAttempt = DateTime.UtcNow;
+
             // Generate OTP
             var otpCode = _otpService.GenerateOtpCode();
             var expiry = _otpService.GetOtpExpiration();
@@ -1497,6 +1629,7 @@ namespace SABC_Phase2.Controllers
             user.PendingPhoneNumber = request.PhoneNumber.Trim();
             user.PendingCountryCode = request.CountryCode.Trim();
             user.OtpType = "phone";
+
             await _context.SaveChangesAsync();
 
             // Send OTP SMS
@@ -1508,11 +1641,19 @@ namespace SABC_Phase2.Controllers
 
                 await smsOtpService.SendPhoneOtpSmsAsync(cleanPhoneNumber, userName, otpCode);
 
-                return Ok(new { success = true, message = "OTP sent successfully to your phone" });
+                // ✅ Calculate remaining attempts for UI
+                var remainingAttempts = Math.Max(0, maxAttempts - user.PhoneOtpAttempts);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "OTP sent successfully to your phone",
+                    remainingAttempts = remainingAttempts
+                });
             }
             catch (Exception ex)
             {
-                // Clear the OTP data since SMS failed
+                // Clear the OTP data since SMS failed, but keep the attempt count
                 user.OtpCode = null;
                 user.OtpExpiration = null;
                 user.PendingPhoneNumber = null;
@@ -1542,19 +1683,21 @@ namespace SABC_Phase2.Controllers
             if (user == null) return Unauthorized();
 
             bool valid = _otpService.ValidateOtp(user.OtpCode, user.OtpExpiration, request.Otp);
-            if (!valid)
-                return BadRequest(new { success = false, message = "Invalid or expired OTP" });
 
-            // Update legacy user phone number only
+            if (!valid)
+            {
+                // ✅ DON'T INCREMENT ATTEMPTS ON VERIFICATION FAILURE
+                // Only increment on Send attempts, not verification attempts
+                return BadRequest(new { success = false, message = "Invalid or expired OTP" });
+            }
+
+            // ✅ SUCCESS - RESET ALL RATE LIMITING AND UPDATE PHONE
             if (!string.IsNullOrEmpty(user.PendingPhoneNumber) && !string.IsNullOrEmpty(user.PendingCountryCode))
             {
                 var legacyUser = await _legacyContext.TblUsers.FirstOrDefaultAsync(u => u.UserId == user.LegacyUserId);
                 if (legacyUser != null)
                 {
                     legacyUser.Phone = $"{user.PendingCountryCode} {user.PendingPhoneNumber}";
-                    //legacyUser.UpdatedDate = DateTime.Now;
-
-
                     await _legacyContext.SaveChangesAsync();
                 }
 
@@ -1569,10 +1712,58 @@ namespace SABC_Phase2.Controllers
                 user.OtpExpiration = null;
                 user.OtpType = null;
 
+                // ✅ RESET ALL PHONE RATE LIMITING ON SUCCESS
+                user.PhoneOtpAttempts = 0;
+                user.PhoneOtpLastAttempt = null;
+                user.PhoneOtpBlockedUntil = null;
+
                 await _context.SaveChangesAsync();
             }
 
             return Ok(new { success = true, message = "Phone number updated successfully" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetPhoneOtpStatus()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
+                return Unauthorized();
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
+            if (user == null) return Unauthorized();
+
+            // Check if blocked
+            if (user.PhoneOtpBlockedUntil.HasValue && user.PhoneOtpBlockedUntil.Value > DateTime.UtcNow)
+            {
+                var secondsLeft = (int)(user.PhoneOtpBlockedUntil.Value - DateTime.UtcNow).TotalSeconds;
+                return Ok(new
+                {
+                    isBlocked = true,
+                    secondsLeft = secondsLeft,
+                    attempts = user.PhoneOtpAttempts
+                });
+            }
+
+            // Check if block period has expired - reset if so
+            if (user.PhoneOtpBlockedUntil.HasValue && user.PhoneOtpBlockedUntil.Value <= DateTime.UtcNow)
+            {
+                user.PhoneOtpAttempts = 0;
+                user.PhoneOtpLastAttempt = null;
+                user.PhoneOtpBlockedUntil = null;
+                await _context.SaveChangesAsync();
+            }
+
+            var maxAttempts = 3;
+            var remainingAttempts = Math.Max(0, maxAttempts - user.PhoneOtpAttempts);
+
+            return Ok(new
+            {
+                isBlocked = false,
+                secondsLeft = 0,
+                attempts = user.PhoneOtpAttempts,
+                remainingAttempts = remainingAttempts
+            });
         }
 
         // Request models
@@ -1583,52 +1774,6 @@ namespace SABC_Phase2.Controllers
         }
 
 
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> CancelOtp()
-        //{
-        //    // Get current user
-        //    var userIdClaim = User.FindFirst("UserId")?.Value;
-        //    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int phase2UserId))
-        //    {
-        //        return Json(new { success = false, message = "User not found." });
-        //    }
-
-        //    var phase2User = await _context.Users.FirstOrDefaultAsync(u => u.Id == phase2UserId);
-        //    if (phase2User == null || phase2User.LegacyUserId == null)
-        //    {
-        //        return Json(new { success = false, message = "User not found." });
-        //    }
-
-        //    // Store the original values to return them to the client
-        //    var originalData = new
-        //    {
-        //        originalEmail = phase2User.OriginalEmail,
-        //        originalPhone = phase2User.OriginalPhoneNumber,
-        //        originalCountryCode = phase2User.OriginalCountryCode,
-        //        otpType = phase2User.OtpType
-        //    };
-
-        //    // Clear all OTP-related, pending, and original data
-        //    phase2User.OtpCode = null;
-        //    phase2User.OtpExpiration = null;
-        //    phase2User.PendingPhoneNumber = null;
-        //    phase2User.PendingCountryCode = null;
-        //    phase2User.PendingEmail = null;
-        //    phase2User.OriginalPhoneNumber = null;
-        //    phase2User.OriginalCountryCode = null;
-        //    phase2User.OriginalEmail = null;
-        //    phase2User.OtpType = null;
-
-        //    await _context.SaveChangesAsync();
-
-        //    return Json(new
-        //    {
-        //        success = true,
-        //        message = "OTP verification cancelled successfully.",
-        //        originalData = originalData
-        //    });
-        //}
 
         [HttpPost]
         [ValidateAntiForgeryToken]

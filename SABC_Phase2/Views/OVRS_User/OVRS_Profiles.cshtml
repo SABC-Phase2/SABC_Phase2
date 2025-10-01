@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <div class="breadcrumb-custom">
-    Home<span class="breadcrumb-arrow">&#x2794;</span> <span class="breadcrumb-active">Profile</span>
+    Home<span class="breadcrumb-arrow">&gt;</span> <span class="breadcrumb-active">Profile</span>
 </div>
 
 <div class="tab-container">
@@ -77,7 +77,7 @@
             @Model.CountryCode @Model.PhoneNumber
         </p>
     </div>
-  <a href="javascript:void(0)" class="change-link" id="changePhoneBtn" data-bs-toggle="modal" data-bs-target="#changePhoneModal">Change</a>
+  <a href="javascript:void(0)" class="change-link" id="changePhoneBtn">Change</a>
 </div>
 @Html.HiddenFor(m => m.PhoneNumber) <!-- Keep binding -->
 @Html.HiddenFor(m => m.CountryCode)
@@ -164,60 +164,76 @@
 </div>
 
 
-<!-- Email Change Modal -->
+<!-- Email Change Modal (Admin-style) -->
 <div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="changeEmailForm" autocomplete="off" onsubmit="return false;">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email Address</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Change email address</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <input type="email" class="form-control" id="newEmailInput" name="newEmail" placeholder="Enter new email address" required />
-                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Send OTP</button>
-                        </div>
+
+                    <!-- Step 1: Email Address -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-success me-2">1</span> Email Address
+                        </label>
+                        <input type="email" class="form-control mb-2" id="newEmailInput" name="newEmail" placeholder="Enter your new email address" />
                         <div class="invalid-feedback" id="newEmailError" style="display:block"></div>
-                    </div>
-                    <div id="otpSection" class="mb-3 d-none">
-                        <label>Enter OTP Code</label>
-                        <div class="d-flex justify-content-between gap-2 mb-2">
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
-                            <input type="text" class="form-control text-center otp-input" maxlength="1" />
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="sendOtpBtn" style="min-width:130px;">Get OTP</button>
                         </div>
-                        <button type="button" class="btn btn-primary w-100" id="verifyOtpBtn">Verify OTP</button>
+                    </div>
+
+                    <!-- Step 2: Verify OTP -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-warning text-dark me-2">2</span> Verify Email Address
+                        </label>
+                        <div class="d-flex align-items-center mb-3">
+                            <a href="javascript:void(0)" id="resendOtpLink" class="me-2">Resend OTP</a>
+                            <span class="text-muted">• This OTP will expire after <span id="otpTimer" style="color:#0074d9;">00:05:00</span></span>
+                        </div>
+                           <div class="d-flex justify-content-start gap-2 mb-3">
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center otp-input" maxlength="1" disabled />
+                        </div>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="verifyOtpBtn" style="min-width:130px;" disabled>Verify</button>
+                        </div>
                         <div class="invalid-feedback" id="otpError" style="display:block"></div>
                         <div class="valid-feedback" id="otpSuccess" style="display:block"></div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    @* <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button> *@
+
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-
-<!-- Phone Change Modal -->
+<!-- Phone Change Modal (Admin-style) -->
 <div class="modal fade" id="changePhoneModal" tabindex="-1" aria-labelledby="changePhoneModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="changePhoneForm" autocomplete="off" onsubmit="return false;">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="changePhoneModalLabel">Change Phone Number</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="changePhoneModalLabel">Change phone number</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">New Phone Number</label>
-                        <div class="input-group">
+
+                    <!-- Step 1: Phone Number -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-success me-2">1</span> Phone Number
+                        </label>
+                        <div class="input-group mb-2">
                             <span class="input-group-text flag-box">
                                 <img id="newCountryFlag" src="@Model.CountryCodes.FirstOrDefault(c => c.DialingCode == Model.CountryCode)?.FlagUrl" alt="Country flag" />
                             </span>
@@ -239,41 +255,41 @@
                                    placeholder="Enter new phone number" 
                                    maxlength="15"
                                    required />
-                            <button type="button" class="btn btn-success" id="sendPhoneOtpBtn" style="min-width:130px;">
-                                Send OTP
-                            </button>
                         </div>
-                        <div class="invalid-feedback" id="newPhoneError" style="display:block"></div>
+                                                <div class="invalid-feedback" id="newPhoneError" style="display:block"></div>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="sendPhoneOtpBtn" style="min-width:130px;">Get OTP</button>
+                        </div>
                     </div>
 
-                    <div id="phoneOtpSection" class="mb-3 d-none">
-                        <label class="form-label">Enter 6-Digit OTP Code</label>
-                        <div class="d-flex justify-content-between gap-2 mb-3">
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
-                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" pattern="[0-9]" />
+                    <!-- Step 2: Verify OTP -->
+                    <div class="mb-5">
+                        <label class="form-label fw-bold d-flex align-items-center mb-2">
+                            <span class="badge bg-warning text-dark me-2">2</span> Verify Phone Number
+                        </label>
+                        <div class="d-flex align-items-center mb-3">
+                            <a href="javascript:void(0)" id="resendPhoneOtpLink" class="me-2">Resend OTP</a>
+                            <span class="text-muted">• This OTP will expire after <span id="phoneOtpTimer" style="color:#0074d9;">00:05:00</span></span>
                         </div>
-                        <button type="button" class="btn btn-primary w-100" id="verifyPhoneOtpBtn">
-                            Verify OTP
-                        </button>
+                        <div class="d-flex justify-content-start gap-2 mb-3">
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                            <input type="text" class="form-control text-center phone-otp-input" maxlength="1" disabled />
+                        </div>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-success" id="verifyPhoneOtpBtn" style="min-width:130px;" disabled>Verify</button>
+                        </div>
                         <div class="invalid-feedback" id="phoneOtpError" style="display:block"></div>
-                        <div class="valid-feedback text-success" id="phoneOtpSuccess" style="display:block"></div>
-                        <small class="text-muted mt-2 d-block">
-                            Didn't receive the code? Make sure your phone number is correct and try again.
-                        </small>
+                        <div class="valid-feedback" id="phoneOtpSuccess" style="display:block"></div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
 
 
 <!--Delete Account Model Popup-->
@@ -309,41 +325,64 @@
     </div>
 </div>
 
-<!-- Password Security Requirements Modal -->
+<!-- Password Security Requirements Modal (Admin-style) -->
 <div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Security Requirements</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Error image and title, both enlarged and centered -->
+            <div class="modal-header d-block border-0 text-center" style="background:transparent;">
+                <img src="~/lib/Images/X-Box.png" alt="Error"
+                     style="width: 96px; height: 96px; margin: 0 auto 12px auto; display: block;" />
+                <h5 class="modal-title w-100" id="passwordRequirementsModalLabel"
+                    style="color:#e53935; font-weight:900; font-size:2rem; text-align:center;">
+                    Error
+                </h5>
             </div>
-            <div class="modal-body">
-                <p class="mb-3">Your password must meet the following security requirements:</p>
-                <div id="passwordRequirementsList">
-                    <div class="requirement-item" id="req-length">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must be 8 to 15 characters long</span>
-                    </div>
-                    <div class="requirement-item" id="req-lowercase">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a lowercase letter (a-z)</span>
-                    </div>
-                    <div class="requirement-item" id="req-uppercase">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain an uppercase letter (A-Z)</span>
-                    </div>
-                    <div class="requirement-item" id="req-number">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a number (0-9)</span>
-                    </div>
-                    <div class="requirement-item" id="req-special">
-                        <i class="fas fa-times requirement-not-met"></i>
-                        <span>Must contain a special character (!@@#$%^&*()_+-=[]{}|;:,.<>?)</span>
-                    </div>
-                </div>
+            <div class="modal-body" style="text-align:center;">
+                <p class="mb-2" style="font-size:1.2rem; font-weight:600;">Password Requirements:</p>
+                <ul class="list-unstyled mb-0" id="passwordRequirementsChecklist" style="display:inline-block; text-align:left;">
+                    @{
+                        string attemptedPassword = ViewBag.AttemptedPassword ?? Model?.NewPassword ?? "";
+                        bool hasLength = attemptedPassword.Length >= 8 && attemptedPassword.Length <= 15;
+                        bool hasLower = attemptedPassword.Any(char.IsLower);
+                        bool hasUpper = attemptedPassword.Any(char.IsUpper);
+                        bool hasDigit = attemptedPassword.Any(char.IsDigit);
+                        bool hasSpecial = attemptedPassword.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c));
+                    }
+                    <li>
+                        <span class="@(hasLength ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasLength ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use 8 or more characters
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasLower ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasLower ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use lower case letters (e.g. a)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasUpper ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasUpper ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use upper case letters (e.g. A)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasDigit ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasDigit ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use a number (e.g. 123)
+                        </span>
+                    </li>
+                    <li>
+                        <span class="@(hasSpecial ? "text-success" : "text-danger")" style="font-size:1.1rem;">
+                            <i class="fa-solid @(hasSpecial ? "fa-check-circle" : "fa-xmark-circle") me-1"></i>
+                            Use a symbol (e.g. !#$*)
+                        </span>
+                    </li>
+                </ul>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 d-flex justify-content-center">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="closePasswordReqModalBtn">Close</button>
             </div>
         </div>
     </div>
@@ -501,177 +540,312 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ---- PHONE CHANGE FLOW ----
+        var newCountryCodeSelect = document.getElementById('newCountryCode');
+    var newCountryFlag = document.getElementById('newCountryFlag');
     var changePhoneBtn = document.getElementById('changePhoneBtn');
     var sendPhoneOtpBtn = document.getElementById('sendPhoneOtpBtn');
     var verifyPhoneOtpBtn = document.getElementById('verifyPhoneOtpBtn');
-    var phoneOtpSection = document.getElementById('phoneOtpSection');
     var newPhoneInput = document.getElementById('newPhoneInput');
-    var changePhoneModal = null;
+    var phoneOtpInputs = document.querySelectorAll('.phone-otp-input');
+    var resendPhoneOtpLink = document.getElementById('resendPhoneOtpLink');
+    var phoneOtpTimer = document.getElementById('phoneOtpTimer');
+    var newPhoneError = document.getElementById('newPhoneError');
+    var phoneOtpError = document.getElementById('phoneOtpError');
+    var phoneOtpSuccess = document.getElementById('phoneOtpSuccess');
 
-    // Initialize modal instance
-    var changePhoneModalEl = document.getElementById('changePhoneModal');
-    if (changePhoneModalEl) {
-        changePhoneModal = bootstrap.Modal.getInstance(changePhoneModalEl) || new bootstrap.Modal(changePhoneModalEl);
+// Add spinner inside buttons
+    if (sendPhoneOtpBtn) {
+        sendPhoneOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendPhoneOtpSpinner"></span> <span class="btn-text">Get OTP</span>';
     }
-
-    // Function to reset phone form
-    function resetPhoneForm() {
-        if (newPhoneInput) newPhoneInput.value = '';
-        document.querySelectorAll('.phone-otp-input').forEach(i => i.value = '');
-        document.getElementById('phoneOtpError').textContent = '';
-        document.getElementById('phoneOtpSuccess').textContent = '';
-        document.getElementById('newPhoneError').textContent = '';
-        if (phoneOtpSection) phoneOtpSection.classList.add('d-none');
-        if (sendPhoneOtpBtn) {
-            sendPhoneOtpBtn.disabled = false;
-            sendPhoneOtpBtn.textContent = 'Send OTP';
-        }
-        if (verifyPhoneOtpBtn) {
-            verifyPhoneOtpBtn.disabled = false;
-            verifyPhoneOtpBtn.textContent = 'Verify OTP';
-        }
-        // Re-enable inputs
-        if (newPhoneInput) newPhoneInput.disabled = false;
-        if (newCountryCodeSelect) newCountryCodeSelect.disabled = false;
+    if (verifyPhoneOtpBtn) {
+        verifyPhoneOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyPhoneOtpSpinner"></span> <span class="btn-text">Verify</span>';
     }
+    var sendPhoneOtpSpinner = document.getElementById('sendPhoneOtpSpinner');
+    var verifyPhoneOtpSpinner = document.getElementById('verifyPhoneOtpSpinner');
 
-    // Handle change phone button click
-    if (changePhoneBtn) {
-        changePhoneBtn.addEventListener('click', function () {
-            resetPhoneForm();
-            if (changePhoneModal) {
-                changePhoneModal.show();
+    let phoneCountdownInterval;
+    let phoneOtpTimeLeft = 300; // 5 minutes
+    let phoneResendCooldownTime = 60;
+    let phoneResendCooldownLeft = 0;
+    let phoneResendCooldownInterval = null;
+    let phoneBlockTimeLeft = 0;
+    let phoneBlockInterval = null;
+
+     function startPhoneResendCooldown(seconds) {
+        phoneResendCooldownLeft = seconds;
+        updatePhoneResendLinkState();
+        if (phoneResendCooldownInterval) clearInterval(phoneResendCooldownInterval);
+        phoneResendCooldownInterval = setInterval(() => {
+            phoneResendCooldownLeft--;
+            updatePhoneResendLinkState();
+            if (phoneResendCooldownLeft <= 0) {
+                clearInterval(phoneResendCooldownInterval);
             }
-        });
+        }, 1000);
     }
 
-    // Send Phone OTP
+    function updatePhoneResendLinkState() {
+        if (!resendPhoneOtpLink) return;
+        if (phoneBlockTimeLeft > 0) {
+            resendPhoneOtpLink.classList.add('disabled');
+            resendPhoneOtpLink.style.pointerEvents = 'none';
+            resendPhoneOtpLink.style.color = '#dc3545';
+            const minutes = Math.floor(phoneBlockTimeLeft / 60);
+            const seconds = phoneBlockTimeLeft % 60;
+            resendPhoneOtpLink.textContent = `Blocked (${minutes}:${seconds.toString().padStart(2, '0')})`;
+            return;
+        }
+        if (phoneResendCooldownLeft > 0) {
+            resendPhoneOtpLink.classList.add('disabled');
+            resendPhoneOtpLink.style.pointerEvents = 'none';
+            resendPhoneOtpLink.style.color = '#6c757d';
+            resendPhoneOtpLink.textContent = `Resend OTP (${phoneResendCooldownLeft}s)`;
+        } else {
+            resendPhoneOtpLink.classList.remove('disabled');
+            resendPhoneOtpLink.style.pointerEvents = '';
+            resendPhoneOtpLink.style.color = '';
+            resendPhoneOtpLink.textContent = 'Resend OTP';
+        }
+    }
+
+    function startPhoneBlockCountdown(seconds) {
+phoneBlockTimeLeft = seconds;
+        updatePhoneResendLinkState();
+        if (phoneBlockInterval) clearInterval(phoneBlockInterval);
+        phoneBlockInterval = setInterval(() => {
+            phoneBlockTimeLeft--;
+            updatePhoneResendLinkState();
+            if (phoneBlockTimeLeft <= 0) {
+                clearInterval(phoneBlockInterval);
+                sendPhoneOtpBtn.disabled = false;
+                sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                newPhoneInput.removeAttribute('readonly');
+                newCountryCodeSelect.disabled = false;
+            }
+        }, 1000);
+    }
+
+    function resetPhoneOtpUI() {
+        phoneOtpInputs.forEach(i => { i.value = ''; i.disabled = true; });
+        verifyPhoneOtpBtn.disabled = true;
+        phoneOtpError.textContent = '';
+        phoneOtpSuccess.textContent = '';
+        clearInterval(phoneCountdownInterval);
+        if (phoneOtpTimer) phoneOtpTimer.textContent = "00:05:00";
+        if (phoneBlockTimeLeft <= 0) {
+            phoneResendCooldownLeft = phoneResendCooldownTime;
+            updatePhoneResendLinkState();
+        }
+    }
+
+           // Flag update logic (unchanged)
+    if (newCountryCodeSelect && newCountryFlag) {
+        function updateNewFlag() {
+            var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+            var flagUrl = selectedOption.getAttribute('data-flag');
+            if (flagUrl) {
+                newCountryFlag.src = flagUrl;
+                newCountryFlag.style.display = '';
+            } else {
+                newCountryFlag.style.display = 'none';
+            }
+        }
+        function updateOptionTexts() {
+            var selectedOption = newCountryCodeSelect.options[newCountryCodeSelect.selectedIndex];
+            var selectedValue = selectedOption.value;
+            Array.from(newCountryCodeSelect.options).forEach(function(option) {
+                var countryCode = option.value;
+                var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+                if (option.value === selectedValue) {
+                    option.textContent = countryCode;
+                } else {
+                    option.textContent = countryName + ' (' + countryCode + ')';
+                }
+            });
+        }
+        function updateSelectDisplay() {
+            updateNewFlag();
+            updateOptionTexts();
+        }
+        newCountryCodeSelect.addEventListener('change', updateSelectDisplay);
+        newCountryCodeSelect.addEventListener('mousedown', function() {
+            Array.from(newCountryCodeSelect.options).forEach(function(option) {
+                var countryCode = option.value;
+                var countryName = option.getAttribute('data-country') || option.textContent.split(' (')[0];
+                option.textContent = countryName + ' (' + countryCode + ')';
+            });
+ });
+        newCountryCodeSelect.addEventListener('blur', function() {
+            setTimeout(function() {
+                updateOptionTexts();
+            }, 100);
+        });
+        var changePhoneModalEl = document.getElementById('changePhoneModal');
+        if (changePhoneModalEl) {
+            changePhoneModalEl.addEventListener('shown.bs.modal', updateSelectDisplay);
+        }
+        updateSelectDisplay();
+    }
+
+// Open modal with block status check
+if (changePhoneBtn) {
+    changePhoneBtn.addEventListener('click', async function () {
+        newPhoneInput.value = '';
+        newPhoneInput.classList.remove('is-invalid', 'is-valid');
+        newPhoneError.textContent = '';
+        
+        // ✅ CHECK BLOCK STATUS FROM SERVER
+        try {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            var headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['RequestVerificationToken'] = token.value;
+            }
+            
+            let res = await fetch('/OVRS_User/GetPhoneOtpStatus', {
+                method: 'POST',
+                headers: headers
+            });
+            let statusData = await res.json();
+            
+            if (statusData.isBlocked && statusData.secondsLeft > 0) {
+                phoneBlockTimeLeft = statusData.secondsLeft;
+                newPhoneInput.setAttribute('readonly', true);
+                newCountryCodeSelect.disabled = true;
+                sendPhoneOtpBtn.disabled = true;
+                sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Blocked';
+                const minutes = Math.floor(phoneBlockTimeLeft / 60);
+                const seconds = phoneBlockTimeLeft % 60;
+                newPhoneError.textContent = `You are temporarily blocked.`;
+                startPhoneBlockCountdown(phoneBlockTimeLeft);
+            } else {
+                phoneBlockTimeLeft = 0;
+                newPhoneInput.removeAttribute('readonly');
+                newCountryCodeSelect.disabled = false;
+                sendPhoneOtpBtn.disabled = false;
+                sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+            }
+        } catch (error) {
+            // If status check fails, proceed normally
+            phoneBlockTimeLeft = 0;
+            newPhoneInput.removeAttribute('readonly');
+            newCountryCodeSelect.disabled = false;
+            sendPhoneOtpBtn.disabled = false;
+            sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+        }
+        
+        resetPhoneOtpUI();
+        var modal = new bootstrap.Modal(document.getElementById('changePhoneModal'));
+        modal.show();
+    });
+}
+
+
+        // Send Phone OTP
     if (sendPhoneOtpBtn) {
         sendPhoneOtpBtn.addEventListener('click', async function () {
             var phone = newPhoneInput.value.trim();
             var countryCode = newCountryCodeSelect.value.trim();
-
-            // Clear previous errors
-            document.getElementById('newPhoneError').textContent = '';
-
-            // Validation
+            newPhoneInput.classList.remove('is-invalid', 'is-valid');
+            newPhoneError.textContent = '';
             if (!phone) {
-                document.getElementById('newPhoneError').textContent = "Please enter phone number.";
+                newPhoneError.textContent = "Please enter phone number.";
+                newPhoneInput.classList.add('is-invalid');
                 return;
             }
-
             if (!countryCode) {
-                document.getElementById('newPhoneError').textContent = "Please select country code.";
+                newPhoneError.textContent = "Please select country code.";
+                newPhoneInput.classList.add('is-invalid');
                 return;
             }
-
-            // Basic phone number validation (digits only, reasonable length)
             if (!/^\d{8,15}$/.test(phone)) {
-                document.getElementById('newPhoneError').textContent = "Please enter a valid phone number (8-15 digits).";
+                newPhoneError.textContent = "Please enter a valid phone number (8-15 digits).";
+                newPhoneInput.classList.add('is-invalid');
                 return;
             }
-
-            // Disable button and show loading state
+            if (phoneBlockTimeLeft > 0) {
+                const minutes = Math.floor(phoneBlockTimeLeft / 60);
+                const seconds = phoneBlockTimeLeft % 60;
+                newPhoneError.textContent = `You are temporarily blocked.`;
+                return;
+            }
+            sendPhoneOtpSpinner.classList.remove('d-none');
             sendPhoneOtpBtn.disabled = true;
-            sendPhoneOtpBtn.textContent = 'Sending...';
-
             try {
-                // Get CSRF token
                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
                 var headers = { 'Content-Type': 'application/json' };
                 if (token) {
                     headers['RequestVerificationToken'] = token.value;
                 }
-
                 let response = await fetch('/OVRS_User/SendPhoneOtp', {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ 
-                        phoneNumber: phone, 
-                        countryCode: countryCode 
-                    })
+                    body: JSON.stringify({ phoneNumber: phone, countryCode: countryCode })
                 });
-                
                 let data = await response.json();
-                
                 if (data.success) {
-                    // Show OTP section
-                    phoneOtpSection.classList.remove('d-none');
-                    document.getElementById('newPhoneError').textContent = '';
-                    sendPhoneOtpBtn.textContent = 'OTP Sent';
-                    
-                    // Focus first OTP input
-                    const firstOtpInput = document.querySelector('.phone-otp-input');
-                    if (firstOtpInput) firstOtpInput.focus();
-                    
-                    // Disable inputs to prevent changes
-                    newPhoneInput.disabled = true;
+                    newPhoneError.textContent = '';
+                    newPhoneInput.classList.remove('is-invalid');
+                    newPhoneInput.classList.add('is-valid');
+                    newPhoneInput.setAttribute('readonly', true);
                     newCountryCodeSelect.disabled = true;
+                    let btnText = 'OTP Sent';
+                    if (data.remainingAttempts !== undefined) {
+                        btnText += ` (${data.remainingAttempts} left)`;
+                    }
+                    sendPhoneOtpBtn.querySelector('.btn-text').textContent = btnText;
+                    phoneOtpInputs.forEach(i => i.disabled = false);
+                    verifyPhoneOtpBtn.disabled = false;
+                    phoneOtpInputs[0].focus();
+                    phoneOtpTimeLeft = 300;
+                    startPhoneCountdown();
+                    startPhoneResendCooldown(phoneResendCooldownTime);
+                    updatePhoneResendLinkState();
                 } else {
-                    // Show error
-                    document.getElementById('newPhoneError').textContent = data.message || 'Failed to send OTP';
-                    sendPhoneOtpBtn.disabled = false;
-                    sendPhoneOtpBtn.textContent = 'Send OTP';
+                    newPhoneError.textContent = data.message || 'Failed to send OTP';
+                    newPhoneInput.value = '';
+                    newPhoneInput.classList.remove('is-valid');
+                    newPhoneInput.classList.add('is-invalid');
+                    newPhoneInput.focus();
+                    if (data.isBlocked && data.secondsLeft) {
+                        sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Blocked';
+                        startPhoneBlockCountdown(data.secondsLeft);
+                        newPhoneInput.setAttribute('readonly', true);
+                        newCountryCodeSelect.disabled = true;
+                    } else {
+                        sendPhoneOtpBtn.disabled = false;
+                        sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                        if (data.secondsLeft && data.secondsLeft > 0) {
+                            startPhoneResendCooldown(data.secondsLeft);
+                        }
+                    }
+                    resetPhoneOtpUI();
+                    updatePhoneResendLinkState();
                 }
             } catch (error) {
-                console.error('Error sending phone OTP:', error);
-                document.getElementById('newPhoneError').textContent = "Error sending OTP. Please try again.";
+                newPhoneError.textContent = "Error sending OTP. Please try again.";
+                newPhoneInput.value = '';
+                newPhoneInput.classList.remove('is-valid');
+                newPhoneInput.classList.add('is-invalid');
+                newPhoneInput.focus();
                 sendPhoneOtpBtn.disabled = false;
-                sendPhoneOtpBtn.textContent = 'Send OTP';
+                sendPhoneOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                resetPhoneOtpUI();
+            } finally {
+                sendPhoneOtpSpinner.classList.add('d-none');
             }
         });
     }
-
-    // Phone OTP Inputs auto-move and validation
-    const phoneOtpInputs = document.querySelectorAll('.phone-otp-input');
+    // OTP input behavior
     phoneOtpInputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            // Only allow digits
-            input.value = input.value.replace(/[^0-9]/g, '');
-            
+        input.addEventListener('input', () => {
             if (input.value.length === 1 && index < phoneOtpInputs.length - 1) {
                 phoneOtpInputs[index + 1].focus();
             }
-            
-            // Auto-verify when all inputs are filled
-            let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
-            if (otpCode.length === 6 && /^\d{6}$/.test(otpCode)) {
-                // Small delay to ensure UI updates
-                setTimeout(() => {
-                    if (verifyPhoneOtpBtn && !verifyPhoneOtpBtn.disabled) {
-                        verifyPhoneOtpBtn.click();
-                    }
-                }, 100);
-            }
         });
-        
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !input.value && index > 0) {
                 phoneOtpInputs[index - 1].focus();
-            }
-        });
-        
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const paste = (e.clipboardData || window.clipboardData).getData('text');
-            const digits = paste.replace(/[^0-9]/g, '').substring(0, 6);
-            
-            digits.split('').forEach((digit, i) => {
-                if (phoneOtpInputs[index + i]) {
-                    phoneOtpInputs[index + i].value = digit;
-                }
-            });
-            
-            // Focus next empty input or trigger verification
-            const nextEmptyIndex = digits.length + index;
-            if (nextEmptyIndex < phoneOtpInputs.length) {
-                phoneOtpInputs[nextEmptyIndex].focus();
-            } else if (digits.length === 6) {
-                setTimeout(() => {
-                    if (verifyPhoneOtpBtn && !verifyPhoneOtpBtn.disabled) {
-                        verifyPhoneOtpBtn.click();
-                    }
-                }, 100);
             }
         });
     });
@@ -680,163 +854,288 @@ document.addEventListener('DOMContentLoaded', function () {
     if (verifyPhoneOtpBtn) {
         verifyPhoneOtpBtn.addEventListener('click', async function () {
             let otpCode = Array.from(phoneOtpInputs).map(i => i.value).join('');
-
-            // Clear previous errors
-            document.getElementById('phoneOtpError').textContent = '';
-            document.getElementById('phoneOtpSuccess').textContent = '';
-
-            if (otpCode.length < 6 || !/^\d{6}$/.test(otpCode)) {
-                document.getElementById('phoneOtpError').textContent = "Please enter the complete 6-digit OTP.";
+            if (!otpCode || otpCode.length < 6) {
+                phoneOtpError.textContent = "Please enter full 6-digit OTP.";
                 return;
             }
-
-            // Disable button and show loading state
+            verifyPhoneOtpSpinner.classList.remove('d-none');
             verifyPhoneOtpBtn.disabled = true;
-            verifyPhoneOtpBtn.textContent = 'Verifying...';
-
             try {
-                // Get CSRF token
                 var token = document.querySelector('input[name="__RequestVerificationToken"]');
                 var headers = { 'Content-Type': 'application/json' };
                 if (token) {
                     headers['RequestVerificationToken'] = token.value;
                 }
-
                 let response = await fetch('/OVRS_User/VerifyPhoneOtp', {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({ otp: otpCode })
                 });
-                
-                let data = await response.json();
-                
+let data = await response.json();
                 if (data.success) {
-                    // Show success message
-                    document.getElementById('phoneOtpSuccess').textContent = data.message || 'Phone number updated successfully';
-                    document.getElementById('phoneOtpError').textContent = '';
-                    
-                    // Update the displayed phone number on the main form
-                    const phoneStatic = document.getElementById('phoneStatic');
-                    if (phoneStatic) {
-                        phoneStatic.textContent = `${newCountryCodeSelect.value} ${newPhoneInput.value}`;
-                    }
-                    
-                    // Update hidden form fields for main form submission
-                    const hiddenPhoneInput = document.querySelector('input[name="PhoneNumber"]');
-                    const hiddenCountryCodeInput = document.querySelector('input[name="CountryCode"]');
-                    if (hiddenPhoneInput) hiddenPhoneInput.value = newPhoneInput.value;
-                    if (hiddenCountryCodeInput) hiddenCountryCodeInput.value = newCountryCodeSelect.value;
-                    
-                    // Close modal after delay
+                    phoneOtpError.textContent = '';
+                    phoneOtpSuccess.textContent = data.message || 'Phone number updated successfully';
+                    document.getElementById('phoneStatic').textContent = `${newCountryCodeSelect.value} ${newPhoneInput.value}`;
+                    document.querySelector('input[name="PhoneNumber"]').value = newPhoneInput.value;
+                    document.querySelector('input[name="CountryCode"]').value = newCountryCodeSelect.value;
                     setTimeout(() => {
-                        if (changePhoneModal) {
-                            changePhoneModal.hide();
-                        }
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('changePhoneModal'));
+                        modal.hide();
                     }, 1500);
                 } else {
-                    // Show error
-                    document.getElementById('phoneOtpError').textContent = data.message || 'Invalid or expired OTP';
+                    phoneOtpError.textContent = data.message || 'Invalid or expired OTP';
                     verifyPhoneOtpBtn.disabled = false;
-                    verifyPhoneOtpBtn.textContent = 'Verify OTP';
-                    
-                    // Clear OTP inputs for retry
-                    phoneOtpInputs.forEach(input => input.value = '');
-                    phoneOtpInputs[0].focus();
                 }
             } catch (error) {
-                console.error('Error verifying phone OTP:', error);
-                document.getElementById('phoneOtpError').textContent = "Error verifying OTP. Please try again.";
+                phoneOtpError.textContent = "Error verifying OTP.";
                 verifyPhoneOtpBtn.disabled = false;
-                verifyPhoneOtpBtn.textContent = 'Verify OTP';
+            } finally {
+                verifyPhoneOtpSpinner.classList.add('d-none');
+            }
+        });
+    }
+        // Resend OTP
+    if (resendPhoneOtpLink) {
+        resendPhoneOtpLink.addEventListener('click', function () {
+            if (phoneBlockTimeLeft > 0 || phoneResendCooldownLeft > 0 || phoneOtpInputs[0].disabled) return;
+            resetPhoneOtpUI();
+            if (sendPhoneOtpBtn) {
+                sendPhoneOtpBtn.disabled = false;
+                sendPhoneOtpBtn.click();
+                startPhoneResendCooldown(phoneResendCooldownTime);
+                updatePhoneResendLinkState();
             }
         });
     }
 
-    // Reset form when modal is closed
-    if (changePhoneModalEl) {
-        changePhoneModalEl.addEventListener('hidden.bs.modal', function () {
-            resetPhoneForm();
-        });
+    function startPhoneCountdown() {
+        clearInterval(phoneCountdownInterval);
+        phoneCountdownInterval = setInterval(() => {
+            if (phoneOtpTimeLeft <= 0) {
+                clearInterval(phoneCountdownInterval);
+                phoneOtpTimer.textContent = "Expired";
+                verifyPhoneOtpBtn.disabled = true;
+                return;
+            }
+            phoneOtpTimeLeft--;
+            let minutes = String(Math.floor(phoneOtpTimeLeft / 60)).padStart(2, "0");
+            let seconds = String(phoneOtpTimeLeft % 60).padStart(2, "0");
+            phoneOtpTimer.textContent = `00:${minutes}:${seconds}`;
+        }, 1000);
     }
+
 
     // ---- EMAIL CHANGE FLOW ----
     var changeEmailBtn = document.getElementById('changeEmailBtn');
     var sendOtpBtn = document.getElementById('sendOtpBtn');
     var verifyOtpBtn = document.getElementById('verifyOtpBtn');
-    var otpSection = document.getElementById('otpSection');
     var newEmailInput = document.getElementById('newEmailInput');
+    var otpInputs = document.querySelectorAll('.otp-input');
+    var resendOtpLink = document.getElementById('resendOtpLink');
+    var otpTimer = document.getElementById('otpTimer');
+    var newEmailError = document.getElementById('newEmailError');
+    var otpError = document.getElementById('otpError');
+    var otpSuccess = document.getElementById('otpSuccess');
 
     // Add spinner inside buttons
     if (sendOtpBtn) {
-        sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Send OTP</span>';
+        sendOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="sendOtpSpinner"></span> <span class="btn-text">Get OTP</span>';
     }
     if (verifyOtpBtn) {
-        verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify OTP</span>';
+        verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm d-none" role="status" id="verifyOtpSpinner"></span> <span class="btn-text">Verify</span>';
     }
 
-    var sendOtpSpinner = document.getElementById('sendOtpSpinner');
+     var sendOtpSpinner = document.getElementById('sendOtpSpinner');
     var verifyOtpSpinner = document.getElementById('verifyOtpSpinner');
-    var newEmailError = document.getElementById('newEmailError');
 
-    if (changeEmailBtn) {
-        changeEmailBtn.addEventListener('click', function () {
-            // Clear inputs/errors when opening modal
-            newEmailInput.value = '';
-            newEmailInput.classList.remove('is-invalid', 'is-valid');
-            document.querySelectorAll('.otp-input').forEach(i => i.value = '');
-            document.getElementById('otpError').textContent = '';
-            document.getElementById('otpSuccess').textContent = '';
-            newEmailError.textContent = '';
-            otpSection.classList.add('d-none');
+    let countdownInterval;
+    let otpTimeLeft = 300; // 5 minutes
+    let resendCooldownTime = 60;
+    let resendCooldownLeft = 0;
+    let resendCooldownInterval = null;
+    let blockTimeLeft = 0;
+    let blockInterval = null;
 
+    function startResendCooldown(seconds) {
+        resendCooldownLeft = seconds;
+        updateResendLinkState();
+        if (resendCooldownInterval) clearInterval(resendCooldownInterval);
+        resendCooldownInterval = setInterval(() => {
+            resendCooldownLeft--;
+            updateResendLinkState();
+            if (resendCooldownLeft <= 0) {
+                clearInterval(resendCooldownInterval);
+            }
+        }, 1000);
+    }
+
+    function updateResendLinkState() {
+        if (!resendOtpLink) return;
+        if (blockTimeLeft > 0) {
+            resendOtpLink.classList.add('disabled');
+            resendOtpLink.style.pointerEvents = 'none';
+            resendOtpLink.style.color = '#dc3545';
+            const minutes = Math.floor(blockTimeLeft / 60);
+            const seconds = blockTimeLeft % 60;
+            resendOtpLink.textContent = `Blocked (${minutes}:${seconds.toString().padStart(2, '0')})`;
+            return;
+        }
+
+     if (resendCooldownLeft > 0) {
+            resendOtpLink.classList.add('disabled');
+            resendOtpLink.style.pointerEvents = 'none';
+            resendOtpLink.style.color = '#6c757d';
+            resendOtpLink.textContent = `Resend OTP (${resendCooldownLeft}s)`;
+        } else {
+            resendOtpLink.classList.remove('disabled');
+            resendOtpLink.style.pointerEvents = '';
+            resendOtpLink.style.color = '';
+            resendOtpLink.textContent = 'Resend OTP';
+        }
+    }
+
+    function startBlockCountdown(seconds) {
+        blockTimeLeft = seconds;
+        updateResendLinkState();
+        if (blockInterval) clearInterval(blockInterval);
+        blockInterval = setInterval(() => {
+            blockTimeLeft--;
+            updateResendLinkState();
+            if (blockTimeLeft <= 0) {
+                clearInterval(blockInterval);
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                newEmailInput.removeAttribute('readonly');
+            }
+        }, 1000);
+    }
+
+                   function resetOtpUI() {
+        otpInputs.forEach(i => { i.value = ''; i.disabled = true; });
+        verifyOtpBtn.disabled = true;
+        otpError.textContent = '';
+        otpSuccess.textContent = '';
+        clearInterval(countdownInterval);
+        if (otpTimer) otpTimer.textContent = "00:05:00";
+        if (blockTimeLeft <= 0) {
+            resendCooldownLeft = resendCooldownTime;
+            updateResendLinkState();
+        }
+    }
+if (changeEmailBtn) {
+    changeEmailBtn.addEventListener('click', async function () {
+        newEmailInput.value = '';
+        newEmailInput.classList.remove('is-invalid', 'is-valid');
+        newEmailError.textContent = '';
+        
+        // ✅ CHECK BLOCK STATUS FROM SERVER
+        try {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            var headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['RequestVerificationToken'] = token.value;
+            }
+            
+            let res = await fetch('/OVRS_User/GetEmailOtpStatus', {
+                method: 'POST',
+                headers: headers
+            });
+            let statusData = await res.json();
+            
+            if (statusData.isBlocked && statusData.secondsLeft > 0) {
+                blockTimeLeft = statusData.secondsLeft;
+                newEmailInput.setAttribute('readonly', true);
+                sendOtpBtn.disabled = true;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Blocked';
+                const minutes = Math.floor(blockTimeLeft / 60);
+                const seconds = blockTimeLeft % 60;
+                newEmailError.textContent = `You are temporarily blocked.`;
+                startBlockCountdown(blockTimeLeft);
+            } else {
+                blockTimeLeft = 0;
+                newEmailInput.removeAttribute('readonly');
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+            }
+        } catch (error) {
+            // If status check fails, proceed normally
+            blockTimeLeft = 0;
             newEmailInput.removeAttribute('readonly');
             sendOtpBtn.disabled = false;
-
-            var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
-            modal.show();
-        });
-    }
-
-    // Send Email OTP with visual feedback
-    if (sendOtpBtn) {
+            sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+        }
+        
+        resetOtpUI();
+        var modal = new bootstrap.Modal(document.getElementById('changeEmailModal'));
+        modal.show();
+    });
+}
+          if (sendOtpBtn) {
         sendOtpBtn.addEventListener('click', async function () {
             var newEmail = newEmailInput.value.trim();
             newEmailInput.classList.remove('is-invalid', 'is-valid');
             newEmailError.textContent = "";
-
             if (!newEmail) {
                 newEmailError.textContent = "Please enter email.";
                 newEmailInput.classList.add('is-invalid');
                 return;
             }
-
+            if (blockTimeLeft > 0) {
+                const minutes = Math.floor(blockTimeLeft / 60);
+                const seconds = blockTimeLeft % 60;
+                newEmailError.textContent = `You are temporarily blocked.`;
+                return;
+            }
             sendOtpSpinner.classList.remove('d-none');
             sendOtpBtn.disabled = true;
-
             try {
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['RequestVerificationToken'] = token.value;
+                }
                 let res = await fetch('/OVRS_User/SendEmailOtp', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify(newEmail)
                 });
-                let data = await res.json();
+                   let data = await res.json();
                 if (data.success) {
-                    otpSection.classList.remove('d-none');
                     newEmailError.textContent = '';
                     newEmailInput.classList.remove('is-invalid');
                     newEmailInput.classList.add('is-valid');
-                    document.querySelector('.otp-input').focus();
                     newEmailInput.setAttribute('readonly', true);
-                    sendOtpBtn.querySelector('.btn-text').textContent = 'OTP Sent';
+                    let btnText = 'OTP Sent';
+                    if (data.remainingAttempts !== undefined) {
+                        btnText += ` (${data.remainingAttempts} left)`;
+                    }
+                    sendOtpBtn.querySelector('.btn-text').textContent = btnText;
+                    otpInputs.forEach(i => i.disabled = false);
+                    verifyOtpBtn.disabled = false;
+                    otpInputs[0].focus();
+                    otpTimeLeft = 300;
+                    startCountdown();
+                    startResendCooldown(resendCooldownTime);
+                    updateResendLinkState();
                 } else {
                     newEmailError.textContent = data.message;
                     newEmailInput.value = '';
                     newEmailInput.classList.remove('is-valid');
                     newEmailInput.classList.add('is-invalid');
                     newEmailInput.focus();
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
-                    otpSection.classList.add('d-none');
+                    if (data.isBlocked && data.secondsLeft) {
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'Blocked';
+                        startBlockCountdown(data.secondsLeft);
+                        newEmailInput.setAttribute('readonly', true);
+                    } else {
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                        if (data.secondsLeft && data.secondsLeft > 0) {
+                            startResendCooldown(data.secondsLeft);
+                        }
+                    }
+                    resetOtpUI();
+                    updateResendLinkState();
                 }
             } catch (err) {
                 newEmailError.textContent = "Error sending OTP. Please try again.";
@@ -845,28 +1144,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 newEmailInput.classList.add('is-invalid');
                 newEmailInput.focus();
                 sendOtpBtn.disabled = false;
-                sendOtpBtn.querySelector('.btn-text').textContent = 'Send OTP';
-                otpSection.classList.add('d-none');
+                sendOtpBtn.querySelector('.btn-text').textContent = 'Get OTP';
+                resetOtpUI();
             } finally {
                 sendOtpSpinner.classList.add('d-none');
             }
         });
     }
 
-    // Email OTP input behavior
-    const otpInputs = document.querySelectorAll('.otp-input');
     otpInputs.forEach((input, index) => {
         input.addEventListener('input', () => {
             if (input.value.length === 1 && index < otpInputs.length - 1) {
                 otpInputs[index + 1].focus();
-            }
-            // Auto-submit when all inputs are filled
-            let otpCode = Array.from(otpInputs).map(i => i.value).join('');
-            if (otpCode.length === otpInputs.length && otpCode.match(/^\d+$/)) {
-                // Optionally, disable auto-submit if already submitting
-                if (!verifyOtpBtn.disabled) {
-                    verifyOtpBtn.click();
-                }
             }
         });
         input.addEventListener('keydown', (e) => {
@@ -876,51 +1165,79 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Verify Email OTP
     if (verifyOtpBtn) {
         verifyOtpBtn.addEventListener('click', async function () {
-            let otpCode = Array.from(otpInputs)
-                                .map(i => i.value)
-                                .join('');
-
+            let otpCode = Array.from(otpInputs).map(i => i.value).join('');
             if (!otpCode || otpCode.length < 6) {
-                document.getElementById('otpError').textContent = "Please enter full 6-digit OTP.";
+                otpError.textContent = "Please enter full 6-digit OTP.";
                 return;
             }
 
-            // Show spinner and disable button
             verifyOtpSpinner.classList.remove('d-none');
             verifyOtpBtn.disabled = true;
-
             try {
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['RequestVerificationToken'] = token.value;
+                }
                 let res = await fetch('/OVRS_User/VerifyEmailOtp', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ otp: otpCode })
                 });
                 let data = await res.json();
                 if (data.success) {
-                    document.getElementById('otpError').textContent = '';
-                    document.getElementById('otpSuccess').textContent = data.message;
+                    otpError.textContent = '';
+                    otpSuccess.textContent = data.message;
                     document.getElementById('emailStatic').textContent = newEmailInput.value;
-
                     setTimeout(() => {
                         var modal = bootstrap.Modal.getInstance(document.getElementById('changeEmailModal'));
                         modal.hide();
                     }, 1500);
                 } else {
-                    document.getElementById('otpError').textContent = data.message;
-                    verifyOtpBtn.disabled = false; // re-enable if failed
+                    otpError.textContent = data.message;
+                    verifyOtpBtn.disabled = false;
                 }
             } catch (err) {
-                document.getElementById('otpError').textContent = "Error verifying OTP.";
-                verifyOtpBtn.disabled = false; // re-enable if failed
+                otpError.textContent = "Error verifying OTP.";
+                verifyOtpBtn.disabled = false;
             } finally {
-                verifyOtpSpinner.classList.add('d-none'); // hide spinner
+                verifyOtpSpinner.classList.add('d-none');
             }
         });
     }
 
+    if (resendOtpLink) {
+        resendOtpLink.addEventListener('click', function () {
+            if (blockTimeLeft > 0 || resendCooldownLeft > 0 || otpInputs[0].disabled) return;
+            resetOtpUI();
+            if (sendOtpBtn) {
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.click();
+                startResendCooldown(resendCooldownTime);
+                updateResendLinkState();
+            }
+        });
+    }
+
+    function startCountdown() {
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            if (otpTimeLeft <= 0) {
+                clearInterval(countdownInterval);
+                otpTimer.textContent = "Expired";
+                verifyOtpBtn.disabled = true;
+                return;
+            }
+            otpTimeLeft--;
+            let minutes = String(Math.floor(otpTimeLeft / 60)).padStart(2, "0");
+            let seconds = String(otpTimeLeft % 60).padStart(2, "0");
+            otpTimer.textContent = `00:${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+ 
     // ---- PASSWORD VALIDATION HIDING ON INPUT ----
     const passwordFields = ['CurrentPassword', 'NewPassword', 'ConfirmPassword'];
     
@@ -1116,10 +1433,190 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+
+
+
 <style>
 
+    /* 3D Styling for Save and Delete Account Buttons */
+#saveBtn, .btn-success#saveBtn,
+#showDeleteAccountModalBtn, .btn-danger#showDeleteAccountModalBtn,
+#confirmDeleteBtn, .btn-danger#confirmDeleteBtn {
+    box-shadow: 0 6px 0 #15803d, 0 2px 12px rgba(34,197,94,0.13);
+    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+    border: 2px solid #15803d;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 10px;
+    transition: box-shadow 0.15s, transform 0.1s, background 0.2s;
+    position: relative;
+    top: 0;
+}
+
+#saveBtn:active, .btn-success#saveBtn:active,
+#showDeleteAccountModalBtn:active, .btn-danger#showDeleteAccountModalBtn:active,
+#confirmDeleteBtn:active, .btn-danger#confirmDeleteBtn:active {
+    box-shadow: 0 2px 0 #15803d, 0 1px 4px rgba(34,197,94,0.10);
+    background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+    transform: translateY(4px);
+}
+
+#showDeleteAccountModalBtn, .btn-danger#showDeleteAccountModalBtn,
+#confirmDeleteBtn, .btn-danger#confirmDeleteBtn {
+    box-shadow: 0 6px 0 #b91c1c, 0 2px 12px rgba(230,57,70,0.13);
+    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+    border: 2px solid #b91c1c;
+}
+
+#showDeleteAccountModalBtn:active, .btn-danger#showDeleteAccountModalBtn:active,
+#confirmDeleteBtn:active, .btn-danger#confirmDeleteBtn:active {
+    box-shadow: 0 2px 0 #b91c1c, 0 1px 4px rgba(230,57,70,0.10);
+    background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+    transform: translateY(4px);
+}
+    #passwordRequirementsModal .modal-content {
+    border-radius: 2rem !important;
+}
+#passwordRequirementsChecklist li {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+.text-success {
+    color: #16a34a !important;
+}
+.text-danger {
+    color: #e53935 !important;
+}
+
+    #changePhoneModal .modal-body .mb-5 {
+    margin-bottom: 3rem !important;
+}
+#changePhoneModal .badge {
+    font-size: 0.85rem;
+    padding: 0.4em 0.65em;
+    border-radius: 50%;
+}
+#sendPhoneOtpBtn, #verifyPhoneOtpBtn {
+    border-radius: 0 !important;
+    box-shadow: 0 4px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.10);
+    border: 2px solid #16913b;
+    background-color: #16913c;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.3rem 2.2rem;
+    min-width: 120px;
+    transition: box-shadow 0.2s, background 0.2s;
+}
+#sendPhoneOtpBtn:active, #verifyPhoneOtpBtn:active {
+    box-shadow: 0 2px 0 #157a3a, 0 1px 4px rgba(34,197,94,0.10);
+    background-color: #16913b;
+}
+#sendPhoneOtpBtn:hover, #verifyPhoneOtpBtn:hover,
+#sendPhoneOtpBtn:focus, #verifyPhoneOtpBtn:focus {
+    background-color: #16913b;
+    box-shadow: 0 2px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.15);
+    color: #fff;
+}
+#phoneOtpTimer {
+    font-weight: 500;
+}
 
 
+.phone-otp-input {
+    width: 45px;
+    height: 50px;
+    font-size: 1.3rem;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    background: #fff;
+}
+.phone-otp-input:focus {
+    border-color: #198754;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+    outline: none;
+}
+#resendPhoneOtpLink {
+    color: #198754;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+}
+#resendPhoneOtpLink:hover {
+    text-decoration: underline;
+}
+
+
+    #changeEmailModal .modal-body .mb-5 {
+    margin-bottom: 3rem !important;
+}
+.badge {
+    font-size: 0.85rem;
+    padding: 0.4em 0.65em;
+    border-radius: 50%;
+}
+#sendOtpBtn, #verifyOtpBtn {
+    border-radius: 0 !important;
+    box-shadow: 0 4px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.10);
+    border: 2px solid #16913b;
+    background-color: #16913c;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.3rem 2.2rem;
+    min-width: 120px;
+    transition: box-shadow 0.2s, background 0.2s;
+}
+#sendOtpBtn:active, #verifyOtpBtn:active {
+    box-shadow: 0 2px 0 #157a3a, 0 1px 4px rgba(34,197,94,0.10);
+    background-color: #16913b;
+}
+#sendOtpBtn:hover, #verifyOtpBtn:hover,
+#sendOtpBtn:focus, #verifyOtpBtn:focus {
+    background-color: #16913b;
+    box-shadow: 0 2px 0 #157a3a, 0 1px 8px rgba(34,197,94,0.15);
+    color: #fff;
+}
+#otpTimer {
+    font-weight: 500;
+}
+
+.otp-input {
+    width: 45px;
+    height: 50px;
+    font-size: 1.3rem;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    background: #fff;
+}
+.otp-input:focus {
+    border-color: #198754;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+    outline: none;
+}
+.invalid-feedback {
+    display: block;
+    color: #dc3545;
+    margin-top: 5px;
+    font-size: 0.9rem;
+}
+.valid-feedback {
+    display: block;
+    color: #198754;
+    margin-top: 5px;
+    font-size: 0.9rem;
+}
+#resendOtpLink {
+    color: #198754;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+}
+#resendOtpLink:hover {
+    text-decoration: underline;
+}
     .btn-disabled-saving, .btn[disabled] {
     pointer-events: none;
     opacity: 0.7 !important;
@@ -1211,8 +1708,8 @@ height: 320px;
 }
 
 .phone-input {
-    flex: 1 1 auto;
-    min-width: 0;
+        flex: 2 1 220px; /* was flex: 1 1 auto; */
+    min-width: 220px; /* increase from default */
     height: 44px;
     box-sizing: border-box;
     border-radius: 0 !important;
@@ -1220,7 +1717,11 @@ height: 320px;
     border-left: 1px solid #e0e0e0; /* Lighter left border to show separation */
     margin: 0;
 }
-
+/* Make phone input placeholder smaller */
+.phone-input::placeholder {
+    font-size: 0.63rem;
+    opacity: 0.7;
+}
 
 #sendPhoneOtpBtn {
     background-color: #1BA548 !important;

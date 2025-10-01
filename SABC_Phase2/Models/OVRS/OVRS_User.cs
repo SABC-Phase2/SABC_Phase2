@@ -22,6 +22,17 @@ namespace SABC_Phase2.Models.OVRS
         public string? OtpType { get; set; } // "phone" or "email" to identify what the OTP is for
 
         // ✅ New column: 1 = Active, 0 = Deleted
-        public int AccountStatus { get; set; }   
+        public int AccountStatus { get; set; }
+
+        // ✅ NEW: Email OTP rate limiting fields
+        public int EmailOtpAttempts { get; set; } = 0;
+        public DateTime? EmailOtpLastAttempt { get; set; }
+        public DateTime? EmailOtpBlockedUntil { get; set; }
+
+
+        // ✅ NEW: Phone OTP rate limiting fields
+        public int PhoneOtpAttempts { get; set; } = 0;
+        public DateTime? PhoneOtpLastAttempt { get; set; }
+        public DateTime? PhoneOtpBlockedUntil { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿@model SABC_Phase2.Models.Tender.AdministratorProfileViewModel
 @using Microsoft.AspNetCore.Mvc.ModelBinding
 
+
 @functions {
     private IEnumerable<ModelError> GetErrors(string key)
     {
@@ -15,7 +16,9 @@
         return !string.IsNullOrWhiteSpace(Model.CurrentPassword)
             || !string.IsNullOrWhiteSpace(Model.NewPassword)
             || !string.IsNullOrWhiteSpace(Model.ConfirmPassword)
-            || (
+            || 
+
+            (
                 (ViewData.ModelState["CurrentPassword"]?.Errors.Count ?? 0) > 0
                 || (ViewData.ModelState["NewPassword"]?.Errors.Count ?? 0) > 0
                 || (ViewData.ModelState["ConfirmPassword"]?.Errors.Count ?? 0) > 0
@@ -23,6 +26,7 @@
             );
     }
 }
+
 
 @{
     ViewData["BannerText"] = "PROFILE";

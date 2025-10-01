@@ -1,349 +1,243 @@
 ﻿@model IEnumerable<SABC_Phase2.Models.Tender.AuditLog>
 @{
-    // Set the banner text for the page (used in the layout or header)
     ViewData["BannerText"] = "Audit Logs";
 }
 @{
     ViewBag.Title = "Audit Logs";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+<link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
 <!-- Breadcrumb -->
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="row">
         <div class="col-12">
-            <a href="@Url.Action("Index", "OVRS_User")" style="color:#888; text-decoration:none;">Home</a>
+            <a style="color:#888; text-decoration:none;">Reports</a>
             <span style="color:#888;"> &gt; </span>
             <a href="#" style="color:#17994d; text-decoration:none;">Audit Logs</a>
         </div>
     </div>
 </div>
 
-<!-- Audit Logs Section (Toggle + Card) -->
-<div class="audit-section">
-    <div class="audit-toggle" id="auditToggle">
-        <span class="audit-title">Audit Logs</span>
-        <span class="toggle-arrow" id="toggleArrow">&#9660;</span>
-    </div>
-    <div class="audit-card" id="auditCard">
-        <!-- Filter Card Row -->
-        <div class="audit-filter-row">
-            <!-- Left Side: Date Picker -->
-            <div class="audit-filter-left">
-                <div class="audit-filter-heading">Date Picker</div>
-                <div class="audit-filter-underline"></div>
-                <div class="audit-filter-radios">
-                    <label><input type="radio" name="dateRange" value="7"> Last 7 days</label><br />
-                    <label><input type="radio" name="dateRange" value="30"> Last 30 days</label><br />
-                    <label><input type="radio" name="dateRange" value="60"> Last 60 days</label>
-                </div>
-            </div>
-            <!-- Vertical Green Divider -->
-            <div class="audit-filter-divider"></div>
-            <!-- Right Side: Custom Calendar -->
-            <div class="audit-filter-right">
-                <div class="audit-filter-heading">Custom Calendar</div>
-                <div class="audit-filter-underline"></div>
-                <div class="audit-filter-calendar">
-                    <label>From: <input type="date" name="fromDate" style="margin-right: 1.2em;" /></label>
-                    <label>To: <input type="date" name="toDate" /></label>
-                </div>
-            </div>
+<!-- Card Section -->
+<div class="audit-section" style="margin-top: 1.5rem;">
+    <div class="audit-card-outer">
+        <div class="audit-toggle" id="auditToggle" style="background: #17994d; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e0e0e0;">
+            <span style="display: flex; align-items: center;">
+                <i class="fa fa-list" style="font-size: 1.5em; margin-right: 0.7em; color: #fff;"></i>
+                <span class="audit-title" style="color: #fff; font-size: 1.2em;">Time Range</span>
+            </span>
+            <span class="toggle-arrow" id="toggleArrow" style="color: #fff;">&#9650;</span>
         </div>
-        <!-- End Filter Card Row -->
-        <!-- Your audit logs table goes here -->
+        <div class="audit-card" id="auditCard" style="display: block;">
+            <form id="auditFilterForm" autocomplete="off">
+                <div class="audit-filter-heading" style="color: #17994d; font-size: 2em; font-weight: 500; margin-bottom: 0.2em;">Date Picker</div>
+                <div class="audit-filter-underline" style="background: #17994d; height: 2px; width: 100%; margin-bottom: 2em;"></div>
+                <div class="audit-filter-radios" style="margin-bottom: 2em;">
+                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
+                        <input type="radio" name="dateRange" value="7" checked style="margin-right: 0.7em;" /> Last 7 days
+                    </label>
+                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
+                        <input type="radio" name="dateRange" value="30" style="margin-right: 0.7em;" /> Last 30 days
+                    </label>
+                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
+                        <input type="radio" name="dateRange" value="60" style="margin-right: 0.7em;" /> Last 60 days
+                    </label>
+                    <label style="display: flex; align-items: center; font-size: 1.1em;">
+                        <input type="radio" name="dateRange" value="custom" id="customDateRadio" style="margin-right: 0.7em;" /> Custom date
+                    </label>
+                </div>
+                <div class="audit-filter-calendar" style="max-width: 350px;">
+                    <div style="margin-bottom: 1.5em;">
+                        <label for="fromDate" style="font-size: 1em; color: #888; display: block; margin-bottom: 0.3em;">From Date *</label>
+                        <input type="date" name="fromDate" id="fromDate" class="calendar-input" disabled style="width: 100%; background: #f5f5f5; color: #bbb; border: 1px solid #e0e0e0; border-radius: 5px; padding: 0.7em 1em; font-size: 1em;" />
+                    </div>
+                    <div>
+                        <label for="toDate" style="font-size: 1em; color: #888; display: block; margin-bottom: 0.3em;">To Date *</label>
+                        <input type="date" name="toDate" id="toDate" class="calendar-input" disabled style="width: 100%; background: #f5f5f5; color: #bbb; border: 1px solid #e0e0e0; border-radius: 5px; padding: 0.7em 1em; font-size: 1em;" />
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
-    <!-- Generate report button - shown only when card is open -->
-    <div id="generateReportWrapper" style="display: none;">
-        <button type="button" class="generate-report-btn">Generate report</button>
+    <div id="generateReportWrapper" style="display: flex; justify-content: center; align-items: center; margin: 2.5rem 0 0 0;">
+        <button type="button" class="generate-report-btn" style="background: #17994d; color: #fff; border: none; padding: 0.8em 3em; font-size: 1.2em; font-weight: 500; border-radius: 6px; box-shadow: 0 2px 6px rgba(23,153,77,0.12); cursor: pointer; transition: background 0.2s, box-shadow 0.2s;">Generate Report</button>
     </div>
 </div>
 
 <script>
-    document.getElementById("auditToggle").addEventListener("click", function() {
+    // Toggle card open/close
+    document.getElementById("auditToggle").addEventListener("click", function () {
         var card = document.getElementById("auditCard");
         var arrow = document.getElementById("toggleArrow");
-        var reportBtn = document.getElementById("generateReportWrapper");
         if (card.style.display === "none" || card.style.display === "") {
             card.style.display = "block";
-            arrow.innerHTML = "&#9650;"; // Up arrow
-            reportBtn.style.display = "flex";
+            arrow.innerHTML = "&#9650;";
         } else {
             card.style.display = "none";
-            arrow.innerHTML = "&#9660;"; // Down arrow
-            reportBtn.style.display = "none";
+            arrow.innerHTML = "&#9660;";
         }
     });
 
-    // Auto-uncheck radio buttons when custom dates are used
-    document.querySelectorAll('input[name="fromDate"], input[name="toDate"]').forEach(function(input) {
-        input.addEventListener('input', function() {
-            if (this.value) {
-                document.querySelectorAll('input[name="dateRange"]').forEach(function(radio) {
-                    radio.checked = false;
-                });
-            }
-        });
+    // Enable/disable custom calendar fields
+    function updateCalendarState() {
+        var customRadio = document.getElementById("customDateRadio");
+        var fromDate = document.getElementById("fromDate");
+        var toDate = document.getElementById("toDate");
+        if (customRadio.checked) {
+            fromDate.disabled = false;
+            toDate.disabled = false;
+            fromDate.style.background = "#fff";
+            fromDate.style.color = "#222";
+            fromDate.style.border = "1px solid #17994d";
+            toDate.style.background = "#fff";
+            toDate.style.color = "#222";
+            toDate.style.border = "1px solid #17994d";
+        } else {
+            fromDate.disabled = true;
+            toDate.disabled = true;
+            fromDate.value = "";
+            toDate.value = "";
+            fromDate.style.background = "#f5f5f5";
+            fromDate.style.color = "#bbb";
+            fromDate.style.border = "1px solid #e0e0e0";
+            toDate.style.background = "#f5f5f5";
+            toDate.style.color = "#bbb";
+            toDate.style.border = "1px solid #e0e0e0";
+        }
+    }
+
+    document.querySelectorAll('input[name="dateRange"]').forEach(function (radio) {
+        radio.addEventListener('change', updateCalendarState);
     });
 
-    // Auto-clear custom dates when radio button is selected
-    document.querySelectorAll('input[name="dateRange"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            if (this.checked) {
-                document.querySelector('input[name="fromDate"]').value = '';
-                document.querySelector('input[name="toDate"]').value = '';
-            }
-        });
-    });
+    // Initial state
+    updateCalendarState();
 
-    document.querySelector(".generate-report-btn").addEventListener("click", function() {
-        // Get selected radio value
+    // Generate report button logic (unchanged)
+    document.querySelector(".generate-report-btn").addEventListener("click", function () {
         var radio = document.querySelector('input[name="dateRange"]:checked');
         var dateRange = radio ? radio.value : null;
-        var fromDate = document.querySelector('input[name="fromDate"]').value;
-        var toDate = document.querySelector('input[name="toDate"]').value;
+        var fromDate = document.getElementById("fromDate").value;
+        var toDate = document.getElementById("toDate").value;
 
-        // Validate input
-        if (!dateRange && (!fromDate || !toDate)) {
-            alert("Please select a date range or specify custom dates");
+        if (dateRange === "custom" && (!fromDate || !toDate)) {
+            alert("Please specify both From and To dates.");
+            return;
+        }
+        if (dateRange !== "custom" && !dateRange) {
+            alert("Please select a date range.");
             return;
         }
 
-        // Show loading state
         var button = this;
         var originalText = button.textContent;
         button.textContent = "Generating...";
         button.disabled = true;
 
-        // Build form data
         var formData = new FormData();
-        if (dateRange) formData.append("dateRange", dateRange);
-        if (fromDate) formData.append("fromDate", fromDate);
-        if (toDate) formData.append("toDate", toDate);
+        if (dateRange && dateRange !== "custom") formData.append("dateRange", dateRange);
+        if (dateRange === "custom") {
+            formData.append("fromDate", fromDate);
+            formData.append("toDate", toDate);
+        }
 
-        // Debug log
-        console.log("Sending request with:", {
-            dateRange: dateRange,
-            fromDate: fromDate,
-            toDate: toDate
-        });
-
-        // FIXED: Changed controller name from "AuditLog" to "TenderAdmin"
         fetch('@Url.Action("GenerateAuditLogReport", "TenderAdmin")', {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            console.log("Response status:", response.status);
-            console.log("Response headers:", response.headers);
-
-            if (!response.ok) {
-                // Try to get error message from response
-                return response.text().then(text => {
-                    throw new Error(`Server error (${response.status}): ${text}`);
-                });
-            }
-
-            return response.blob();
-        })
-        .then(blob => {
-            console.log("Blob size:", blob.size);
-
-            if (blob.size === 0) {
-                throw new Error("Generated PDF is empty. Please check your date range.");
-            }
-
-            // Download the PDF file
-            var link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = `AuditLogReport_${new Date().toISOString().slice(0,10)}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Clean up
-            window.URL.revokeObjectURL(link.href);
-        })
-        .catch(error => {
-            console.error('Error details:', error);
-            alert("Failed to generate report: " + error.message);
-        })
-        .finally(() => {
-            // Restore button state
-            button.textContent = originalText;
-            button.disabled = false;
-        });
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Server error (${response.status}): ${text}`);
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                if (blob.size === 0) {
+                    throw new Error("Generated PDF is empty. Please check your date range.");
+                }
+                var link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = `AuditLogReport_${new Date().toISOString().slice(0, 10)}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(link.href);
+            })
+            .catch(error => {
+                alert("Failed to generate report: " + error.message);
+            })
+            .finally(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            });
     });
 </script>
 
 <style>
-    .audit-toggle {
-        background: #17994d;
-        padding: 1rem 2rem;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: 600;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        margin: 2rem auto 0.2rem auto;
-        max-width: 1200px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .toggle-arrow {
-        font-size: 1.2em;
-        color: #fff;
-        transition: transform 0.2s;
+    .audit-card-outer {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 0 3px #2196f3, 0 2px 10px rgba(0,0,0,0.08);
+        margin: 2rem auto 0 auto;
+        max-width: 1100px;
+        border: 1px solid #e0e0e0;
+        padding: 0;
     }
 
     .audit-card {
         background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        padding: 2rem;
-        margin: 1rem auto 2rem auto;
-        max-width: 1200px;
-        display: none;
-    }
-    /* Generate Report Button */
-    #generateReportWrapper {
-        justify-content: center;
-        align-items: center;
-        margin: 1rem auto 2rem auto;
-        max-width: 1200px;
-    }
-
-    .generate-report-btn {
-        background: #17994d;
-        color: #fff;
-        border: none;
-        padding: 0.75em 2.5em;
-        font-size: 1.18em;
-        font-weight: 600;
-        border-radius: 7px;
-        box-shadow: 0 2px 6px rgba(23,153,77,0.12);
-        cursor: pointer;
-        transition: background 0.2s, box-shadow 0.2s;
-        margin-top: 0;
-        margin-bottom: 0;
-        letter-spacing: 0.5px;
+        border-radius: 0 0 8px 8px;
+        box-shadow: none;
+        padding: 3rem 3.5rem 2rem 3.5rem;
+        margin: 0;
+        max-width: 100%;
         display: block;
     }
 
-        .generate-report-btn:hover,
-        .generate-report-btn:focus {
-            background: #117838;
-            box-shadow: 0 4px 16px rgba(23,153,77,0.18);
-        }
-    /* Filter Card Layout */
-    .audit-filter-row {
+    .audit-toggle {
+        padding: 1.2rem 2.5rem;
+        font-weight: 600;
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        width: 100%;
-        margin-bottom: 2.5rem;
-    }
-
-    .audit-filter-left, .audit-filter-right {
-        flex: 1 1 0;
-        padding: 0 2rem;
-        min-width: 260px;
-    }
-
-    .audit-filter-divider {
-        width: 3px;
-        background: #17994d;
-        height: 110px;
-        margin: 0 1.5rem;
-        border-radius: 4px;
-        align-self: center;
-    }
-
-    .audit-filter-heading {
-        font-size: 1.25em;
-        font-weight: bold;
-        color: #17994d;
-        margin-bottom: 0.15em;
-        letter-spacing: 1px;
-    }
-
-    .audit-filter-underline {
-        width: 90px;
-        height: 4px;
-        background: #17994d;
-        margin-bottom: 1.2em;
-        border-radius: 2px;
-    }
-
-    .audit-filter-radios label {
-        font-size: 1em;
-        font-weight: 500;
-        color: #444;
-        display: block;
-        margin-bottom: 0.5em;
+        align-items: center;
         cursor: pointer;
+        user-select: none;
     }
 
-    .audit-filter-radios input[type="radio"] {
-        accent-color: #17994d;
-        margin-right: 0.5em;
+    .toggle-arrow {
+        font-size: 1.5em;
+        color: #fff;
+        transition: transform 0.2s;
     }
 
-    .audit-filter-calendar label {
-        font-size: 1em;
-        font-weight: 500;
-        color: #444;
-        margin-right: 1em;
-        margin-bottom: 1em;
-        display: inline-block;
-    }
-
-    .audit-filter-calendar input[type="date"] {
-        border: 1px solid #17994d;
-        border-radius: 6px;
-        padding: 0.3em 0.6em;
-        font-size: 1em;
-        outline: none;
-        margin-bottom: 0.8em;
-    }
-    /* Rest of audit log styles unchanged */
     .audit-title {
-        font-size: 1.5rem;
+        font-size: 1.2em;
         font-weight: 500;
         color: #fff;
         letter-spacing: 1px;
     }
 
-    .audit-table th, .audit-table td {
-        padding: 0.5rem 1rem;
-        border-bottom: 1px solid #eee;
+    .generate-report-btn:hover,
+    .generate-report-btn:focus {
+        background: #117838 !important;
+        box-shadow: 0 4px 16px rgba(23,153,77,0.18);
     }
-
-    .audit-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 1rem;
+    /* Remove default focus outline for date fields */
+    .calendar-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #2196f3;
     }
-
-        .audit-table th {
-            background: #f7f7f7;
-            color: #555;
-            font-weight: 500;
-            text-align: left;
+    /* Responsive */
+    @@media (max-width: 700px) {
+        .audit-card {
+            padding: 1.5rem 1rem 1rem 1rem;
         }
 
-        .audit-table tr:last-child td {
-            border-bottom: none;
+        .audit-card-outer {
+            margin: 1rem 0.2rem 0 0.2rem;
         }
-
-    .audit-role-badge {
-        display: inline-block;
-        background: #e3e7fd;
-        color: #284cbb;
-        padding: 0.1em 0.7em;
-        border-radius: 12px;
-        font-size: 0.9em;
-        margin-right: 0.5em;
     }
 </style>
