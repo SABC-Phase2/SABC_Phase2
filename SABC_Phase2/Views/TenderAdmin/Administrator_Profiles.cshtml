@@ -143,6 +143,10 @@
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             <span class="btn-text">Save</span>
                         </button>
+                        <!-- Add this button after your Save button -->
+                        <button type="button" class="btn btn-danger mt-3 d-none" id="showDeleteAccountModalBtn">
+                            Delete Account
+                        </button>
 
                     </div>
 
@@ -811,6 +815,28 @@
 
         // Razor/CSHTML modal logic (success, password requirements) should remain in your view
     });
+
+
+        // Add modal trigger logic based on server-side flags
+    @if (ViewBag.ShowPasswordRequirementsModal == true)
+    {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var passwordModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
+                passwordModal.show();
+            });
+            </text>
+    }
+
+    @if (TempData["ProfileUpdateSuccess"] != null)
+    {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var successModal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
+                successModal.show();
+            });
+            </text>
+    }
 </script>
 
 

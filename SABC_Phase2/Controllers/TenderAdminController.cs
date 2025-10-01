@@ -3108,6 +3108,20 @@ namespace SABC_Phase2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Administrator_Profiles(AdministratorProfileViewModel model)
         {
+            // Get current admin FIRST (before any validation)
+            var adminIdClaim = User.FindFirst("AdminId")?.Value;
+            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+            {
+                return Unauthorized();
+            }
+
+            var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == adminId);
+            if (admin == null)
+            {
+                ModelState.AddModelError("", "Administrator not found.");
+                return View(model);
+            }
+
             // Clear password-related model state if password change is not being attempted
             bool changingPassword = !string.IsNullOrWhiteSpace(model.CurrentPassword)
                 || !string.IsNullOrWhiteSpace(model.NewPassword)
@@ -3127,25 +3141,21 @@ namespace SABC_Phase2.Controllers
             }
 
             // Clear email from model state since it's handled via OTP
+            // IMPORTANT: Restore from database instead of setting to null
             ModelState.Remove("Email");
-            model.Email = null;
+            model.Email = admin.Email;
+            model.FirstName = admin.FirstName;
+            model.LastName = admin.LastName;
+            model.Id = admin.Id;
 
             if (!ModelState.IsValid)
             {
-                return View(model);
-            }
-
-            // Get current admin
-            var adminIdClaim = User.FindFirst("AdminId")?.Value;
-            if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
-            {
-                return Unauthorized();
-            }
-
-            var admin = await _context.Administrators.FirstOrDefaultAsync(a => a.Id == adminId);
-            if (admin == null)
-            {
-                ModelState.AddModelError("", "Administrator not found.");
+                // Optionally add debugging to see what's invalid
+                var errors = ModelState.Values.SelectMany(v => v.Errors);
+                foreach (var error in errors)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ModelState Error: {error.ErrorMessage}");
+                }
                 return View(model);
             }
 
@@ -3184,14 +3194,11 @@ namespace SABC_Phase2.Controllers
                     return View(model);
                 }
 
-                // 5. FIXED: Validate password requirements - DON'T add to ModelState
-                // Controller: pass the attempted password to the view for modal checklist,
-                // and show the modal if requirements not met
-
+                // 5. Validate password requirements
                 if (!ValidatePasswordRequirements(model.NewPassword, out List<string> passwordErrors))
                 {
                     ViewBag.ShowPasswordRequirementsModal = true;
-                    ViewBag.AttemptedPassword = model.NewPassword; // Pass attempted password
+                    ViewBag.AttemptedPassword = model.NewPassword;
                     return View(model);
                 }
 
@@ -3200,8 +3207,6 @@ namespace SABC_Phase2.Controllers
                 admin.PasswordLastUpdated = DateTime.UtcNow;
             }
 
-          
-         
             // Note: Email is updated via OTP flow, not here
 
             await _context.SaveChangesAsync();
@@ -3215,7 +3220,9 @@ namespace SABC_Phase2.Controllers
 
             return RedirectToAction(nameof(Administrator_Profiles));
         }
- 
+        
+        
+        
         // Step 1: Send Email OTP
         // Enhanced SendAdminEmailOtp method with session-based rate limiting
         [HttpPost]
@@ -3434,42 +3441,35 @@ namespace SABC_Phase2.Controllers
             public int Id { get; set; }
         }
 
-        // Password validation method (SAME AS OVRS)
+        // Password validation method
         private bool ValidatePasswordRequirements(string password, out List<string> errors)
         {
             errors = new List<string>();
-
             if (string.IsNullOrWhiteSpace(password))
             {
                 errors.Add("Password is required.");
                 return false;
             }
-
             if (password.Length < 8 || password.Length > 15)
             {
                 errors.Add("Password must be 8 to 15 characters long.");
             }
-
             if (!password.Any(char.IsLower))
             {
                 errors.Add("Password must contain a lowercase letter.");
             }
-
             if (!password.Any(char.IsUpper))
             {
                 errors.Add("Password must contain an uppercase letter.");
             }
-
             if (!password.Any(char.IsDigit))
             {
                 errors.Add("Password must contain a number.");
             }
-
             if (!password.Any(c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c)))
             {
                 errors.Add("Password must contain a special character.");
             }
-
             return errors.Count == 0;
         }
     }

@@ -19,63 +19,68 @@
     </div>
 </div>
 
+<!-- Time Range Bar (separate from card) -->
+<div class="time-range-bar" id="auditToggle">
+    <span style="display: flex; align-items: center;">
+        <i class="fa fa-list" style="font-size: 1.5em; margin-right: 0.7em; color: #fff;"></i>
+        <span class="audit-title" style="color: #fff; font-size: 1.2em;">Time Range</span>
+    </span>
+    <span class="toggle-arrow" id="toggleArrow">&#9650;</span>
+</div>
+
 <!-- Card Section -->
-<div class="audit-section" style="margin-top: 1.5rem;">
-    <div class="audit-card-outer">
-        <div class="audit-toggle" id="auditToggle" style="background: #17994d; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e0e0e0;">
-            <span style="display: flex; align-items: center;">
-                <i class="fa fa-list" style="font-size: 1.5em; margin-right: 0.7em; color: #fff;"></i>
-                <span class="audit-title" style="color: #fff; font-size: 1.2em;">Time Range</span>
-            </span>
-            <span class="toggle-arrow" id="toggleArrow" style="color: #fff;">&#9650;</span>
-        </div>
-        <div class="audit-card" id="auditCard" style="display: block;">
-            <form id="auditFilterForm" autocomplete="off">
-                <div class="audit-filter-heading" style="color: #17994d; font-size: 2em; font-weight: 500; margin-bottom: 0.2em;">Date Picker</div>
-                <div class="audit-filter-underline" style="background: #17994d; height: 2px; width: 100%; margin-bottom: 2em;"></div>
-                <div class="audit-filter-radios" style="margin-bottom: 2em;">
-                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
-                        <input type="radio" name="dateRange" value="7" checked style="margin-right: 0.7em;" /> Last 7 days
+<div class="audit-section" style="margin-top: 2rem;">
+    <div class="audit-card-outer" id="auditCard" style="display: block;">
+        <form id="auditFilterForm" autocomplete="off">
+            <div class="audit-card">
+                <div class="audit-filter-heading">Date Picker</div>
+                <div class="audit-filter-underline"></div>
+                <div class="audit-filter-radios">
+                    <label>
+                        <input type="radio" name="dateRange" value="7" checked /> Last 7 days
                     </label>
-                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
-                        <input type="radio" name="dateRange" value="30" style="margin-right: 0.7em;" /> Last 30 days
+                    <label>
+                        <input type="radio" name="dateRange" value="30" /> Last 30 days
                     </label>
-                    <label style="display: flex; align-items: center; font-size: 1.1em; margin-bottom: 1em;">
-                        <input type="radio" name="dateRange" value="60" style="margin-right: 0.7em;" /> Last 60 days
+                    <label>
+                        <input type="radio" name="dateRange" value="60" /> Last 60 days
                     </label>
-                    <label style="display: flex; align-items: center; font-size: 1.1em;">
-                        <input type="radio" name="dateRange" value="custom" id="customDateRadio" style="margin-right: 0.7em;" /> Custom date
+                    <label>
+                        <input type="radio" name="dateRange" value="custom" id="customDateRadio" /> Custom date
                     </label>
                 </div>
-                <div class="audit-filter-calendar" style="max-width: 350px;">
-                    <div style="margin-bottom: 1.5em;">
-                        <label for="fromDate" style="font-size: 1em; color: #888; display: block; margin-bottom: 0.3em;">From Date *</label>
-                        <input type="date" name="fromDate" id="fromDate" class="calendar-input" disabled style="width: 100%; background: #f5f5f5; color: #bbb; border: 1px solid #e0e0e0; border-radius: 5px; padding: 0.7em 1em; font-size: 1em;" />
+                <div class="audit-filter-calendar">
+                    <div>
+                        <label for="fromDate">From Date *</label>
+                        <input type="date" name="fromDate" id="fromDate" class="calendar-input" disabled />
                     </div>
                     <div>
-                        <label for="toDate" style="font-size: 1em; color: #888; display: block; margin-bottom: 0.3em;">To Date *</label>
-                        <input type="date" name="toDate" id="toDate" class="calendar-input" disabled style="width: 100%; background: #f5f5f5; color: #bbb; border: 1px solid #e0e0e0; border-radius: 5px; padding: 0.7em 1em; font-size: 1em;" />
+                        <label for="toDate">To Date *</label>
+                        <input type="date" name="toDate" id="toDate" class="calendar-input" disabled />
                     </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
     <div id="generateReportWrapper" style="display: flex; justify-content: center; align-items: center; margin: 2.5rem 0 0 0;">
-        <button type="button" class="generate-report-btn" style="background: #17994d; color: #fff; border: none; padding: 0.8em 3em; font-size: 1.2em; font-weight: 500; border-radius: 6px; box-shadow: 0 2px 6px rgba(23,153,77,0.12); cursor: pointer; transition: background 0.2s, box-shadow 0.2s;">Generate Report</button>
+        <button type="button" class="generate-report-btn">Generate Report</button>
     </div>
 </div>
 
 <script>
-    // Toggle card open/close
+    // Toggle card open/close and show/hide generate report button
     document.getElementById("auditToggle").addEventListener("click", function () {
         var card = document.getElementById("auditCard");
         var arrow = document.getElementById("toggleArrow");
+        var reportBtn = document.getElementById("generateReportWrapper");
         if (card.style.display === "none" || card.style.display === "") {
             card.style.display = "block";
             arrow.innerHTML = "&#9650;";
+            reportBtn.style.display = "flex";
         } else {
             card.style.display = "none";
             arrow.innerHTML = "&#9660;";
+            reportBtn.style.display = "none";
         }
     });
 
@@ -177,11 +182,24 @@
 </script>
 
 <style>
+    .time-range-bar {
+        background: #17994d;
+        border-radius: 8px;
+        margin: 2rem auto 0 auto;
+        max-width: 1100px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.2rem 2.5rem;
+        cursor: pointer;
+        user-select: none;
+    }
+
     .audit-card-outer {
         background: #fff;
         border-radius: 8px;
-        box-shadow: 0 0 0 3px #2196f3, 0 2px 10px rgba(0,0,0,0.08);
-        margin: 2rem auto 0 auto;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin: 0 auto 0 auto;
         max-width: 1100px;
         border: 1px solid #e0e0e0;
         padding: 0;
@@ -189,29 +207,83 @@
 
     .audit-card {
         background: #fff;
-        border-radius: 0 0 8px 8px;
+        border-radius: 8px;
         box-shadow: none;
-        padding: 3rem 3.5rem 2rem 3.5rem;
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
         margin: 0;
         max-width: 100%;
         display: block;
+        /* Add left margin for contents */
     }
 
-    .audit-toggle {
-        padding: 1.2rem 2.5rem;
-        font-weight: 600;
+    .audit-filter-heading {
+        color: #17994d;
+        font-size: 2em;
+        font-weight: 500;
+        margin-bottom: 0.2em;
+        margin-left: 0.1em;
+    }
+
+    .audit-filter-underline {
+        background: #17994d;
+        height: 2px;
+        width: 100%;
+        margin-bottom: 2em;
+        border-radius: 2px;
+    }
+
+    .audit-filter-radios {
+        margin-bottom: 2em;
+        margin-left: 0.1em;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        user-select: none;
+        flex-direction: column;
+        gap: 0.7em;
     }
 
-    .toggle-arrow {
-        font-size: 1.5em;
-        color: #fff;
-        transition: transform 0.2s;
+        .audit-filter-radios label {
+            display: flex;
+            align-items: center;
+            font-size: 1.1em;
+            font-weight: 400;
+            color: #444;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .audit-filter-radios input[type="radio"] {
+            margin-right: 0.7em;
+            accent-color: #17994d;
+        }
+
+    .audit-filter-calendar {
+        max-width: 350px;
+        margin-left: 0.1em;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2em;
     }
+
+        .audit-filter-calendar label {
+            font-size: 1em;
+            color: #888;
+            display: block;
+            margin-bottom: 0.3em;
+        }
+
+    .calendar-input {
+        width: 100%;
+        background: #f5f5f5;
+        color: #bbb;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 0.7em 1em;
+        font-size: 1em;
+    }
+
+        .calendar-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #2196f3;
+        }
 
     .audit-title {
         font-size: 1.2em;
@@ -220,17 +292,31 @@
         letter-spacing: 1px;
     }
 
-    .generate-report-btn:hover,
-    .generate-report-btn:focus {
-        background: #117838 !important;
-        box-shadow: 0 4px 16px rgba(23,153,77,0.18);
+    .toggle-arrow {
+        font-size: 1.5em;
+        color: #fff;
+        transition: transform 0.2s;
     }
-    /* Remove default focus outline for date fields */
-    .calendar-input:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px #2196f3;
+
+    .generate-report-btn {
+        background: #17994d;
+        color: #fff;
+        border: none;
+        padding: 0.8em 3em;
+        font-size: 1.2em;
+        font-weight: 500;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(23,153,77,0.12);
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
     }
-    /* Responsive */
+
+        .generate-report-btn:hover,
+        .generate-report-btn:focus {
+            background: #117838 !important;
+            box-shadow: 0 4px 16px rgba(23,153,77,0.18);
+        }
+
     @@media (max-width: 700px) {
         .audit-card {
             padding: 1.5rem 1rem 1rem 1rem;
@@ -238,6 +324,10 @@
 
         .audit-card-outer {
             margin: 1rem 0.2rem 0 0.2rem;
+        }
+
+        .time-range-bar {
+            padding: 1rem 1rem;
         }
     }
 </style>
