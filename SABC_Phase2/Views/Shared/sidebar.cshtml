@@ -35,29 +35,27 @@
                 profileUrl = Url.Action("OVRS_Profiles", "OVRS_User");
             }
         }
-        <a href="@profileUrl" class="icon-link" title="Profile">
+        <a href="@profileUrl" class="icon-link profile-icon" title="Profile">
             <i class="fas fa-user-circle fa-2x"></i>
         </a>
 
         <div class="info">
             @if (User.Identity.IsAuthenticated)
             {
-                <span class="name">@User.Identity.Name</span>
-                <br />
-                <span class="supplier-type">@User.FindFirst("SupplierType")?.Value</span>
+                <span class="name profile-name-wrap">@User.Identity.Name</span>
+                <span class="supplier-type profile-role-wrap">@User.FindFirst("SupplierType")?.Value</span>
             }
             else
             {
                 <a href="@Url.Action("Login", "Account")" style="color:inherit;text-decoration:none;">
-                    <span class="name">Sign In / Register</span>
+                    <span class="name profile-name-wrap">Sign In / Register</span>
                 </a>
             }
         </div>
-
         @if (User.Identity.IsAuthenticated)
         {
-            <span class="chevron-toggle">
-                <i class="fas fa-chevron-down" style="margin-left:12px;"></i>
+            <span class="chevron-toggle profile-chevron">
+                <i class="fas fa-chevron-down"></i>
             </span>
             <div class="profile-dropdown-menu" id="profileDropdownMenu">
                 @if (User.IsInRole("IT_Admin") || User.IsInRole("Tender_Administrator") || User.IsInRole("Vendor_Administrator"))
@@ -81,7 +79,6 @@
             </div>
         }
     </div>
-
     <div class="menu">
         @if (User.Identity.IsAuthenticated && User.IsInRole("IT_Admin"))
         {
@@ -95,8 +92,8 @@
                 </a>
             </div>
             <div class="menu-section">
-                <a asp-controller="TenderAdmin" asp-action="Audit_Logs" class="icon-link" title="Users">
-                    <i class="fas fa-user-shield fa-2x"></i>
+                <a asp-controller="TenderAdmin" asp-action="Audit_Logs" class="icon-link" title="Audit Logs">
+                    <i class="fas fa-file-alt fa-2x"></i>
                 </a>
                 <a asp-controller="TenderAdmin" asp-action="Audit_Logs" class="label"
                    style="color:inherit; text-decoration:none; display:inline-block; width:100%;">
@@ -702,6 +699,62 @@
         vertical-align: middle;
     }
 
+    /* Ensure all sidebar icons do NOT turn blue on hover, focus, or active */
+    .sidebar .icon-link,
+    .sidebar .icon-link i {
+        color: white !important;
+    }
+
+        /* Remove blue on all states for normal icons */
+        .sidebar .icon-link:visited,
+        .sidebar .icon-link:active,
+        .sidebar .icon-link:focus,
+        .sidebar .icon-link:hover,
+        .sidebar .icon-link:visited i,
+        .sidebar .icon-link:active i,
+        .sidebar .icon-link:focus i,
+        .sidebar .icon-link:hover i,
+        .sidebar .menu-section:hover .icon-link,
+        .sidebar .menu-section:hover .icon-link i,
+        .sidebar .menu-section:active .icon-link,
+        .sidebar .menu-section:active .icon-link i,
+        .sidebar .menu-section:focus .icon-link,
+        .sidebar .menu-section:focus .icon-link i,
+        .sidebar .menu-section.active .icon-link,
+        .sidebar .menu-section.active .icon-link i {
+            color: white !important;
+        }
+
+    /* Keep special icons (Company Documents, My Documents) white as well */
+    .menu-section.company-docs-section .icon-link i,
+    .menu-section .icon-link[title="My Documents"] i {
+        color: white !important;
+    }
+
+    /* --- CIRCLE DOT ICONS --- */
+    /* Default green for all .green icons */
+    .menu-section.sub-item i.fa-circle-dot.green {
+        color: #33cc33 !important;
+        transition: color 0.2s;
+    }
+
+    /* On hover, keep green (do not turn blue) */
+    .menu-section.sub-item:hover i.fa-circle-dot.green,
+    .menu-section.sub-item:focus i.fa-circle-dot.green {
+        color: #33cc33 !important;
+    }
+
+    /* --- GENERAL ICONS --- */
+    /* All other icons stay white except when active */
+    .sidebar .icon-link i:not(.fa-circle-dot):not(.green) {
+        color: white !important;
+        transition: color 0.2s;
+    }
+
+    .sidebar .menu-section.active .icon-link i:not(.fa-circle-dot):not(.green) {
+        color: #111 !important;
+    }
+
     .sidebar.collapsed .label {
         display: none !important;
     }
@@ -829,35 +882,114 @@
                 font-size: 2em;
             }
 
+
+
     .profile {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 10px 0;
         border-top: 1px solid #666;
         border-bottom: 1px solid #666;
         margin-bottom: 15px;
         width: 100%;
+        min-height: 60px;
+        box-sizing: border-box;
+        flex-wrap: nowrap;
+        gap: 0;
+        padding-left: 18px; /* Align with menu-section icons */
     }
 
-        .profile .info {
-            margin-left: 30px;
+    /* Profile icon alignment for expanded sidebar */
+    .profile-icon {
+        min-width: 50px;
+        max-width: 50px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-left: 10px;
+    }
+
+    /* Fix profile icon alignment when sidebar is collapsed */
+    .sidebar.collapsed .profile {
+        padding-left: 0 !important;
+    }
+
+    .sidebar.collapsed .profile-icon {
+        margin-left: 0 !important;
+    }
+
+
+    .profile .info {
+        margin-left: 28px; /* Increase from 18px to 28px for better alignment */
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+
+    .profile-name-wrap {
+        font-weight: bold;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.1;
+        margin-bottom: 2px;
+        max-width: 160px;
+        display: block;
+    }
+
+    .profile-role-wrap {
+        font-size: 0.95em;
+        color: #ccc;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.1;
+        margin-bottom: 2px;
+        max-width: 160px;
+        display: block;
+    }
+
+    .profile-chevron {
+        margin-left: 18px !important;
+        min-width: 50px;
+        max-width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        flex-shrink: 0;
+    }
+
+        .profile-chevron i.fas.fa-chevron-down {
+            margin-left: -6px !important;
+            font-size: 1.1em; /* Reduced from 1.5em to 1.1em for a smaller chevron */
         }
 
-        .profile img {
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+    @@media (max-width: 700px) {
+        .profile-name-wrap, .profile-role-wrap {
+            max-width: 70px;
         }
+    }
 
-        .profile .name {
-            font-weight: bold;
-        }
+    .profile img {
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+    }
 
-        .profile .role {
-            font-size: 12px;
-            color: #ccc;
-        }
+    .profile .name {
+        font-weight: bold;
+    }
+
+    .profile .role {
+        font-size: 12px;
+        color: #ccc;
+    }
 
     .menu-section {
         width: 90%;
@@ -1005,8 +1137,8 @@
     }
 
     /*     .sidebar.collapsed .submenu-icon {
-                                    display: none !important;
-                                } */
+                                        display: none !important;
+                                    } */
 
     @*---------------------------------------------
 

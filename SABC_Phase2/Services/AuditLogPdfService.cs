@@ -13,7 +13,6 @@ namespace SABC_Phase2.Services
     {
         public byte[] GenerateAuditLogReport(List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate, string reportCode = null)
         {
-            // Set QuestPDF license (required for commercial use)
             QuestPDF.Settings.License = LicenseType.Community;
 
             var document = Document.Create(container =>
@@ -24,10 +23,7 @@ namespace SABC_Phase2.Services
                     page.Margin(30);
                     page.DefaultTextStyle(x => x.FontSize(10));
 
-                    // Content
                     page.Content().Element(content => ComposeContent(content, auditLogs, fromDate, toDate, reportCode));
-
-                    // Footer
                     page.Footer().AlignCenter().Text(text =>
                     {
                         text.CurrentPageNumber();
@@ -44,29 +40,22 @@ namespace SABC_Phase2.Services
         {
             container.Column(column =>
             {
-                // === Heading Row with Logo + True Centered Title + Report Code ===
                 column.Item().PaddingBottom(20).Row(row =>
                 {
-                    // Left: Logo (60px wide)
                     var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "lib", "Images", "cropped_logoblack.png");
                     if (File.Exists(logoPath))
                     {
                         var logoBytes = File.ReadAllBytes(logoPath);
-
-                        row.ConstantItem(60)
-                            .AlignMiddle()
-                            .Element(c => c.Image(logoBytes));
+                        row.ConstantItem(60).AlignMiddle().Element(c => c.Image(logoBytes));
                     }
                     else
                     {
-                        row.ConstantItem(60); // empty if no logo
+                        row.ConstantItem(60);
                     }
 
-                    // Middle: Title (centered)
                     row.RelativeItem().AlignMiddle().AlignCenter().Text("Audit Log Report")
                         .FontSize(24).Bold().FontColor(Colors.Black);
 
-                    // Right: Report Code (if provided)
                     row.ConstantItem(60).AlignMiddle().AlignRight().Element(e =>
                     {
                         if (!string.IsNullOrWhiteSpace(reportCode))
@@ -79,67 +68,75 @@ namespace SABC_Phase2.Services
                     });
                 });
 
-                // Rest of your existing content implementation...
-                // (keeping the rest of the method unchanged)
+                column.Item().PaddingBottom(20).Text(new string('=', 130)).FontSize(10).FontFamily("Courier New");
 
-                // Separator line
-                column.Item().PaddingBottom(20).Text(new string('=', 130))
-                    .FontSize(10).FontFamily("Courier New");
+                // --- Dynamic column widths, scaled to fit table ---
+                // Calculate max lengths
+                int maxUserNameLength = auditLogs.Any() ? auditLogs.Max(l => (l.AdminFullName ?? "").Length) : 5;
+                int maxUserRoleLength = auditLogs.Any() ? auditLogs.Max(l => GetUserRole(l).Length) : 4;
+                int maxActionLength = auditLogs.Any() ? auditLogs.Max(l => GetActionTypeDisplay(l.ActionType).Length) : 5;
+                int maxDescriptionLength = auditLogs.Any() ? auditLogs.Max(l => (l.Description ?? "").Length) : 8;
 
-                // Data section using column/row approach
+                // Assign raw relative widths (minimum 2, maximum 6; scale with string length, but capped)
+                float userColRaw = Math.Clamp(2f + maxUserNameLength / 10f, 2f, 6f);
+                float userRoleColRaw = Math.Clamp(2f + maxUserRoleLength / 10f, 2f, 5f);
+                float actionColRaw = Math.Clamp(2f + maxActionLength / 12f, 2f, 5f);
+                float descriptionColRaw = Math.Clamp(3f + maxDescriptionLength / 40f, 3f, 7f);
+                float timeStampColRaw = 2.5f;
+
+                // Total relative width
+                float totalRawWidth = timeStampColRaw + userColRaw + userRoleColRaw + actionColRaw + descriptionColRaw;
+
+                // Scale so the sum is 16 (fits A4 landscape well)
+                float scale = 16f / totalRawWidth;
+
+                float timeStampCol = timeStampColRaw * scale;
+                float userCol = userColRaw * scale;
+                float userRoleCol = userRoleColRaw * scale;
+                float actionCol = actionColRaw * scale;
+                float descriptionCol = descriptionColRaw * scale;
+
                 if (auditLogs.Any())
                 {
                     column.Item().PaddingBottom(20).Column(dataColumn =>
                     {
-                        // Header - only once
                         dataColumn.Item().Row(headerRow =>
                         {
-                            headerRow.RelativeColumn(2).Element(InvisibleCellStyle).Text("Time Stamp").Bold().FontSize(12);
-                            headerRow.RelativeColumn(3).Element(InvisibleCellStyle).Text("User").Bold().FontSize(12);
-                            headerRow.RelativeColumn(2).Element(InvisibleCellStyle).Text("User Role").Bold().FontSize(12);
-                            headerRow.RelativeColumn(1.5f).Element(InvisibleCellStyle).Text("Action").Bold().FontSize(12);
-                            headerRow.RelativeColumn(4).Element(InvisibleCellStyle).Text("Description").Bold().FontSize(12);
+                            headerRow.RelativeColumn(timeStampCol).Element(InvisibleCellStyle).Text("Time Stamp").Bold().FontSize(12);
+                            headerRow.RelativeColumn(userCol).Element(InvisibleCellStyle).Text("User").Bold().FontSize(12);
+                            headerRow.RelativeColumn(userRoleCol).Element(InvisibleCellStyle).Text("User Role").Bold().FontSize(12);
+                            headerRow.RelativeColumn(actionCol).Element(InvisibleCellStyle).Text("Action").Bold().FontSize(12);
+                            headerRow.RelativeColumn(descriptionCol).Element(InvisibleCellStyle).Text("Description").Bold().FontSize(12);
                         });
 
-                        // Data rows - each row is kept together with ShowEntire
                         foreach (var log in auditLogs.OrderByDescending(l => l.Timestamp))
                         {
                             dataColumn.Item().ShowEntire().Row(dataRow =>
                             {
-                                dataRow.RelativeColumn(2).Element(InvisibleCellStyle).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"));
-                                dataRow.RelativeColumn(3).Element(InvisibleCellStyle).Text(log.AdminFullName ?? "N/A");
-                                dataRow.RelativeColumn(2).Element(InvisibleCellStyle).Text(GetUserRole(log));
-                                dataRow.RelativeColumn(1.5f).Element(InvisibleCellStyle).Text(GetActionTypeDisplay(log.ActionType));
-                                dataRow.RelativeColumn(4).Element(InvisibleCellStyle).Text(log.Description ?? "N/A");
+                                dataRow.RelativeColumn(timeStampCol).Element(InvisibleCellStyle).Text(log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"));
+                                dataRow.RelativeColumn(userCol).Element(InvisibleCellStyle).Text(log.AdminFullName ?? "N/A");
+                                dataRow.RelativeColumn(userRoleCol).Element(InvisibleCellStyle).Text(GetUserRole(log));
+                                dataRow.RelativeColumn(actionCol).Element(InvisibleCellStyle).Text(GetActionTypeDisplay(log.ActionType));
+                                dataRow.RelativeColumn(descriptionCol).Element(InvisibleCellStyle).Text(log.Description ?? "N/A");
                             });
                         }
                     });
                 }
 
-                // Bottom separator line
-                column.Item().PaddingVertical(20).Text(new string('=', 130))
-                    .FontSize(10).FontFamily("Courier New");
+                column.Item().PaddingVertical(20).Text(new string('=', 130)).FontSize(10).FontFamily("Courier New");
+                column.Item().PaddingBottom(10).Text($"Date generated: {DateTime.Now:dd MMMM yyyy HH:mm}").FontSize(12).Bold();
 
-                // Date generated
-                column.Item().PaddingBottom(10).Text($"Date generated: {DateTime.Now:dd MMMM yyyy HH:mm}")
-                    .FontSize(12).Bold();
-
-                // Time range information
                 if (fromDate.HasValue && toDate.HasValue)
                 {
                     var timeRangeText = GetTimeRangeDescription(fromDate.Value, toDate.Value);
-                    column.Item().Text($"Time Range: {timeRangeText}")
-                        .FontSize(12);
+                    column.Item().Text($"Time Range: {timeRangeText}").FontSize(12);
                 }
                 else if (fromDate.HasValue || toDate.HasValue)
                 {
-                    // Handle cases where only one date is provided
                     var dateText = fromDate?.ToString("dd MMMM yyyy") ?? toDate?.ToString("dd MMMM yyyy");
-                    column.Item().Text($"Time Range: From {dateText}")
-                        .FontSize(12);
+                    column.Item().Text($"Time Range: From {dateText}").FontSize(12);
                 }
 
-                // No records message
                 if (!auditLogs.Any())
                 {
                     column.Item().PaddingTop(20).AlignCenter().Text("No audit logs found for the selected period.")
@@ -148,7 +145,6 @@ namespace SABC_Phase2.Services
             });
         }
 
-        // Keep all your existing helper methods unchanged...
         private IContainer InvisibleCellStyle(IContainer container)
         {
             return container.Padding(8);

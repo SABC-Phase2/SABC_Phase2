@@ -52,7 +52,9 @@
 </div>
 
 <div class="table-container">
-    <partial name="_UsersTablePartial" model="Model" />
+    <div class="table-scroll-container">
+        <partial name="_UsersTablePartial" model="Model" />
+    </div>
 </div>
 @if (totalPages > 1)
 {
@@ -990,17 +992,39 @@
 
         function initActionMenus() {
             document.querySelectorAll('.action-menu-btn').forEach(function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const dropdown = btn.nextElementSibling;
-                    const isActive = btn.classList.contains('active');
-                    closeAllDropdowns();
-                    if (!isActive) {
-                        btn.classList.add('active');
-                        dropdown.classList.add('show');
-                    }
-                });
+                     btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const dropdown = btn.nextElementSibling;
+            const isActive = btn.classList.contains('active');
+            closeAllDropdowns();
+            if (!isActive) {
+                btn.classList.add('active');
+                dropdown.classList.add('show');
+
+                // --- Smart dropdown positioning ---
+                // Reset any previous positioning
+                dropdown.style.top = '';
+                dropdown.style.bottom = '';
+                dropdown.style.maxHeight = '300px';
+
+                // Get dropdown and viewport positions
+                const rect = dropdown.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const spaceAbove = rect.top;
+
+                // If not enough space below, and more space above, open upwards
+                if (spaceBelow < rect.height && spaceAbove > rect.height) {
+                    dropdown.style.top = 'auto';
+                    dropdown.style.bottom = '100%';
+                    dropdown.style.maxHeight = `${spaceAbove - 20}px`; // prevent overflow
+                } else {
+                    dropdown.style.top = '100%';
+                    dropdown.style.bottom = 'auto';
+                    dropdown.style.maxHeight = `${spaceBelow - 20}px`; // prevent overflow
+                }
+            }
+        });
             });
 
             document.querySelectorAll('.view-user-btn').forEach(function(btn) {
@@ -1019,9 +1043,11 @@
             document.querySelectorAll('.action-menu-btn').forEach(function(btn) {
                 btn.classList.remove('active');
                 btn.nextElementSibling.classList.remove('show');
+                btn.nextElementSibling.style.top = '';
+                btn.nextElementSibling.style.bottom = '';
+                btn.nextElementSibling.style.maxHeight = '300px';
             });
         }
-
         function submitFormData() {
             const formData = {
                 firstName: document.getElementById('firstName').value,
@@ -1188,12 +1214,12 @@
                 }, 500);
             });
 
-            // Hide search results when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('#adUserSearch') && !e.target.closest('#searchResults')) {
-                    hideSearchResults();
-                }
-            });
+         // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.action-menu-container')) {
+                closeAllDropdowns();
+            }
+        });
 
             function isFormTampered() {
                 if (!tamperDetectionActive || !originalFormData || !securityData) {
@@ -1378,6 +1404,19 @@
         }
     }
 
+    .table-container,
+    .user-table-card,
+    .table-scroll-container,
+    .user-table {
+        max-height: none !important;
+        height: auto !important;
+        overflow-y: visible !important;
+        overflow: visible !important;
+    }
+
+    body {
+        overflow-y: auto !important;
+    }
     /* Green button with 3rd effect for modal */
     .green-effect {
         background: linear-gradient(to bottom, #009344 90%, #007a3d 100%);
@@ -1640,6 +1679,35 @@
     .table-scroll-container {
         overflow-x: auto; /* Only horizontal scroll when needed */
         overflow-y: visible; /* Allow vertical overflow for dropdowns */
+    }
+
+    @@media (max-width: 700px) {
+        .table-scroll-container {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        .user-table {
+            min-width: 700px !important;
+            width: 700px !important;
+            /* Prevent shrinking below content width */
+            display: block;
+        }
+    }
+
+    @@media (max-width: 500px) {
+        .table-scroll-container {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        .user-table {
+            min-width: 500px !important;
+            width: 500px !important;
+            display: block;
+        }
     }
 
     .user-table {
@@ -2210,4 +2278,207 @@
             background: #00918d;
             box-shadow: 0 4px 12px rgba(0,147,68,0.18);
         }
-</style>
+
+    @@media (max-width: 900px) {
+        .table-container {
+            padding: 8px;
+            margin-bottom: 40px;
+        }
+
+        .user-action-bar form {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .user-action-bar span[style*="margin-left: auto;"] {
+            margin-left: 0 !important;
+            justify-content: flex-start;
+        }
+
+        .search-wrapper,
+        .filter-dropdown,
+        .search-input,
+        .big-newuser-btn,
+        .big-delete-btn,
+        .refresh-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .custom-pagination {
+            margin-top: 10px;
+            padding-bottom: 20px;
+        }
+
+        .pagination-list {
+            gap: 8px;
+            padding: 6px 4px;
+            font-size: 0.95rem;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .table-scroll-container {
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        .user-table {
+            min-width: 600px;
+            font-size: 0.95rem;
+        }
+
+            .user-table thead th, .user-table td {
+                padding: 8px 4px;
+                font-size: 0.95rem;
+            }
+
+        .action-menu-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 1rem;
+        }
+    }
+
+    @@media (max-width: 500px) {
+        .table-container {
+            padding: 2px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb-custom {
+            font-size: 0.85rem;
+            padding: 0 2px;
+        }
+
+        .user-action-bar form {
+            gap: 6px;
+        }
+
+        .big-newuser-btn, .big-delete-btn, .refresh-btn {
+            font-size: 0.95rem;
+            padding: 10px 0;
+        }
+
+        .user-table {
+            font-size: 0.85rem;
+            min-width: 400px;
+        }
+
+            .user-table thead th, .user-table td {
+                padding: 6px 2px;
+                font-size: 0.85rem;
+            }
+                /* Hide less important columns for OVRS users */
+                .user-table th:nth-child(3), /* COMPANY NAME */
+                .user-table td:nth-child(3) {
+                    display: none;
+                }
+
+        .custom-pagination {
+            padding-bottom: 10px;
+        }
+
+        .pagination-list {
+            gap: 4px;
+            padding: 4px 2px;
+            font-size: 0.85rem;
+        }
+
+        #newUserModal .modal-content {
+            min-width: 98vw;
+            max-width: 100vw;
+            padding: 0;
+        }
+
+        #newUserModal form {
+            padding: 8px;
+        }
+
+        #newUserModal .form-row {
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #newUserModal .btn, #newUserModal button[type="submit"] {
+            padding: 10px 0;
+            font-size: 1rem;
+        }
+
+        #newUserModal .search-input, #newUserModal #adUserSearch {
+            padding: 10px 12px 10px 38px;
+            font-size: 0.95rem;
+        }
+
+        #newUserModal label {
+            font-size: 0.95rem;
+        }
+
+        #newUserModal select {
+            min-width: 0;
+            font-size: 0.95rem;
+        }
+
+        #newUserModal #submitSection {
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        #newUserModal #changeUserBtn {
+            font-size: 0.95rem;
+            padding: 8px 0;
+        }
+
+        #newUserModal .search-result-item {
+            font-size: 0.95rem;
+        }
+        /* Modals */
+        #errorPopup > div, #successPopup > div, #tamperDetectedModal > div,
+        #deleteConfirmModal > div, #bulkDeleteConfirmModal > div, #reactivateConfirmModal > div {
+            padding: 10px 4px !important;
+            max-width: 98vw !important;
+            width: 98vw !important;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .user-action-bar {
+            max-width: 340px;
+            margin: 0 auto;
+            width: 90vw;
+        }
+
+            .user-action-bar form {
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 4px 0;
+            }
+    }
+
+    @@media (max-width: 500px) {
+        .user-action-bar {
+            max-width: 280px;
+            margin: 0 auto;
+            width: 92vw;
+        }
+
+            .user-action-bar form {
+                gap: 4px;
+                padding: 2px 0;
+            }
+    }
+
+    @@media (max-width: 700px) {
+        .breadcrumb-custom, .user-action-bar, .table-container, .custom-pagination {
+            margin-left: 60px !important;
+        }
+    }
+
+    @@media (max-width: 500px) {
+        .breadcrumb-custom, .user-action-bar, .table-container, .custom-pagination {
+            margin-left: 48px !important;
+        }
+    }</style>

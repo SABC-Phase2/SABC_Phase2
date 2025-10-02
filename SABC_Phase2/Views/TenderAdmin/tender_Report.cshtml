@@ -16,9 +16,7 @@
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h2 class="report-title">@Model.Tender.TenderNumber</h2>
-
         </div>
-
         <!-- Table section -->
         <div class="table-wrapper" style="display: flex; justify-content: center; margin-top: 40px;">
             <table class="report-table">
@@ -46,44 +44,140 @@
         </div>
     </div>
 </div>
+
 <!-- PDF generation button -->
 <div style="display: flex; justify-content: center; margin-top: 48px;">
     <button id="generatePdfBtn" style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
-
-        Generate PDF 
+        Generate PDF
     </button>
 </div>
 
 <!-- Font Awesome for icons -->
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
-<!-- jQuery for functionality -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-
 <script>
+    console.log("PDF generation script loaded");
 
-    $(document).ready(function() {
+    // Check if button exists immediately
+    var pdfBtn = document.getElementById("generatePdfBtn");
 
-        // Generate report button click handler
+    if (!pdfBtn) {
+        console.error("PDF button with ID 'generatePdfBtn' not found!");
+        console.log("Available buttons:", document.querySelectorAll('button'));
+    } else {
+        console.log("PDF button found, attaching event listener");
 
-        $("#generatePdfBtn").click(function() {
+        pdfBtn.addEventListener("click", function () {
+            console.log("Generate PDF button clicked");
 
             var tenderId = @Model.Tender.Id;
+            var button = this;
+            var originalText = button.textContent;
 
-            // Generate the PDF URL without date range parameters
+            // Prevent double-clicks
+            if (button.disabled) {
+                console.warn("Button already processing, ignoring click");
+                return;
+            }
 
-            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' +
+            console.log("Processing tender ID:", tenderId);
 
-                       '?id=' + tenderId;
+            button.textContent = "Generating...";
+            button.disabled = true;
 
-            // Open the PDF in a new tab
+            // Build the GET URL for PDF generation
+            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' + '?id=' + tenderId;
+            console.log("Fetching PDF from URL:", url);
 
-            window.open(url, '_blank');
+            fetch(url, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log("Response status:", response.status);
+                console.log("Response OK:", response.ok);
+                console.log("Content-Type:", response.headers.get('content-type'));
 
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error("Server error response:", text);
+                        throw new Error(`Server error (${response.status}): ${text}`);
+                    });
+                }
+
+                // Check content type
+                var contentType = response.headers.get('content-type');
+                if (contentType && !contentType.includes('application/pdf')) {
+                    console.warn('Unexpected content type:', contentType);
+                }
+
+                return response.blob();
+            })
+            .then(blob => {
+                console.log("Blob received - Size:", blob.size, "Type:", blob.type);
+
+                if (blob.size === 0) {
+                    throw new Error("Generated PDF is empty. Please check your tender data.");
+                }
+
+                // Create object URL
+                var blobUrl = window.URL.createObjectURL(blob);
+                console.log("Blob URL created:", blobUrl);
+
+                // Create download link
+                var link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `SupplierReport_Tender_${tenderId}_${new Date().toISOString().slice(0, 10)}.pdf`;
+                link.style.display = 'none';
+
+                console.log("Download filename:", link.download);
+
+                // Append to body
+                document.body.appendChild(link);
+                console.log("Link appended to DOM");
+
+                // Trigger download with delay to ensure browser processes
+                setTimeout(function() {
+                    try {
+                        link.click();
+                        console.log("Download triggered successfully");
+                    } catch (e) {
+                        console.error("Click failed:", e);
+                        // Fallback: try opening in new window
+                        window.open(blobUrl, '_blank');
+                        console.log("Opened in new tab as fallback");
+                    }
+
+                    // Cleanup after delay
+                    setTimeout(function() {
+                        try {
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(blobUrl);
+                            console.log("Cleanup completed");
+                        } catch (e) {
+                            console.error("Cleanup error:", e);
+                        }
+                    }, 250);
+                }, 100);
+
+            })
+            .catch(error => {
+                console.error('PDF Generation Error:', error);
+                console.error('Error details:', error.message);
+                alert("Failed to generate report: " + error.message);
+            })
+            .finally(() => {
+                console.log("Restoring button state");
+                button.textContent = originalText;
+                button.disabled = false;
+            });
         });
 
-    });
+        console.log("Event listener attached successfully");
+    }
 </script>
 
 

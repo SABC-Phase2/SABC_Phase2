@@ -3236,7 +3236,10 @@ namespace SABC_Phase2.Controllers
 
                 // 6. Hash and save new password
                 admin.PasswordHash = newPasswordHash;
-                admin.PasswordLastUpdated = DateTime.UtcNow;
+                // Get current South African time, convert to UTC before saving
+                var saTime = _saTimeService.GetCurrentSouthAfricanTime().ToDateTimeUnspecified();
+                var saTimeUtc = TimeZoneInfo.ConvertTimeToUtc(saTime, TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time"));
+                admin.PasswordLastUpdated = saTimeUtc;
             }
 
             // Note: Email is updated via OTP flow, not here
