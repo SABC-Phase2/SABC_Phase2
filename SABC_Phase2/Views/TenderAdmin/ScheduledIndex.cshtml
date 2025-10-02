@@ -29,7 +29,7 @@
                    style="padding-left: 38px;" />
         </span>
         <select name="type" class="filter-dropdown" id="scheduledTenderTypeDropdown">
-            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL TENDER TPES</option>
+            <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">ALL TENDER TYPES</option>
             <option value="rfq" selected="@(typeFilter == "rfq" ? "selected" : null)">RFQ</option>
             <option value="rfp" selected="@(typeFilter == "rfp" ? "selected" : null)">RFP</option>
             <option value="rfi" selected="@(typeFilter == "rfi" ? "selected" : null)">RFI</option>
@@ -155,6 +155,18 @@
             });
         });
     }
+        function updateTenderTypeOptionText() {
+        var select = document.getElementById('scheduledTenderTypeDropdown');
+        if (!select) return;
+        var option = select.options[0];
+        if (window.innerWidth <= 600) {
+            option.text = 'All';
+        } else {
+            option.text = 'ALL TENDER TYPES';
+        }
+    }
+    window.addEventListener('resize', updateTenderTypeOptionText);
+    window.addEventListener('DOMContentLoaded', updateTenderTypeOptionText);
 
     function deleteScheduledTender(id, rowElement) {
         document.getElementById('deleteScheduledLoading').style.display = 'block';

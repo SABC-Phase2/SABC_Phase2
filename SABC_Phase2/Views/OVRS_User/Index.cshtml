@@ -120,6 +120,19 @@
             };
         });
     }
+
+        function updateTenderTypeOptionText() {
+        var select = document.getElementById('tenderTypeDropdown');
+        if (!select) return;
+        var option = select.options[0];
+        if (window.innerWidth <= 600) {
+            option.text = 'All';
+        } else {
+            option.text = 'ALL TENDER TYPES';
+        }
+    }
+    window.addEventListener('resize', updateTenderTypeOptionText);
+    window.addEventListener('DOMContentLoaded', updateTenderTypeOptionText);
             function hookSortIcon() {
         const table = document.querySelector('.tender-table');
         if (!table) return;
