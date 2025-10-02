@@ -30,12 +30,16 @@ namespace SABC_Phase2.Data
 
         public DbSet<AuditLog> AuditLogs { get; set; }
 
+      
+        //--------------------------------------------------------------------------------------------------------
+ 
+        public DbSet<Administrator> Administrators { get; set; }
+
+        public DbSet<PdfGenerationRecord> PdfGenerationRecords { get; set; }
+
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
         public DbSet<PasswordHistory> PasswordHistories { get; set; }
-        //--------------------------------------------------------------------------------------------------------
-        // Adminstrator dummy data
-        public DbSet<Administrator> Administrators { get; set; }
         //--------------------------------------------------------------------------------------------------------
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

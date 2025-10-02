@@ -11,7 +11,7 @@ namespace SABC_Phase2.Services
 {
     public class AuditLogPdfService
     {
-        public byte[] GenerateAuditLogReport(List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate)
+        public byte[] GenerateAuditLogReport(List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate, string reportCode = null)
         {
             // Set QuestPDF license (required for commercial use)
             QuestPDF.Settings.License = LicenseType.Community;
@@ -25,7 +25,7 @@ namespace SABC_Phase2.Services
                     page.DefaultTextStyle(x => x.FontSize(10));
 
                     // Content
-                    page.Content().Element(content => ComposeContent(content, auditLogs, fromDate, toDate));
+                    page.Content().Element(content => ComposeContent(content, auditLogs, fromDate, toDate, reportCode));
 
                     // Footer
                     page.Footer().AlignCenter().Text(text =>
@@ -40,11 +40,11 @@ namespace SABC_Phase2.Services
             return document.GeneratePdf();
         }
 
-        private void ComposeContent(IContainer container, List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate)
+        private void ComposeContent(IContainer container, List<AuditLog> auditLogs, DateTime? fromDate, DateTime? toDate, string reportCode)
         {
             container.Column(column =>
             {
-                // === Heading Row with Logo + True Centered Title ===
+                // === Heading Row with Logo + True Centered Title + Report Code ===
                 column.Item().PaddingBottom(20).Row(row =>
                 {
                     // Left: Logo (60px wide)
@@ -66,15 +66,27 @@ namespace SABC_Phase2.Services
                     row.RelativeItem().AlignMiddle().AlignCenter().Text("Audit Log Report")
                         .FontSize(24).Bold().FontColor(Colors.Black);
 
-                    // Right: Spacer (same width as logo to keep symmetry)
-                    row.ConstantItem(60);
+                    // Right: Report Code (if provided)
+                    row.ConstantItem(60).AlignMiddle().AlignRight().Element(e =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(reportCode))
+                        {
+                            e.Text(reportCode)
+                                .FontColor(Colors.Red.Medium)
+                                .FontSize(16)
+                                .Bold();
+                        }
+                    });
                 });
+
+                // Rest of your existing content implementation...
+                // (keeping the rest of the method unchanged)
 
                 // Separator line
                 column.Item().PaddingBottom(20).Text(new string('=', 130))
                     .FontSize(10).FontFamily("Courier New");
 
-                // Data section using column/row approach (ONLY this approach - removed the table)
+                // Data section using column/row approach
                 if (auditLogs.Any())
                 {
                     column.Item().PaddingBottom(20).Column(dataColumn =>
@@ -136,23 +148,23 @@ namespace SABC_Phase2.Services
             });
         }
 
+        // Keep all your existing helper methods unchanged...
         private IContainer InvisibleCellStyle(IContainer container)
         {
-            // No borders, just padding for spacing
             return container.Padding(8);
         }
 
         private string GetUserRole(AuditLog log)
         {
             if (string.IsNullOrWhiteSpace(log.Role))
-                return "User"; // fallback if role is missing
+                return "User";
 
             return log.Role switch
             {
                 "Tender_Administrator" => "Tender Administrator",
                 "IT_Admin" => "IT Administrator",
                 "Vendor_Administrator" => "Vendor Administrator",
-                _ => log.Role // default to raw DB value if not mapped
+                _ => log.Role
             };
         }
 
@@ -172,12 +184,10 @@ namespace SABC_Phase2.Services
 
         private string GetActionTypeDisplay(string actionType)
         {
-            // Format action type for better readability
             if (string.IsNullOrEmpty(actionType)) return "N/A";
 
             return actionType switch
             {
-                // Tender Actions
                 "CreateTender" => "Create Tender",
                 "EditTender" => "Edit Tender",
                 "DeleteTender" => "Delete Tender",
@@ -187,49 +197,35 @@ namespace SABC_Phase2.Services
                 "ScheduleTender" => "Schedule Tender",
                 "EditScheduledTender" => "Edit Scheduled Tender",
                 "DeleteScheduledTender" => "Delete Scheduled Tender",
-
-                // Draft Actions
                 "CreateDraft" => "Create Draft",
                 "EditDraft" => "Edit Draft",
                 "DeleteDraft" => "Delete Draft",
-                "Create" => "Create Draft", // Handle the generic "Create" case
-                "Edit" => "Edit Draft", // Handle the generic "Edit" case
-
-                // User Management Actions
+                "Create" => "Create Draft",
+                "Edit" => "Edit Draft",
                 "CreateUser" => "Create User",
                 "EditUser" => "Edit User",
                 "DeleteUser" => "Delete User",
                 "BulkDeleteUsers" => "Bulk Delete Users",
-                "ReactivateUser" => "Reactivate User", // Fixed typo from "ReacvateUser"
-                "ReacvateUser" => "Reactivate User", // Handle the typo case
+                "ReactivateUser" => "Reactivate User",
+                "ReacvateUser" => "Reactivate User",
                 "DeactivateUser" => "Deactivate User",
-
-                // Report Generation Actions
                 "GenerateTenderSupplierReport" => "Generate Supplier Report",
                 "GenerateClosedTendersSummaryReport" => "Generate Summary Report",
                 "GenerateReport" => "Generate Report",
-
-                // Authentication & System Actions
                 "Login" => "Login",
                 "Logout" => "Logout",
                 "PasswordReset" => "Password Reset",
                 "PasswordChange" => "Password Change",
                 "AccountLocked" => "Account Locked",
                 "AccountUnlocked" => "Account Unlocked",
-
-                // System Configuration
                 "SystemConfiguration" => "System Configuration",
                 "UpdateSettings" => "Update Settings",
                 "BackupDatabase" => "Backup Database",
                 "RestoreDatabase" => "Restore Database",
-
-                // Security Actions
                 "SecurityAlert" => "Security Alert",
                 "UnauthorizedAccess" => "Unauthorized Access",
                 "DataExport" => "Data Export",
                 "DataImport" => "Data Import",
-
-                // Default fallback - convert PascalCase to readable format
                 _ => ConvertPascalCaseToReadable(actionType)
             };
         }
@@ -239,7 +235,6 @@ namespace SABC_Phase2.Services
             if (string.IsNullOrEmpty(input))
                 return "N/A";
 
-            // Add space before capital letters (except the first one)
             var result = "";
             for (int i = 0; i < input.Length; i++)
             {

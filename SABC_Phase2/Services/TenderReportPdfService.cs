@@ -20,8 +20,9 @@ namespace SABC_Phase2.Services
         /// </summary>
         /// <param name="tender">The tender for which the report is generated.</param>
         /// <param name="applications">A list of supplier info viewmodels for the tender.</param>
+        /// <param name="reportCode">Optional report tracking code (e.g., TR001)</param>
         /// <returns>Byte array representing the generated PDF file.</returns>
-        public byte[] GenerateSupplierReport(Tender tender, List<OVRS_UserPdfInfoViewModel> applications)
+        public byte[] GenerateSupplierReport(Tender tender, List<OVRS_UserPdfInfoViewModel> applications, string reportCode = null)
         {
             // Build the absolute path to the logo image in the wwwroot folder.
             var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "lib", "Images", "cropped_logoblack.png");
@@ -44,7 +45,7 @@ namespace SABC_Phase2.Services
                     page.Size(PageSizes.A4);
                     page.DefaultTextStyle(x => x.FontSize(12));
 
-                    // HEADER SECTION: logo, report title, and tender closing date/time.
+                    // HEADER SECTION: logo, report title, tender closing date/time, and report code.
                     page.Header().Row(row =>
                     {
                         // Left column: SABC logo (if available), scaled to fit width.
@@ -67,6 +68,18 @@ namespace SABC_Phase2.Services
                                 (tender.ClosingTime.HasValue ? tender.ClosingTime.Value.ToString(@"hh\:mm") : "--:--"))
                                 .FontSize(11)
                                 .AlignCenter();
+                        });
+
+                        // Right column: Report code (if provided)
+                        row.ConstantColumn(80).AlignMiddle().AlignRight().Element(e =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(reportCode))
+                            {
+                                e.Text(reportCode)
+                                    .FontColor(Colors.Red.Medium)
+                                    .FontSize(16)
+                                    .Bold();
+                            }
                         });
                     });
 

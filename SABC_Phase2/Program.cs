@@ -36,6 +36,8 @@ builder.Services.AddHangfireServer();
 // Register your custom close publishing service for DI
 builder.Services.AddScoped<ITenderClosingService, TenderClosingService>();
 
+// Add this with your other service registrations
+builder.Services.AddScoped<IPdfTrackingService, PdfTrackingService>();
 
 // Register your custom tender publishing service for DI
 builder.Services.AddScoped<ITenderPublishingService, TenderPublishingService>();

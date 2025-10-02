@@ -32,7 +32,7 @@ namespace SABC_Phase2.Controllers
         private readonly ISecurityService _securityService;
         private readonly ILogger<TenderAdminController> _logger; // ✅ add logger
         private readonly AuditLogPdfService _auditLogPdfService;
-
+        private readonly IPdfTrackingService _pdfTrackingService;
         /// <summary>
         /// Initializes a new instance of the <see cref="TenderAdminController"/> class.
         /// </summary>
@@ -47,7 +47,8 @@ namespace SABC_Phase2.Controllers
             EmailService emailService,
             ISecurityService securityService,
             ILogger<TenderAdminController> logger,
-            AuditLogPdfService auditLogPdfService) // ✅ inject logger
+            AuditLogPdfService auditLogPdfService,
+           IPdfTrackingService pdfTrackingService)
         {
             _context = context;
             _legacyContext = legacyContext;
@@ -60,6 +61,7 @@ namespace SABC_Phase2.Controllers
             _securityService = securityService;
             _logger = logger; // ✅ assign logger
             _auditLogPdfService = auditLogPdfService;
+            _pdfTrackingService = pdfTrackingService;
         }
 
         // Helper to get current admin info
@@ -2128,6 +2130,15 @@ namespace SABC_Phase2.Controllers
             if (tender == null)
                 return NotFound();
 
+            // Get current admin info
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
+
+            // Generate report code and track PDF generation
+            var reportCode = await _pdfTrackingService.GetNextSequenceNumberAsync(
+                PdfTrackingService.PDF_TYPE_TENDER_SUPPLIER,
+                id, // tender ID as related ID
+                adminId);
+
             // Prepare a query for all applications for this tender, including OVRS_User info
             var query = _context.Applied_For_Tenders
                 .Include(a => a.OVRS_User)
@@ -2173,12 +2184,10 @@ namespace SABC_Phase2.Controllers
                 };
             }).ToList();
 
-            // Generate the supplier report PDF from the list
-            var pdfBytes = _pdfService.GenerateSupplierReport(tender, pdfInfos);
+            // Generate the supplier report PDF from the list with report code
+            var pdfBytes = _pdfService.GenerateSupplierReport(tender, pdfInfos, reportCode);
 
             // --- AUDIT LOG: Log supplier report generation ---
-            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
-            // Get South African time stamp
             var saTime = _saTimeService.GetCurrentSouthAfricanTime();
             var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -2188,19 +2197,30 @@ namespace SABC_Phase2.Controllers
                 adminFullName,
                 adminRole,
                 "GenerateTenderSupplierReport",
-                $"Supplier report for Tender \"{tender.TenderNumber}\" was generated"
+                $"Supplier report {reportCode} for Tender \"{tender.TenderNumber}\" was generated"
             );
 
-            // Return the PDF file as a download, naming it with the tender number
-            return File(pdfBytes, "application/pdf", $"SupplierReport_Tender_{tender.TenderNumber}.pdf");
+            // Return the PDF file as a download, naming it with the tender number and report code
+            return File(pdfBytes, "application/pdf", $"{reportCode}_SupplierReport_Tender_{tender.TenderNumber}.pdf");
         }
-        
+
+
+
         [HttpGet]
         public async Task<IActionResult> GenerateClosedTendersSummaryReport(DateTime? startDate, DateTime? endDate)
         {
             // Validate that both start and end dates are provided
             if (!startDate.HasValue || !endDate.HasValue)
                 return BadRequest("Start and end date required");
+
+            // Get current admin info
+            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
+
+            // Generate report code and track PDF generation
+            var reportCode = await _pdfTrackingService.GetNextSequenceNumberAsync(
+                PdfTrackingService.PDF_TYPE_CLOSED_TENDERS_SUMMARY,
+                null, // no specific related ID for summary reports
+                adminId);
 
             // Make endDate inclusive (end of day)
             var endDateInclusive = endDate.Value.AddDays(1).AddTicks(-1);
@@ -2260,11 +2280,10 @@ namespace SABC_Phase2.Controllers
                 };
             }).ToList();
 
-            // Generate the summary PDF report for closed tenders
-            var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value);
+            // Generate the summary PDF report for closed tenders with report code
+            var pdfBytes = ClosedTendersSummaryPdfService.GenerateSummaryReport(summaryList, startDate.Value, endDate.Value, reportCode);
 
             // --- AUDIT LOG: Log closed tenders summary report generation ---
-            var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
             var saTime = _saTimeService.GetCurrentSouthAfricanTime();
             var timestamp = saTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -2274,11 +2293,11 @@ namespace SABC_Phase2.Controllers
                 adminFullName,
                 adminRole,
                 "GenerateClosedTendersSummaryReport",
-                $"Closed Tenders Summary report ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated"
+                $"Closed Tenders Summary report {reportCode} ({startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}) was generated"
             );
 
-            // Return the PDF file as a download, naming it with the date range
-            return File(pdfBytes, "application/pdf", $"ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
+            // Return the PDF file as a download, naming it with the date range and report code
+            return File(pdfBytes, "application/pdf", $"{reportCode}_ClosedTendersSummary_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf");
         }
 
 
@@ -2289,6 +2308,7 @@ namespace SABC_Phase2.Controllers
 
         // ----------------------------------------------------------------------------------------------------------------------------------------------
         // USER MANAGEMENT SECTION (IT ADMIN)
+
 
         [HttpGet]
         public async Task<IActionResult> Audit_Logs()
@@ -2301,6 +2321,9 @@ namespace SABC_Phase2.Controllers
 
             return View(auditLogs);
         }
+
+
+
 
         [HttpPost]
         public async Task<IActionResult> GenerateAuditLogReport(int? dateRange, string fromDate, string toDate)
@@ -2335,6 +2358,15 @@ namespace SABC_Phase2.Controllers
                     return BadRequest("Please select a date range or specify custom dates");
                 }
 
+                // Get current admin info
+                var (adminId, adminEmail, adminFullName, adminRole) = await GetCurrentAdminAsync();
+
+                // Generate report code and track PDF generation
+                var reportCode = await _pdfTrackingService.GetNextSequenceNumberAsync(
+                    PdfTrackingService.PDF_TYPE_AUDIT_LOG,
+                    null, // no specific related ID for audit log reports
+                    adminId);
+
                 // Fetch audit logs from database
                 var query = _context.AuditLogs.AsQueryable();
 
@@ -2347,16 +2379,16 @@ namespace SABC_Phase2.Controllers
                     .OrderByDescending(a => a.Timestamp)
                     .ToListAsync();
 
-                // Generate PDF
-                var pdfBytes = _auditLogPdfService.GenerateAuditLogReport(auditLogs, startDate, endDate);
+                // Generate PDF with report code
+                var pdfBytes = _auditLogPdfService.GenerateAuditLogReport(auditLogs, startDate, endDate, reportCode);
 
                 if (pdfBytes == null || pdfBytes.Length == 0)
                 {
                     return StatusCode(500, "Failed to generate PDF");
                 }
 
-                // Return PDF file
-                var fileName = $"AuditLogReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                // Return PDF file with report code in filename
+                var fileName = $"{reportCode}_AuditLogReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 return File(pdfBytes, "application/pdf", fileName);
             }
             catch (Exception ex)
@@ -2367,7 +2399,7 @@ namespace SABC_Phase2.Controllers
             }
         }
 
-        // Helper method to check if method exists
+        // Helper method to check if method exists (keep existing)
         private bool HasMethod(string methodName)
         {
             return this.GetType().GetMethod(methodName) != null;
