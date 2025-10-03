@@ -1,4 +1,5 @@
 ﻿@model SABC_Phase2.Models.OVRS.OVRS_UserProfileViewModel
+
 @using Microsoft.AspNetCore.Mvc.ModelBinding
 @functions {
     private IEnumerable<ModelError> GetErrors(string key)
@@ -237,6 +238,7 @@
                             <span class="input-group-text flag-box">
                                 <img id="newCountryFlag" src="@Model.CountryCodes.FirstOrDefault(c => c.DialingCode == Model.CountryCode)?.FlagUrl" alt="Country flag" />
                             </span>
+                           
                             <select id="newCountryCode" name="newCountryCode" class="form-select country-select" style="max-width: 150px;">
                                 @foreach (var cc in Model.CountryCodes)
                                 {
@@ -1441,7 +1443,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 <style>
-
 
 
 /* --- Cancel & Delete buttons: same size --- */

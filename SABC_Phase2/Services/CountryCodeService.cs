@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using System.Net.Http; // Add this using directive
+using System.Net.Http;
 
 namespace SABC_Phase2.Services
 {
@@ -18,10 +18,9 @@ namespace SABC_Phase2.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync("https://restcountries.com/v3.1/all?fields=name,idd,flags");
+                var response = await _httpClient.GetAsync("https://restcountries.com/v3.1/all?fields=name,idd,flags,cca2");
                 response.EnsureSuccessStatusCode();
 
-                // Use the Content property to read the string
                 var jsonContent = await response.Content.ReadAsStringAsync();
                 var countries = JsonSerializer.Deserialize<List<RestCountryResponse>>(jsonContent, new JsonSerializerOptions
                 {
@@ -32,7 +31,7 @@ namespace SABC_Phase2.Services
 
                 foreach (var country in countries)
                 {
-                    if (country.Idd?.Root != null && country.Idd.Suffixes?.Any() == true)
+                    if (country.Idd?.Root != null && country.Idd.Suffixes?.Any() == true && !string.IsNullOrWhiteSpace(country.Cca2))
                     {
                         foreach (var suffix in country.Idd.Suffixes)
                         {
@@ -41,7 +40,9 @@ namespace SABC_Phase2.Services
                             {
                                 CountryName = country.Name.Common,
                                 DialingCode = dialingCode,
-                                FlagUrl = country.Flags?.Png // or .Svg
+                                IsoCode = country.Cca2,
+                                // Point to your local flag file
+                                FlagUrl = $"/lib/flags/{country.Cca2.ToLower()}.png"
                             });
                         }
                     }
@@ -64,14 +65,9 @@ namespace SABC_Phase2.Services
         {
             return new List<CountryCode>
             {
-                new CountryCode { CountryName = "South Africa", DialingCode = "+27" },
-                new CountryCode { CountryName = "United States", DialingCode = "+1" },
-                new CountryCode { CountryName = "United Kingdom", DialingCode = "+44" },
-                new CountryCode { CountryName = "India", DialingCode = "+91" },
-                new CountryCode { CountryName = "Australia", DialingCode = "+61" },
-                new CountryCode { CountryName = "Germany", DialingCode = "+49" },
-                new CountryCode { CountryName = "France", DialingCode = "+33" },
-                new CountryCode { CountryName = "Canada", DialingCode = "+1" }
+                new CountryCode { CountryName = "South Africa", DialingCode = "+27", IsoCode = "ZA", FlagUrl = "/lib/flags/za.png" },
+                new CountryCode { CountryName = "United States", DialingCode = "+1", IsoCode = "US", FlagUrl = "/lib/flags/us.png" },
+                // Add other fallback countries as needed
             };
         }
     }
@@ -81,7 +77,7 @@ namespace SABC_Phase2.Services
         public string CountryName { get; set; }
         public string DialingCode { get; set; }
         public string FlagUrl { get; set; }
-        public string IsoCode { get; set; } // <-- Add this
+        public string IsoCode { get; set; }
     }
 
     // API Response models
@@ -90,6 +86,7 @@ namespace SABC_Phase2.Services
         public CountryName Name { get; set; }
         public Idd Idd { get; set; }
         public Flags Flags { get; set; }
+        public string Cca2 { get; set; } // <-- Add this for ISO code
     }
 
     public class CountryName
@@ -104,7 +101,7 @@ namespace SABC_Phase2.Services
         public string[] Suffixes { get; set; }
     }
 
-    public class Flags // For deserializing the "flags" property
+    public class Flags
     {
         public string Png { get; set; }
         public string Svg { get; set; }

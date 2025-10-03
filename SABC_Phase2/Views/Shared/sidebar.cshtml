@@ -447,6 +447,13 @@
             menuIcon.classList.toggle("rotated", sidebar.classList.contains("collapsed"));
         }
 
+        // ✅ Add/remove class on body to control banner and content
+        if (sidebar.classList.contains("collapsed")) {
+            document.body.classList.add("sidebar-collapsed");
+        } else {
+            document.body.classList.remove("sidebar-collapsed");
+        }
+
         // Toggle chevron visibility based on sidebar state
         const chevrons = document.querySelectorAll('.chevron-toggle');
         if (sidebar.classList.contains("collapsed")) {
@@ -456,7 +463,6 @@
         } else {
             chevrons.forEach(chevron => {
                 chevron.style.display = "inline";
-                // Restore rotation state if submenu was open
                 const submenu = chevron.closest('.has-submenu')?.nextElementSibling;
                 const icon = chevron.querySelector(".submenu-icon");
                 if (submenu?.classList.contains('visible')) {
@@ -574,14 +580,20 @@
     }
 
     // Initialize on DOM load
-    document.addEventListener("DOMContentLoaded", function()  {
+    document.addEventListener("DOMContentLoaded", function() {
         manageSubmenus();
         const sidebar = document.getElementById("sidebar");
         const chevrons = document.querySelectorAll('.chevron-toggle');
 
         // Automatically collapse sidebar on mobile screens
-        if (window.innerWidth <= 768) { // mobile breakpoint
+        if (window.innerWidth <= 768) {
             sidebar.classList.add("collapsed");
+            document.body.classList.add("sidebar-collapsed"); // ✅ Add this
+        } else {
+            // ✅ Set initial state for desktop
+            if (sidebar.classList.contains("collapsed")) {
+                document.body.classList.add("sidebar-collapsed");
+            }
         }
 
         // Set chevron visibility based on sidebar state
@@ -705,7 +717,14 @@
         color: white !important;
     }
 
-        /* Remove blue on all states for normal icons */
+
+    /* Make sidebar icons light purple on hover */
+    .sidebar .menu-section:hover .icon-link i:not(.fa-circle-dot):not(.green),
+    .sidebar .menu-section:hover .profile-icon i {
+        color: #6b5da1 !important; /* Light purple shade */
+        transition: color 0.2s;
+    }
+        /* Remove blue on all states for normal icons
         .sidebar .icon-link:visited,
         .sidebar .icon-link:active,
         .sidebar .icon-link:focus,
@@ -723,7 +742,7 @@
         .sidebar .menu-section.active .icon-link,
         .sidebar .menu-section.active .icon-link i {
             color: white !important;
-        }
+        } */
 
     /* Keep special icons (Company Documents, My Documents) white as well */
     .menu-section.company-docs-section .icon-link i,
@@ -867,17 +886,34 @@
     .menu-toggle {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start; /* Changed from center */
         cursor: pointer;
-        padding: 18px 10px;
+        padding: 14px 18px 14px 28px;
         width: 100%;
     }
 
         .menu-toggle i {
-            margin-right: 13px;
+            width: 50px; /* Match menu-section icon width */
+            min-width: 50px;
+            text-align: center;
             font-size: 2em;
+            margin-right: 0; /* Remove the margin-right */
         }
 
+        .menu-toggle .label {
+            margin-left: 28px; /* Match menu-section label spacing */
+        }
+
+    /* When collapsed, center the icon */
+    .sidebar.collapsed .menu-toggle {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+        .sidebar.collapsed .menu-toggle i {
+            margin-left: 0;
+        }
             .menu-toggle i.fas.fa-bars {
                 font-size: 2em;
             }
