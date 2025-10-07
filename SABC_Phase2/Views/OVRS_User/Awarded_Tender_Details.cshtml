@@ -1,6 +1,7 @@
 ﻿@model SABC_Phase2.Models.Tender.Tender
 
 @{
+    ViewData["BannerText"] = "Awarded Tender Details";
     ViewData["Title"] = "Awarded Tender Details";
     bool isAuthenticated = User.Identity.IsAuthenticated;
     var tenderStatus = Model.Status?.ToLower() ?? "";
@@ -675,20 +676,18 @@
             display: block;
             width: 100%;
         }
+
         @@media (max-width: 767px) {
-            .tender-respond-row
+            .tender-respond-row {
+                margin-top: 22px;
+            }
 
-    {
-        margin-top: 22px;
-    }
-
-    .respond-btn {
-        width: 100%;
-        font-size: 1.1rem;
-        padding: 12px 0;
-    }
-
-    }
+            .respond-btn {
+                width: 100%;
+                font-size: 1.1rem;
+                padding: 12px 0;
+            }
+        }
 
         .tender-attachments td {
             display: block;
@@ -785,6 +784,133 @@
             max-width: 320px;
             word-break: break-all;
             pointer-events: none;
+        }
+    }
+
+    /* Make everything on the Awarded Tender Details page smaller */
+    body,
+    .breadcrumb-custom,
+    .tender-details-card,
+    .details-header,
+    .details-title,
+    .back-arrow,
+    .tender-main-info,
+    .tender-title,
+    .tender-meta,
+    .tender-closing,
+    .tender-awarded-to label,
+    .tender-description,
+    .tender-attachments h4,
+    .tender-attachments td,
+    .pdf-filename-cell,
+    .action-buttons .icon-btn,
+    .tender-respond-row,
+    .respond-btn,
+    .modal-content,
+    .modal-title,
+    .modal-body,
+    .modal-btn,
+    .close {
+        font-size: 0.92rem !important;
+    }
+
+    .tender-details-card {
+        padding: 22px 14px 16px 14px !important;
+        max-width: 650px !important;
+    }
+
+    .details-title {
+        font-size: 1.05rem !important;
+    }
+
+    .back-arrow {
+        font-size: 1.05rem !important;
+    }
+
+    .tender-title {
+        font-size: 0.98rem !important;
+    }
+
+    .tender-meta,
+    .tender-closing,
+    .tender-awarded-to label,
+    .tender-description {
+        font-size: 0.92rem !important;
+    }
+
+    .tender-attachments h4 {
+        font-size: 0.98rem !important;
+    }
+
+    .tender-attachments td {
+        padding: 7px 8px 7px 0 !important;
+        font-size: 0.92rem !important;
+    }
+
+    .pdf-filename-cell {
+        font-size: 0.92rem !important;
+    }
+
+    .action-buttons .icon-btn {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 0.92rem !important;
+        margin-left: 4px !important;
+    }
+
+    .respond-btn {
+        font-size: 0.92rem !important;
+        padding: 8px 18px !important;
+        border-radius: 5px !important;
+        margin-top: 16px !important;
+    }
+
+    .modal-content {
+        padding: 12px 8px !important;
+        width: 260px !important;
+    }
+
+    .modal-title,
+    .modal-body,
+    .modal-btn,
+    .close {
+        font-size: 0.92rem !important;
+        padding: 4px 8px !important;
+    }
+
+    @@media (max-width: 767px) {
+        .tender-details-card {
+            padding: 10px 2vw !important;
+            max-width: 98vw !important;
+        }
+
+        .details-title {
+            font-size: 0.98rem !important;
+        }
+
+        .tender-title {
+            font-size: 0.92rem !important;
+        }
+
+        .tender-meta,
+        .tender-closing,
+        .tender-awarded-to label,
+        .tender-description {
+            font-size: 0.9rem !important;
+        }
+
+        .tender-attachments h4 {
+            font-size: 0.92rem !important;
+        }
+
+        .respond-btn {
+            font-size: 0.9rem !important;
+            padding: 8px 0 !important;
+        }
+
+        .modal-content {
+            width: 90vw !important;
+            padding: 8px 2vw !important;
         }
     }
 </style>

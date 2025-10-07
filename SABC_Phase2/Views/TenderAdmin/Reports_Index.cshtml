@@ -64,7 +64,7 @@
             <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
             <input type="text" name="search" class="search-input"
                    value="@search"
-                   placeholder="Search keyword"
+                   placeholder="   Search keyword"
                    autocomplete="off"
                    style="padding-left: 38px;" />
         </span>
@@ -352,7 +352,12 @@
 <style>
 
 
-
+    .tender-blocks-container.list-view .tender-block {
+        width: 100% !important; /* Use full row width */
+        min-width: 320px !important; /* Minimum width for content */
+        min-height: 80px !important; /* Height as needed */
+        box-sizing: border-box;
+    }
 
     /* Modal container */
     .modal {
@@ -1033,14 +1038,29 @@
     }
 
 
-    /* Status badge: top right of the entire row */
     .tender-blocks-container.list-view .tender-block-status {
-        position: absolute;
-        top: 38px;
-        right: -995px;
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        margin-left: 1980px !important;
+        margin-right: 16px !important; /* Add spacing if needed */
+        align-self: center !important;
+        display: inline-flex !important;
     }
+    /* Hide list view toggle button on mobile */
+    @@media (max-width: 600px) {
+        #listViewBtn {
+            display: none !important;
+        }
 
+        .tender-blocks-container.list-view {
+            display: none !important;
+        }
 
+        .tender-blocks-container.grid-view {
+            display: block !important;
+        }
+    }
     /* Enhanced pagination */
     .pagination-container {
         display: flex;
@@ -1670,6 +1690,161 @@
             width: 70vw !important;
         }
     }
+    /* Make everything smaller and more compact */
+    body,
+    .modal-content,
+    .modal-header-text h1,
+    .modal-tender-title,
+    .modal-subtitle,
+    .month-header,
+    .day,
+    .selected-dates,
+    .btn-generate,
+    .btn-clear,
+    .report-action-bar,
+    .search-input,
+    .new-tender-btn,
+    .card-header h2,
+    .tender-blocks-container,
+    .tender-block-row,
+    .tender-block,
+    .tender-block-logo-wrap,
+    .tender-block-thumbnail,
+    .tender-block-status,
+    .tender-block-number,
+    .tender-block-title,
+    .tender-block-closing,
+    .no-tenders,
+    .pagination-list,
+    .page-link,
+    .page-link.arrow-link,
+    .view-toggle,
+    .closed-label {
+        font-size: 0.92rem !important;
+    }
 
+    .modal-content {
+        padding: 18px 10px !important;
+        max-width: 500px !important;
+    }
+
+    .modal-header-text h1,
+    .modal-tender-title {
+        font-size: 1.2rem !important;
+    }
+
+    .modal-subtitle {
+        font-size: 0.95rem !important;
+    }
+
+    .month-header {
+        font-size: 1rem !important;
+    }
+
+    .day {
+        padding: 6px 0 !important;
+        font-size: 0.85rem !important;
+    }
+
+    .selected-dates {
+        font-size: 0.85rem !important;
+        padding-top: 8px !important;
+        margin-top: 10px !important;
+    }
+
+    .btn-generate,
+    .btn-clear,
+    .new-tender-btn {
+        padding: 7px 12px !important;
+        font-size: 0.92rem !important;
+        border-radius: 5px !important;
+    }
+
+    .report-action-bar {
+        gap: 8px !important;
+        margin: 12px 0 18px 0 !important;
+    }
+
+    .search-input {
+        padding: 7px 7px 7px 28px !important;
+        font-size: 0.92rem !important;
+    }
+
+    .card-header h2 {
+        font-size: 1.1rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    .tender-blocks-container {
+        gap: 12px !important;
+        padding: 0 8px !important;
+    }
+
+    .tender-block-row {
+        gap: 8px !important;
+    }
+
+    .tender-block {
+        padding: 10px 4px 8px 4px !important;
+        min-height: 120px !important;
+        border-radius: 10px !important;
+        width: 180px !important;
+    }
+
+    .tender-block-logo-wrap {
+        min-height: 40px !important;
+        padding-top: 4px !important;
+    }
+
+    .tender-block-thumbnail {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .tender-block-status {
+        font-size: 0.75rem !important;
+        padding: 4px 10px 4px 8px !important;
+        height: 22px !important;
+        border-radius: 14px 0 0 14px !important;
+    }
+
+    .tender-block-number,
+    .tender-block-title,
+    .tender-block-closing {
+        font-size: 0.85rem !important;
+        max-width: 90vw !important;
+        min-height: 16px !important;
+    }
+
+    .no-tenders {
+        font-size: 0.92rem !important;
+        padding: 12px 0 !important;
+    }
+
+    .pagination-list {
+        gap: 6px !important;
+        padding: 4px 6px !important;
+        font-size: 0.92rem !important;
+    }
+
+    .page-link,
+    .page-link.arrow-link {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.85rem !important;
+        border-radius: 5px !important;
+        padding: 0 !important;
+    }
+
+    .view-toggle {
+        padding: 6px 8px !important;
+        font-size: 0.92rem !important;
+        border-radius: 5px !important;
+    }
+
+    .closed-label {
+        font-size: 1.1rem !important;
+        margin-left: 0 !important;
+    }
 </style>
 

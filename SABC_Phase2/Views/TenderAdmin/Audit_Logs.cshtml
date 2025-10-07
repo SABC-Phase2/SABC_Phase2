@@ -381,4 +381,130 @@
             margin-left: 74px !important;
         }
     }
+
+    /* Make everything slightly smaller on the Audit Logs page */
+    body,
+    .container-fluid,
+    .time-range-bar,
+    .audit-title,
+    .audit-filter-heading,
+    .audit-filter-radios label,
+    .audit-filter-calendar label,
+    .calendar-input,
+    .generate-report-btn,
+    .audit-card,
+    .audit-card-outer,
+    .toggle-arrow {
+        font-size: 0.92rem !important;
+    }
+
+    .time-range-bar {
+        padding: 0.7rem 1.2rem !important;
+        border-radius: 6px !important;
+    }
+
+    .audit-title {
+        font-size: 1.05em !important;
+    }
+
+    .toggle-arrow {
+        font-size: 1.1em !important;
+    }
+
+    .audit-card-outer {
+        border-radius: 6px !important;
+        max-width: 800px !important;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.06) !important;
+    }
+
+    .audit-card {
+        padding: 1.2rem 1.2rem 1rem 1.2rem !important;
+        border-radius: 6px !important;
+    }
+
+    .audit-filter-heading {
+        font-size: 1.2em !important;
+        margin-bottom: 0.1em !important;
+    }
+
+    .audit-filter-underline {
+        margin-bottom: 1em !important;
+    }
+
+    .audit-filter-radios label {
+        font-size: 1em !important;
+        gap: 0.4em !important;
+    }
+
+    .audit-filter-calendar {
+        max-width: 260px !important;
+        gap: 0.7em !important;
+    }
+
+        .audit-filter-calendar label {
+            font-size: 0.95em !important;
+            margin-bottom: 0.2em !important;
+        }
+
+    .calendar-input {
+        padding: 0.4em 0.7em !important;
+        font-size: 0.95em !important;
+        border-radius: 4px !important;
+    }
+
+    .generate-report-btn {
+        padding: 0.5em 1.5em !important;
+        font-size: 1em !important;
+        border-radius: 5px !important;
+    }
+
+    @@media (max-width: 700px) {
+        .audit-card {
+            padding: 0.7rem 0.5rem 0.5rem 0.5rem !important;
+        }
+
+        .audit-card-outer {
+            margin: 0.5rem 0.1rem 0 0.1rem !important;
+            max-width: 98vw !important;
+        }
+
+        .time-range-bar {
+            padding: 0.5rem 0.5rem !important;
+            max-width: 88vw !important;
+        }
+    }
+
+    /* Make the time range bar shorter and left-aligned on mobile screens */
+    @@media (max-width: 900px) {
+        .time-range-bar {
+            max-width: 320px !important;
+            width: 90vw !important;
+            margin-left: 20px !important;
+            margin-right: auto !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .time-range-bar {
+            max-width: 360px !important;
+            width: 90vw !important;
+            margin-left: 50px !important;
+            margin-right: auto !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+        }
+    }
+
+    @@media (max-width: 500px) {
+        .time-range-bar {
+            max-width: 300px !important;
+            width: 90vw !important;
+            margin-left: 30px !important;
+            margin-right: auto !important;
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+        }
+    }
 </style>

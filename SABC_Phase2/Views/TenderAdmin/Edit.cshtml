@@ -2183,11 +2183,233 @@
         }
     }
 
+    /* Make all text, buttons, inputs, and table cells slightly smaller and keep tab headers centered */
+    body,
+    .breadcrumb-custom,
+    .tender-action-bar,
+    .search-input,
+    .filter-dropdown,
+    .refresh-btn,
+    .new-tender-btn,
+    .tender-table,
+    .tender-table th,
+    .tender-table td,
+    .tender-title,
+    .edit-btn,
+    .page-link,
+    .pagination-list,
+    .custom-pagination,
+    .table-container,
+    .tender-status,
+    .tender-title-block,
+    .tender-number,
+    label,
+    .form-control,
+    select.form-control,
+    .tab-btn,
+    .tab-header div,
+    .action-btn,
+    .upload-label,
+    .supporting-label,
+    .uploaded-file-name,
+    .uploaded-file-meta,
+    .uploaded-file-actions button,
+    .modal-title,
+    .modal-body p,
+    .modal-footer button,
+    #successModalTenderNumber,
+    #AwardedTenderDropdown,
+    #AwardedTenderDropdown option {
+        font-size: 0.92rem !important;
+    }
+
+    .tab-header {
+        gap: 8px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 28px !important;
+        justify-content: center !important;
+        display: flex !important;
+    }
+
+        .tab-btn, .tab-header div {
+            padding: 9px 20px !important;
+            font-size: 0.92rem !important;
+            border-radius: 10px 10px 0 0 !important;
+            min-width: 70px !important;
+        }
+
+    .tab-container {
+        padding: 18px 10px 12px 10px !important;
+        max-width: 700px !important;
+        margin-bottom: 28px !important;
+    }
+
+    .form-row {
+        gap: 12px !important;
+    }
+
+    .form-group, .form-group.full-width {
+        min-width: 140px !important;
+        margin-bottom: 10px !important;
+    }
+
+    label {
+        margin-bottom: 3px !important;
+    }
+
+    .form-control, select.form-control {
+        padding: 7px 10px !important;
+        font-size: 0.92rem !important;
+        border-radius: 7px !important;
+    }
+
+    textarea.form-control {
+        min-height: 48px !important;
+        max-height: 120px !important;
+    }
+
+    .form-check-label {
+        font-size: 0.92rem !important;
+        margin-right: 0.8em !important;
+    }
+
+    .form-check-input[type="radio"] {
+        width: 1em !important;
+        height: 1em !important;
+    }
+
+    .action-buttons {
+        gap: 12px !important;
+        margin-top: 14px !important;
+        margin-bottom: 22px !important;
+    }
+
+    .action-btn {
+        padding: 9px 18px !important;
+        font-size: 0.92rem !important;
+        border-radius: 7px !important;
+    }
+
+    .upload-label {
+        font-size: 1.05rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .upload-label-underline {
+        margin-bottom: 7px !important;
+    }
+
+    .supporting-label {
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-entry {
+        padding: 0.4rem 0.7rem !important;
+        border-radius: 6px !important;
+        margin-bottom: 0.4rem !important;
+    }
+
+    .uploaded-file-name {
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-meta {
+        font-size: 0.8rem !important;
+    }
+
+    .uploaded-file-actions button {
+        font-size: 1rem !important;
+        padding: 4px 8px !important;
+    }
+
+    #AwardedTenderDropdown,
+    #AwardedTenderDropdown option {
+        font-size: 0.92rem !important;
+        padding: 3px 6px !important;
+    }
+
+    .modal-dialog,
+    .modal-content {
+        max-width: 340px !important;
+        min-width: 0 !important;
+        padding: 10px 4px !important;
+    }
+
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+    }
+
+    #successModalTenderNumber {
+        font-size: 1rem !important;
+    }
+
+    @@media (max-width: 700px) {
+        .tab-container {
+            max-width: 98vw !important;
+            width: 98vw !important;
+            padding: 6px 2px 6px 2px !important;
+            margin-left: 0 !important;
+        }
+
+        .tab-header {
+            margin-left: 0 !important;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .breadcrumb-custom, .tab-header, .tab-container, .action-buttons {
+            margin-left: 0 !important;
+            width: 99vw !important;
+            max-width: 99vw !important;
+        }
+
+            .tab-btn, .tab-header div {
+                font-size: 0.9rem !important;
+                padding: 7px 10px !important;
+                min-width: 60px !important;
+            }
+
+        .action-btn {
+            font-size: 0.9rem !important;
+            padding: 7px 10px !important;
+        }
+    }
+
+    @@media (max-width: 700px), (max-width: 768px) {
+        .tab-container, .action-buttons, .breadcrumb-custom, .tab-header {
+            max-width: 68vw !important;
+            width: 68vw !important;
+            margin-left: 50px !important;
+            margin-right: 0 !important;
+            padding-left: 4vw !important;
+            padding-right: 2vw !important;
+            box-sizing: border-box !important;
+        }
+
+        .tab-header {
+            justify-content: flex-start !important;
+            margin-top: 10px !important;
+            gap: 2px !important;
+        }
+
+            .tab-btn, .tab-header div {
+                min-width: 60px !important;
+                padding: 7px 10px !important;
+                font-size: 0.9rem !important;
+                border-radius: 7px 7px 0 0 !important;
+            }
+
+        .form-row {
+            flex-direction: column;
+            gap: 10px !important;
+        }
+
+        .form-group, .form-group.full-width {
+            min-width: 0 !important;
+            margin-bottom: 10px !important;
+        }
+    }
 </style>
-
-
-
-
-
-
-

@@ -1914,7 +1914,174 @@ height: 320px;
             color: #1a7f37;
             font-weight: 600;
         }
+
+        /* Make everything on the OVRS_Profiles page smaller */
+body,
+.breadcrumb-custom,
+.tab-container,
+.profile-page,
+.form-group label,
+.form-group,
+.form-control,
+.form-select,
+.form-static,
+.btn-success,
+.btn-danger,
+.btn-cancel,
+#saveBtn,
+#showDeleteAccountModalBtn,
+#confirmDeleteBtn,
+#changePhoneModal .modal-content,
+#changeEmailModal .modal-content,
+#deleteAccountModal .modal-content,
+#passwordRequirementsModal .modal-content,
+.profile-success-modal,
+.otp-input,
+.phone-otp-input,
+#sendOtpBtn,
+#verifyOtpBtn,
+#sendPhoneOtpBtn,
+#verifyPhoneOtpBtn,
+#resendOtpLink,
+#resendPhoneOtpLink,
+.invalid-feedback,
+.valid-feedback,
+.change-link {
+    font-size: 0.92rem !important;
+}
+
+.tab-container {
+    padding: 32px 16px 16px 16px !important;
+    max-width: 900px !important;
+}
+
+.profile-page {
+    padding: 10px !important;
+}
+
+.form-group label {
+    font-size: 0.92rem !important;
+    margin-bottom: 4px !important;
+}
+
+.form-group {
+    margin-bottom: 8px !important;
+}
+
+.form-control,
+.form-select {
+    padding: 7px 10px !important;
+    height: 36px !important;
+    font-size: 0.92rem !important;
+    border-radius: 6px !important;
+}
+
+.form-static {
+    padding: 3px 0 !important;
+    font-size: 0.92rem !important;
+}
+
+.btn-success,
+.btn-danger,
+.btn-cancel,
+#saveBtn,
+#showDeleteAccountModalBtn,
+#confirmDeleteBtn {
+    font-size: 0.92rem !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    min-width: 90px !important;
+}
+
+.otp-input,
+.phone-otp-input {
+    width: 32px !important;
+    height: 36px !important;
+    font-size: 1.05rem !important;
+    border-radius: 6px !important;
+}
+
+#sendOtpBtn,
+#verifyOtpBtn,
+#sendPhoneOtpBtn,
+#verifyPhoneOtpBtn {
+    min-width: 90px !important;
+    font-size: 0.92rem !important;
+    padding: 6px 10px !important;
+}
+
+#resendOtpLink,
+#resendPhoneOtpLink {
+    font-size: 0.92rem !important;
+}
+
+.invalid-feedback,
+.valid-feedback {
+    font-size: 0.9rem !important;
+}
+
+.change-link {
+    font-size: 0.92rem !important;
+}
+
+.profile-success-modal,
+#changePhoneModal .modal-content,
+#changeEmailModal .modal-content,
+#deleteAccountModal .modal-content,
+#passwordRequirementsModal .modal-content {
+    padding: 10px 8px !important;
+    font-size: 0.92rem !important;
+    min-width: 220px !important;
+    max-width: 340px !important;
+}
+
+@@media (max-width: 700px) {
+    .tab-container {
+        padding: 8px 2vw !important;
+        max-width: 98vw !important;
+    }
+    .profile-page {
+        padding: 2px !important;
+    }
+    .form-control,
+    .form-select {
+        font-size: 0.9rem !important;
+        height: 32px !important;
+        padding: 5px 7px !important;
+    }
+    .btn-success,
+    .btn-danger,
+    .btn-cancel,
+    #saveBtn,
+    #showDeleteAccountModalBtn,
+    #confirmDeleteBtn {
+        font-size: 0.9rem !important;
+        padding: 7px 0 !important;
+        min-width: 80px !important;
+    }
+    .otp-input,
+    .phone-otp-input {
+        width: 26px !important;
+        height: 28px !important;
+        font-size: 0.95rem !important;
+    }
+    .profile-success-modal,
+    #changePhoneModal .modal-content,
+    #changeEmailModal .modal-content,
+    #deleteAccountModal .modal-content,
+    #passwordRequirementsModal .modal-content {
+        min-width: 90vw !important;
+        max-width: 98vw !important;
+        padding: 6px 2vw !important;
+    }
+}
+
+@@media (max-width: 700px) {
+    body,
+    .tab-container,
+    .profile-page,
+    .breadcrumb-custom {
+        margin-left: 12px !important; /* Push content right to avoid sidebar overlap */
+    }
+}
 </style>
-
-
-

@@ -10,6 +10,7 @@
     bool isCancelled = tenderStatus == "cancelled tender";
     bool showGreyButton = isClosed || isAwarded || isCancelled;
     bool alreadyApplied = ViewBag.AlreadyApplied ?? false;
+    ViewData["BannerText"] = "Tender Details";
 }
 
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
@@ -892,4 +893,127 @@
             z-index: 1000 !important;
         }
     }
-</style>
+
+    /* Make everything on the View Tender Details page slightly smaller */
+    body,
+    .breadcrumb-custom,
+    .tender-details-card,
+    .details-header,
+    .details-title,
+    .back-arrow,
+    .tender-number,
+    .tender-main-info,
+    .tender-title,
+    .tender-meta,
+    .tender-closing,
+    .tender-description,
+    .tender-attachments,
+    .tender-attachments h4,
+    .tender-attachments-table,
+    .tender-attachments-table td,
+    .pdf-filename-cell,
+    .attachment-actions,
+    .icon-btn,
+    .respond-btn,
+    .tender-respond-row,
+    .upload-label-underline,
+    .modal-content,
+    .already-applied-modal-content,
+    .modal-warning-title,
+    .modal-message,
+    .modal-ok-btn,
+    .modal-login-btn {
+        font-size: 0.92rem !important;
+    }
+
+    .details-title {
+        font-size: 1.1rem !important;
+    }
+
+    .tender-title {
+        font-size: 1rem !important;
+    }
+
+    .tender-meta,
+    .tender-closing,
+    .tender-description {
+        font-size: 0.92rem !important;
+    }
+
+    .tender-attachments h4 {
+        font-size: 1rem !important;
+    }
+
+    .respond-btn {
+        font-size: 1rem !important;
+        padding: 10px 28px !important;
+    }
+
+    .icon-btn {
+        font-size: 1.1rem !important;
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .modal-content,
+    .already-applied-modal-content {
+        padding: 22px 12px !important;
+        width: 340px !important;
+        max-width: 96vw !important;
+    }
+
+    .modal-warning-title {
+        font-size: 1.1rem !important;
+    }
+
+    .modal-message {
+        font-size: 0.92rem !important;
+    }
+
+    .modal-ok-btn,
+    .modal-login-btn {
+        font-size: 0.92rem !important;
+        padding: 8px 18px !important;
+        min-width: 80px !important;
+    }
+
+    @@media (max-width: 767px) {
+        .details-title {
+            font-size: 1rem !important;
+        }
+
+        .tender-title {
+            font-size: 0.95rem !important;
+        }
+
+        .tender-meta,
+        .tender-closing,
+        .tender-description {
+            font-size: 0.9rem !important;
+        }
+
+        .respond-btn {
+            font-size: 0.95rem !important;
+            padding: 10px 0 !important;
+        }
+
+        .modal-content,
+        .already-applied-modal-content {
+            width: 90vw !important;
+            padding: 14px 4vw !important;
+        }
+
+        .modal-warning-title {
+            font-size: 1rem !important;
+        }
+
+        .modal-message {
+            font-size: 0.9rem !important;
+        }
+
+        .modal-ok-btn,
+        .modal-login-btn {
+            font-size: 0.9rem !important;
+            padding: 8px 0 !important;
+        }
+    }</style>

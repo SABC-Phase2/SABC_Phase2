@@ -23,7 +23,7 @@
             <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
             <input type="text" name="search" class="search-input"
                    value="@search"
-                   placeholder="Search keyword"
+                   placeholder="   Search keyword"
                    autocomplete="off"
                    style="padding-left: 38px;" />
         </span>
@@ -809,6 +809,109 @@
         .breadcrumb-custom, .tender-action-bar, .table-container, .custom-pagination {
             margin-left: 55px; /* push more on mobile */
             margin-right: 15px;
+        }
+    }
+
+    /* Make everything on the OVRS User Index page slightly smaller */
+    body,
+    .breadcrumb-custom,
+    .tender-action-bar,
+    .tender-action-bar form,
+    .search-wrapper,
+    .search-input,
+    .filter-dropdown,
+    .refresh-btn,
+    .table-container,
+    .tender-table,
+    .tender-table th,
+    .tender-table td,
+    .tender-title,
+    .tender-number,
+    .tender-status,
+    .custom-pagination,
+    .pagination-list,
+    .page-link,
+    .page-item span,
+    .page-item.active span,
+    .page-item.active .page-link,
+    .page-link.arrow-link {
+        font-size: 0.92rem !important;
+    }
+
+    .search-input,
+    .filter-dropdown {
+        padding: 8px 8px 8px 28px !important;
+        font-size: 0.92rem !important;
+        border-radius: 3px !important;
+    }
+
+    .tender-table th,
+    .tender-table td {
+        padding: 10px 4px !important;
+        font-size: 0.92rem !important;
+    }
+
+    .tender-title,
+    .tender-number {
+        font-size: 0.92rem !important;
+    }
+
+    .tender-action-bar {
+        gap: 8px !important;
+    }
+
+    .table-container {
+        padding: 16px !important;
+    }
+
+    .custom-pagination,
+    .pagination-list {
+        font-size: 0.92rem !important;
+        gap: 10px !important;
+        padding: 6px 10px !important;
+    }
+
+    .page-link,
+    .page-link.arrow-link {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.92rem !important;
+        border-radius: 6px !important;
+        padding: 0 !important;
+    }
+
+    .page-item.active .page-link {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 6px !important;
+        font-size: 0.92rem !important;
+    }
+
+    @@media (max-width: 768px) {
+        .tender-title,
+        .tender-number,
+        .tender-table td {
+            font-size: 0.9rem !important;
+        }
+
+        .search-input,
+        .filter-dropdown,
+        .refresh-btn {
+            font-size: 0.9rem !important;
+            padding: 7px !important;
+        }
+
+        .page-link,
+        .page-link.arrow-link {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 0.9rem !important;
+        }
+
+        .page-item.active .page-link {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 0.9rem !important;
         }
     }
 </style>

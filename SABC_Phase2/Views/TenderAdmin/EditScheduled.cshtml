@@ -409,61 +409,63 @@
                         });
                     }
 
-        function updateFilesDisplay() {
-            // Remove all new uploaded entries (keep existing ones)
-            document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
+                    function updateFilesDisplay() {
+                        // Remove all new uploaded entries (keep existing ones)
+                        document.querySelectorAll('.uploaded-file-entry.new-doc').forEach(e => e.remove());
 
-            selectedFiles.forEach(function (file, index) {
-                const fileRow = document.createElement("div");
-                fileRow.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
+                        selectedFiles.forEach(function (file, index) {
+                            const fileRow = document.createElement("div");
+                            fileRow.className = "uploaded-file-entry new-doc p-2 rounded d-flex justify-content-between align-items-start mb-2 bg-light";
 
-                // Ellipsis container
-                const fileDetails = document.createElement("div");
-                fileDetails.className = "uploaded-file-name-container";
-                fileDetails.title = file.name;
+                                    const fileDetails = document.createElement("div");
+        fileDetails.className = "uploaded-file-name-container";
+        fileDetails.title = file.name;
 
-                const fileName = document.createElement("strong");
-                fileName.className = "uploaded-file-name";
-                fileName.textContent = file.name;
-                fileDetails.appendChild(fileName);
+        const fileName = document.createElement("strong");
+        fileName.className = "uploaded-file-name";
+        fileName.textContent = file.name;
+        fileDetails.appendChild(fileName);
 
-                // Optionally add meta info
-                // const fileMeta = document.createElement("div");
-                // fileMeta.className = "text-muted small mt-1";
-                // fileMeta.style.fontSize = "0.75rem";
-                // fileMeta.textContent = formatFileSize(file.size);
-                // fileDetails.appendChild(fileMeta);
+                            const fileMeta = document.createElement("div");
+                            fileMeta.className = "text-muted small mt-1";
+                            fileMeta.style.fontSize = "0.75rem";
+                            const size = formatFileSize(file.size);
+                            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            fileMeta.textContent = `${size} • Added at ${time}`;
 
-                const actions = document.createElement("div");
-                actions.className = "uploaded-file-actions d-flex gap-2";
+                            fileDetails.appendChild(fileName);
+                            fileDetails.appendChild(fileMeta);
 
-                const viewBtn = document.createElement("button");
-                viewBtn.type = "button";
-                viewBtn.className = "btn btn-outline-primary btn-sm";
-                viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                viewBtn.title = "View";
-                viewBtn.addEventListener('click', function () {
-                    const fileURL = URL.createObjectURL(file);
-                    window.open(fileURL, "_blank");
-                });
+                            const actions = document.createElement("div");
+                            actions.className = "uploaded-file-actions d-flex gap-2";
 
-                const deleteBtn = document.createElement("button");
-                deleteBtn.type = "button";
-                deleteBtn.className = "btn btn-outline-danger btn-sm";
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.title = "Remove";
-                deleteBtn.addEventListener('click', function () {
-                    selectedFiles.splice(index, 1);
-                    updateFilesDisplay();
-                });
+                            const viewBtn = document.createElement("button");
+                            viewBtn.type = "button";
+                            viewBtn.className = "btn btn-outline-primary btn-sm";
+                            viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                            viewBtn.title = "View";
+                            viewBtn.addEventListener('click', function () {
+                                const fileURL = URL.createObjectURL(file);
+                                window.open(fileURL, "_blank");
+                            });
 
-                actions.appendChild(viewBtn);
-                actions.appendChild(deleteBtn);
-                fileRow.appendChild(fileDetails);
-                fileRow.appendChild(actions);
-                uploadedFilesContainer.appendChild(fileRow);
-            });
-        }
+                            const deleteBtn = document.createElement("button");
+                            deleteBtn.type = "button";
+                            deleteBtn.className = "btn btn-outline-danger btn-sm";
+                            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                            deleteBtn.title = "Remove";
+                            deleteBtn.addEventListener('click', function () {
+                                selectedFiles.splice(index, 1);
+                                updateFilesDisplay();
+                            });
+
+                            actions.appendChild(viewBtn);
+                            actions.appendChild(deleteBtn);
+                            fileRow.appendChild(fileDetails);
+                            fileRow.appendChild(actions);
+                            uploadedFilesContainer.appendChild(fileRow);
+                        });
+                    }
 
                     function formatFileSize(bytes) {
                         if (bytes < 1024) return `${bytes} B`;
@@ -996,7 +998,6 @@
         display: flex;
         justify-content: left;
         gap: 5px;
-        margin-left: 178px;
         margin-bottom: 0;
         margin-top: 40px;
         position: relative;
@@ -1625,22 +1626,136 @@
         }
     }
 
-    .uploaded-file-name-container {
-        flex: 1 1 0;
-        min-width: 0;
-        max-width: 220px; /* Adjust as needed for your layout */
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
+    /* SABC_Phase2\Views\TenderAdmin\EditScheduled.cshtml */
+    /* Make everything slightly smaller on all screens */
+    body,
+    .breadcrumb-custom,
+    .tab-header,
+    .tab-btn,
+    .tab-header div,
+    .tab-container,
+    .form-row,
+    .form-group,
+    label,
+    .form-control,
+    select.form-control,
+    textarea.form-control,
+    .action-btn,
+    .upload-label,
+    .supporting-label,
+    .uploaded-file-name,
+    .uploaded-file-meta,
+    .uploaded-file-actions button,
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+    }
+
+        .tab-btn,
+        .tab-header div {
+            padding: 10px 18px !important;
+            font-size: 0.92rem !important;
+            border-radius: 10px 10px 0 0 !important;
+            min-width: 60px !important;
+        }
+
+    .tab-container {
+        padding: 18px 10px 12px 10px !important;
+        max-width: 700px !important;
+        margin-bottom: 28px !important;
+    }
+
+    .form-row {
+        gap: 12px !important;
+    }
+
+    .form-group, .form-group.full-width {
+        min-width: 140px !important;
+        margin-bottom: 10px !important;
+    }
+
+    label {
+        margin-bottom: 3px !important;
+    }
+
+    .form-control, select.form-control {
+        padding: 7px 10px !important;
+        font-size: 0.92rem !important;
+        border-radius: 7px !important;
+    }
+
+    textarea.form-control {
+        min-height: 48px !important;
+        max-height: 120px !important;
+    }
+
+    .action-btn {
+        padding: 9px 18px !important;
+        font-size: 0.92rem !important;
+        border-radius: 7px !important;
+    }
+
+    .upload-label {
+        font-size: 1.05rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .upload-label-underline {
+        margin-bottom: 7px !important;
+    }
+
+    .supporting-label {
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-entry {
+        padding: 0.4rem 0.7rem !important;
+        border-radius: 6px !important;
+        margin-bottom: 0.4rem !important;
     }
 
     .uploaded-file-name {
-        display: block;
-        width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 0.92rem !important;
     }
-</style>
+
+    .uploaded-file-meta {
+        font-size: 0.8rem !important;
+    }
+
+    .uploaded-file-actions button {
+        font-size: 1rem !important;
+        padding: 4px 8px !important;
+    }
+
+    .modal-dialog,
+    .modal-content {
+        max-width: 340px !important;
+        min-width: 0 !important;
+        padding: 10px 4px !important;
+    }
+
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+    }
+
+    /* SABC_Phase2\Views\TenderAdmin\EditScheduled.cshtml */
+    /* Move the tab-header more to the right */
+    .tab-header {
+        margin-left: 209px !important; /* Increase this value to move further right */
+        justify-content: flex-start !important;
+    }
+
+    @@media (max-width: 900px) {
+        .tab-header {
+            margin-left: 60px !important;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .tab-header {
+            margin-left: 50px !important;
+        }
+    }</style>

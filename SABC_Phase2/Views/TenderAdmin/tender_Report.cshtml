@@ -16,7 +16,9 @@
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h2 class="report-title">@Model.Tender.TenderNumber</h2>
+
         </div>
+
         <!-- Table section -->
         <div class="table-wrapper" style="display: flex; justify-content: center; margin-top: 40px;">
             <table class="report-table">
@@ -44,10 +46,10 @@
         </div>
     </div>
 </div>
-
 <!-- PDF generation button -->
 <div style="display: flex; justify-content: center; margin-top: 48px;">
     <button id="generatePdfBtn" style="background: #00a651; color: #fff; border: none; border-radius: 6px; padding: 14px 38px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,166,81,0.10); cursor: pointer; display: flex; align-items: center; gap: 10px;">
+
         Generate PDF
     </button>
 </div>
@@ -55,129 +57,33 @@
 <!-- Font Awesome for icons -->
 <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
 
+<!-- jQuery for functionality -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
 <script>
-    console.log("PDF generation script loaded");
 
-    // Check if button exists immediately
-    var pdfBtn = document.getElementById("generatePdfBtn");
+    $(document).ready(function() {
 
-    if (!pdfBtn) {
-        console.error("PDF button with ID 'generatePdfBtn' not found!");
-        console.log("Available buttons:", document.querySelectorAll('button'));
-    } else {
-        console.log("PDF button found, attaching event listener");
+        // Generate report button click handler
 
-        pdfBtn.addEventListener("click", function () {
-            console.log("Generate PDF button clicked");
+        $("#generatePdfBtn").click(function() {
 
             var tenderId = @Model.Tender.Id;
-            var button = this;
-            var originalText = button.textContent;
 
-            // Prevent double-clicks
-            if (button.disabled) {
-                console.warn("Button already processing, ignoring click");
-                return;
-            }
+            // Generate the PDF URL without date range parameters
 
-            console.log("Processing tender ID:", tenderId);
+            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' +
 
-            button.textContent = "Generating...";
-            button.disabled = true;
+                       '?id=' + tenderId;
 
-            // Build the GET URL for PDF generation
-            var url = '@Url.Action("GenerateTenderSupplierReport", "TenderAdmin")' + '?id=' + tenderId;
-            console.log("Fetching PDF from URL:", url);
+            // Open the PDF in a new tab
 
-            fetch(url, {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                console.log("Response status:", response.status);
-                console.log("Response OK:", response.ok);
-                console.log("Content-Type:", response.headers.get('content-type'));
+            window.open(url, '_blank');
 
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        console.error("Server error response:", text);
-                        throw new Error(`Server error (${response.status}): ${text}`);
-                    });
-                }
-
-                // Check content type
-                var contentType = response.headers.get('content-type');
-                if (contentType && !contentType.includes('application/pdf')) {
-                    console.warn('Unexpected content type:', contentType);
-                }
-
-                return response.blob();
-            })
-            .then(blob => {
-                console.log("Blob received - Size:", blob.size, "Type:", blob.type);
-
-                if (blob.size === 0) {
-                    throw new Error("Generated PDF is empty. Please check your tender data.");
-                }
-
-                // Create object URL
-                var blobUrl = window.URL.createObjectURL(blob);
-                console.log("Blob URL created:", blobUrl);
-
-                // Create download link
-                var link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `SupplierReport_Tender_${tenderId}_${new Date().toISOString().slice(0, 10)}.pdf`;
-                link.style.display = 'none';
-
-                console.log("Download filename:", link.download);
-
-                // Append to body
-                document.body.appendChild(link);
-                console.log("Link appended to DOM");
-
-                // Trigger download with delay to ensure browser processes
-                setTimeout(function() {
-                    try {
-                        link.click();
-                        console.log("Download triggered successfully");
-                    } catch (e) {
-                        console.error("Click failed:", e);
-                        // Fallback: try opening in new window
-                        window.open(blobUrl, '_blank');
-                        console.log("Opened in new tab as fallback");
-                    }
-
-                    // Cleanup after delay
-                    setTimeout(function() {
-                        try {
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(blobUrl);
-                            console.log("Cleanup completed");
-                        } catch (e) {
-                            console.error("Cleanup error:", e);
-                        }
-                    }, 250);
-                }, 100);
-
-            })
-            .catch(error => {
-                console.error('PDF Generation Error:', error);
-                console.error('Error details:', error.message);
-                alert("Failed to generate report: " + error.message);
-            })
-            .finally(() => {
-                console.log("Restoring button state");
-                button.textContent = originalText;
-                button.disabled = false;
-            });
         });
 
-        console.log("Event listener attached successfully");
-    }
+    });
 </script>
 
 
@@ -308,6 +214,80 @@
         .pdf-btn {
             width: 100%;
             justify-content: center;
+        }
+    }
+    /* Make everything smaller and more compact */
+    .page-wrapper {
+        font-size: 0.92rem !important;
+    }
+
+    .report-title {
+        font-size: 1.2rem !important;
+        padding-bottom: 4px !important;
+        border-bottom-width: 2px !important;
+    }
+
+    .report-table th {
+        font-size: 0.95rem !important;
+        padding: 8px 14px !important;
+    }
+
+    .report-table td {
+        font-size: 0.92rem !important;
+        padding: 8px 14px !important;
+    }
+
+    .table-wrapper {
+        margin-top: 24px !important;
+    }
+
+    div[style*="background: #fff; border-radius: 8px;"] {
+        padding: 24px 0 32px 0 !important;
+        max-width: 700px !important;
+    }
+
+    div[style*="display: flex; align-items: center; gap: 18px;"] {
+        gap: 10px !important;
+        margin-bottom: 10px !important;
+        margin-left: 30px !important;
+    }
+
+    button#generatePdfBtn {
+        padding: 8px 18px !important;
+        font-size: 0.95rem !important;
+        border-radius: 5px !important;
+        box-shadow: 0 1px 4px rgba(0,166,81,0.08) !important;
+        font-weight: 500 !important;
+        margin-top: 24px !important;
+    }
+
+    @@media (max-width: 600px) {
+        .page-wrapper {
+            font-size: 0.88rem !important;
+            margin-left: 50px !important;
+        }
+
+        div[style*="background: #fff; border-radius: 8px;"] {
+            padding: 12px 0 18px 0 !important;
+            max-width: 98vw !important;
+        }
+
+        .report-title {
+            font-size: 1rem !important;
+            padding-bottom: 2px !important;
+        }
+
+        .report-table th,
+        .report-table td {
+            font-size: 0.85rem !important;
+            padding: 6px 8px !important;
+        }
+
+        button#generatePdfBtn {
+            padding: 7px 10px !important;
+            font-size: 0.88rem !important;
+            border-radius: 4px !important;
+            margin-top: 12px !important;
         }
     }</style>
 

@@ -1752,7 +1752,7 @@ ViewData["BannerText"] = "Tenders";
         display: flex;
         justify-content: left;
         gap: 5px;
-        margin-left: 178px;
+        margin-left: 190px;
         margin-bottom: 0;
         margin-top: 40px;
         position: relative;
@@ -2606,4 +2606,250 @@ ViewData["BannerText"] = "Tenders";
             1px -1px 0 #000, /* Top right */
             -1px 1px 0 #000; /* Bottom left */
         }
+
+    /* Make everything smaller and more compact */
+    body,
+    .breadcrumb-custom,
+    .tab-header,
+    .tab-btn,
+    .tab-header div,
+    .tab-container,
+    .form-row,
+    .form-group,
+    label,
+    .form-control,
+    select.form-control,
+    .form-check-label,
+    textarea.form-control,
+    .btn-primary,
+    .action-buttons,
+    .action-btn,
+    .upload-label,
+    .upload-label-underline,
+    .supporting-label,
+    .uploaded-file-entry,
+    .uploaded-file-actions button,
+    .schedule-container,
+    .schedule-toggle-text,
+    .submit-tabs,
+    .submit-tab,
+    .submit-tab-content,
+    .selected-date-display,
+    .time-input-container,
+    .time-part,
+    .time-period-btn,
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+    }
+
+    .tab-header {
+        margin-left: 209px !important;
+        margin-top: 24px !important;
+        gap: 2px !important;
+    }
+
+        .tab-btn,
+        .tab-header div {
+            padding: 8px 18px !important;
+            font-size: 0.92rem !important;
+            border-radius: 8px 8px 0 0 !important;
+            min-width: 80px !important;
+        }
+
+    .tab-container {
+        max-width: 700px !important;
+        padding: 18px 8px 12px 8px !important;
+        border-radius: 0 0 10px 10px !important;
+        margin-bottom: 40px !important;
+    }
+
+    .form-row {
+        gap: 10px !important;
+    }
+
+    .form-group,
+    .form-group.full-width {
+        min-width: 0 !important;
+        margin-bottom: 10px !important;
+    }
+
+    label {
+        font-size: 0.92rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .form-control,
+    select.form-control {
+        font-size: 0.92rem !important;
+        padding: 7px 10px !important;
+        border-radius: 6px !important;
+    }
+
+    .form-check-label {
+        font-size: 0.92rem !important;
+        margin-right: 0.8em !important;
+    }
+
+    textarea.form-control {
+        min-height: 48px !important;
+        max-height: 100px !important;
+    }
+
+    .btn-primary {
+        padding: 8px 18px !important;
+        font-size: 0.92rem !important;
+        border-radius: 6px !important;
+    }
+
+    .action-buttons {
+        gap: 10px !important;
+        margin-top: 18px !important;
+        margin-bottom: 30px !important;
+    }
+
+    .action-btn {
+        padding: 8px 18px !important;
+        font-size: 0.92rem !important;
+        border-radius: 6px !important;
+        min-width: 120px !important;
+        height: 38px !important;
+    }
+
+    .upload-label {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .upload-label-underline {
+        margin-bottom: 6px !important;
+        height: 1px !important;
+    }
+
+    .supporting-label {
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-entry {
+        padding: 0.3rem 0.6rem !important;
+        border-radius: 4px !important;
+        margin-bottom: 0.3rem !important;
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-actions button {
+        font-size: 1rem !important;
+        padding: 4px 6px !important;
+    }
+
+    .schedule-container {
+        padding: 6px !important;
+        font-size: 0.92rem !important;
+    }
+
+    .schedule-toggle-text {
+        margin-left: 6px !important;
+    }
+
+    .submit-tabs {
+        gap: 8px !important;
+        padding: 0 8px !important;
+    }
+
+    .submit-tab {
+        padding: 6px 12px !important;
+        font-size: 0.92rem !important;
+        border-radius: 6px 6px 0 0 !important;
+    }
+
+    .submit-tab-content {
+        font-size: 0.92rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    .selected-date-display {
+        font-size: 0.92rem !important;
+        padding: 4px 6px !important;
+        min-width: 80px !important;
+    }
+
+    .time-input-container {
+        max-width: 300px !important;
+        gap: 4px !important;
+    }
+
+    .time-part {
+        width: 38px !important;
+        height: 28px !important;
+        font-size: 0.92rem !important;
+        padding: 6px !important;
+        border-radius: 6px !important;
+    }
+
+    .time-period-btn {
+        padding: 4px 6px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .modal-title,
+    .modal-body p,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+        padding: 6px 10px !important;
+        border-radius: 6px !important;
+    }
+
+    @@media (max-width: 700px) {
+        .tab-header {
+            margin-left: 50px !important; /* Move content right for sidebar */
+            margin-right: 0 !important;
+            width: 70vw !important; /* Make header less wide */
+            max-width: 70vw !important;
+            gap: 2px !important;
+            flex-wrap: wrap;
+            margin-top: 10px !important;
+            box-sizing: border-box;
+        }
+
+            .tab-btn, .tab-header div {
+                padding: 6px 8px !important;
+                font-size: 0.9rem !important;
+                border-radius: 7px 7px 0 0 !important;
+                min-width: 70px !important;
+            }
+    }
+    /* Make the scheduled time input fields (HH and MM) slightly bigger on all screens */
+    .time-input-container .time-part {
+        width: 56px !important;
+        height: 38px !important;
+        font-size: 1rem !important;
+        padding: 8px !important;
+        border-radius: 7px !important;
+    }
+    /* Make the form and tabs wider on mobile screens */
+    @@media (max-width: 700px) {
+        .breadcrumb-custom, .tab-header, .tab-container, .action-buttons, .form-row, .form-group, .form-group.full-width {
+            width: 75vw !important;
+            max-width: 75vw !important;
+            margin-left: 2vw !important;
+            margin-right: 2vw !important;
+            box-sizing: border-box !important;
+        }
+
+        .tab-header {
+            margin-left: 2vw !important;
+            width: 65vw !important;
+            max-width: 65vw !important;
+        }
+
+        .tab-container {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+        }
+
+        .action-buttons {
+            margin-left: 2vw !important;
+        }
+    }
 </style>

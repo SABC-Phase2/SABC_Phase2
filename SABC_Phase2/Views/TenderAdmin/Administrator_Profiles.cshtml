@@ -1,7 +1,6 @@
 ﻿@model SABC_Phase2.Models.Tender.AdministratorProfileViewModel
 @using Microsoft.AspNetCore.Mvc.ModelBinding
 
-
 @functions {
     private IEnumerable<ModelError> GetErrors(string key)
     {
@@ -16,9 +15,7 @@
         return !string.IsNullOrWhiteSpace(Model.CurrentPassword)
             || !string.IsNullOrWhiteSpace(Model.NewPassword)
             || !string.IsNullOrWhiteSpace(Model.ConfirmPassword)
-            || 
-
-            (
+            || (
                 (ViewData.ModelState["CurrentPassword"]?.Errors.Count ?? 0) > 0
                 || (ViewData.ModelState["NewPassword"]?.Errors.Count ?? 0) > 0
                 || (ViewData.ModelState["ConfirmPassword"]?.Errors.Count ?? 0) > 0
@@ -26,7 +23,6 @@
             );
     }
 }
-
 
 @{
     ViewData["BannerText"] = "PROFILE";
@@ -53,11 +49,7 @@
                             <div class="form-group">
                                 @Html.LabelFor(m => m.FirstName, new { @class = "" })
                                 <span class="text-danger">*</span>
-                                @Html.TextBoxFor(m => m.FirstName, new {
-                                @class = "form-control",
-                                                                placeholder = "Enter your first name",
-                                                                @readonly = "readonly"
-                                                                })
+                                @Html.TextBoxFor(m => m.FirstName, new { @class = "form-control", placeholder = "Enter your first name" })
                                 @Html.ValidationMessageFor(m => m.FirstName, "", new { @class = "text-danger" })
                             </div>
                         </div>
@@ -65,11 +57,7 @@
                             <div class="form-group">
                                 @Html.LabelFor(m => m.LastName, new { @class = "" })
                                 <span class="text-danger">*</span>
-                                @Html.TextBoxFor(m => m.LastName, new {
-                                                                @class = "form-control",
-                                                                placeholder = "Enter your last name",
-                                                                @readonly = "readonly"
-                                                                })
+                                @Html.TextBoxFor(m => m.LastName, new { @class = "form-control", placeholder = "Enter your last name" })
                                 @Html.ValidationMessageFor(m => m.LastName, "", new { @class = "text-danger" })
                             </div>
                         </div>
@@ -83,7 +71,7 @@
                             @Html.LabelFor(m => m.Email)
                             <p id="emailStatic" class="form-static mb-0">@Model.Email</p>
                         </div>
-                        <a href="javascript:void(0)" class="change-link d-none" id="changeEmailBtn">Change</a>
+                        <a href="javascript:void(0)" class="change-link" id="changeEmailBtn">Change</a>
                     </div>
                     @Html.HiddenFor(m => m.Email) <!-- keep model binding for current email -->
 
@@ -142,10 +130,6 @@
                         <button type="submit" form="changeProfileForm" class="btn btn-save-3d" id="saveBtn">
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             <span class="btn-text">Save</span>
-                        </button>
-                        <!-- Add this button after your Save button -->
-                        <button type="button" class="btn btn-danger mt-3 d-none" id="showDeleteAccountModalBtn">
-                            Delete Account
                         </button>
 
                     </div>
@@ -815,28 +799,6 @@
 
         // Razor/CSHTML modal logic (success, password requirements) should remain in your view
     });
-
-
-        // Add modal trigger logic based on server-side flags
-    @if (ViewBag.ShowPasswordRequirementsModal == true)
-    {
-            <text>
-            document.addEventListener('DOMContentLoaded', function() {
-                var passwordModal = new bootstrap.Modal(document.getElementById('passwordRequirementsModal'));
-                passwordModal.show();
-            });
-            </text>
-    }
-
-    @if (TempData["ProfileUpdateSuccess"] != null)
-    {
-            <text>
-            document.addEventListener('DOMContentLoaded', function() {
-                var successModal = new bootstrap.Modal(document.getElementById('profileSuccessModal'));
-                successModal.show();
-            });
-            </text>
-    }
 </script>
 
 
@@ -1126,7 +1088,88 @@
             padding-right: 0;
         }
         /* ...other responsive styles... */
-    }</style>
+    }
+    /* Make everything slightly smaller on the profile page */
+    body,
+    .breadcrumb-custom,
+    .tab-container,
+    .profile-page,
+    .form-group label,
+    .form-control,
+    .form-static,
+    .btn,
+    .btn-save-3d,
+    .btn-success,
+    .btn-danger,
+    .change-link,
+    .otp-input,
+    .modal-title,
+    .modal-body,
+    .modal-footer,
+    #passwordRequirementsChecklist li {
+        font-size: 0.92rem !important;
+    }
+
+    .tab-container {
+        padding: 32px 12px 16px 12px !important;
+        max-width: 800px !important;
+    }
+
+    .profile-page {
+        padding: 10px !important;
+    }
+
+    .form-group label {
+        margin-bottom: 3px !important;
+    }
+
+    .form-control {
+        padding: 7px 10px !important;
+        border-radius: 6px !important;
+    }
+
+    .btn,
+    .btn-save-3d,
+    .btn-success,
+    .btn-danger {
+        padding: 7px 18px !important;
+        font-size: 0.92rem !important;
+        border-radius: 6px !important;
+        min-width: 90px !important;
+    }
+
+    .save-btn-outer {
+        margin-top: 18px !important;
+        margin-bottom: 18px !important;
+    }
+
+    .otp-input {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1.1rem !important;
+    }
+
+    #passwordRequirementsChecklist li {
+        font-size: 0.92rem !important;
+    }
+
+    @@media (max-width: 768px) {
+        .tab-container {
+            padding: 10px 2px 8px 2px !important;
+            max-width: 98vw !important;
+        }
+
+        .breadcrumb-custom {
+            left: 5vw !important;
+            width: 95vw !important;
+            max-width: 95vw !important;
+        }
+
+        .profile-page {
+            padding: 4px !important;
+        }
+    }
+</style>
 
 
 

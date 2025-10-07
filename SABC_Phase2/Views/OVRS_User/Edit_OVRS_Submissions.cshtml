@@ -1159,4 +1159,141 @@
                 white-space: normal;
                 text-overflow: unset;
             }
-    }</style>
+    }
+    /* Make everything on the Edit_OVRS_Submissions page slightly smaller */
+    body,
+    .tender-app-card,
+    .details-header,
+    .details-title,
+    .back-arrow,
+    .tender-details-form,
+    .form-row,
+    .form-group,
+    .form-control,
+    .readonly-label,
+    .readonly-input,
+    .upload-header,
+    .upload-title,
+    .upload-doc-row,
+    .supporting-label,
+    .uploaded-file-entry,
+    .uploaded-file-actions button,
+    .app-action-buttons,
+    .app-btn,
+    .submit-btn,
+    .breadcrumb-custom,
+    .modal-content,
+    .modal-title,
+    .modal-body,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+    }
+
+    .tender-app-card {
+        padding: 28px 16px 16px 16px !important;
+        max-width: 700px !important;
+    }
+
+    .details-title {
+        font-size: 1.1rem !important;
+    }
+
+    .back-arrow {
+        font-size: 1.1rem !important;
+    }
+
+    .form-row {
+        gap: 14px 10px !important;
+    }
+
+    .form-group {
+        margin-bottom: 10px !important;
+    }
+
+    .form-control,
+    .readonly-input {
+        font-size: 0.92rem !important;
+        padding: 7px 10px !important;
+        border-radius: 5px !important;
+    }
+
+    .upload-title {
+        font-size: 1.1rem !important;
+    }
+
+    .uploaded-file-entry {
+        padding: 0.3rem 0.6rem !important;
+        border-radius: 4px !important;
+        margin-bottom: 0.3rem !important;
+        font-size: 0.92rem !important;
+    }
+
+    .uploaded-file-actions button {
+        font-size: 1rem !important;
+        padding: 4px 6px !important;
+    }
+
+    .app-action-buttons {
+        gap: 10px !important;
+        margin-top: 18px !important;
+    }
+
+    .app-btn,
+    .submit-btn {
+        min-width: 110px !important;
+        height: 38px !important;
+        font-size: 0.92rem !important;
+        padding: 8px 14px !important;
+        border-radius: 5px !important;
+    }
+
+    .breadcrumb-custom {
+        font-size: 0.92rem !important;
+    }
+
+    .modal-content {
+        padding: 12px 8px !important;
+        font-size: 0.92rem !important;
+    }
+
+    .modal-title,
+    .modal-body,
+    .modal-footer button {
+        font-size: 0.92rem !important;
+        padding: 6px 10px !important;
+        border-radius: 5px !important;
+    }
+
+    @@media (max-width: 700px) {
+        .tender-app-card {
+            padding: 10px 2vw !important;
+            max-width: 98vw !important;
+        }
+
+        .details-title {
+            font-size: 1rem !important;
+        }
+
+        .form-row {
+            gap: 8px 4px !important;
+        }
+
+        .app-action-buttons {
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+
+        .app-btn,
+        .submit-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+            font-size: 0.9rem !important;
+            padding: 8px 0 !important;
+        }
+
+        .modal-content {
+            width: 90vw !important;
+            padding: 8px 2vw !important;
+        }
+    }
+</style>

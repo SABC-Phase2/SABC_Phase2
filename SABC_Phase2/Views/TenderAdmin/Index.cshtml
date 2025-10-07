@@ -26,7 +26,7 @@
             <i class="fas fa-search" style="position:absolute; left:12px; color:#ccc; font-size:1rem;"></i>
             <input type="text" name="search" class="search-input"
                    value="@search"
-                   placeholder="Search keyword"
+                   placeholder="        Search keyword"
                    autocomplete="off"
                    style="padding-left: 38px;" />
         </span>
@@ -171,6 +171,12 @@
 
 
 <style>
+
+    .filter-dropdown,
+    .filter-dropdown option {
+        font-size: 0.8rem !important;
+    }
+
     .table-container {
         margin-top: 35px;
         margin-bottom: 120px;
@@ -732,4 +738,121 @@
             vertical-align: middle;
         }
     }
-</style>
+
+    /* Make all text, buttons, inputs, and table cells smaller */
+    body,
+    .breadcrumb-custom,
+    .tender-action-bar,
+    .search-input,
+    .filter-dropdown,
+    .refresh-btn,
+    .new-tender-btn,
+    .tender-table,
+    .tender-table th,
+    .tender-table td,
+    .tender-title,
+    .edit-btn,
+    .page-link,
+    .pagination-list,
+    .custom-pagination,
+    .table-container,
+    .tender-status,
+    .tender-title-block,
+    .tender-number {
+        font-size: 0.85rem !important;
+    }
+
+    .table-container {
+        padding: 12px !important;
+        margin-top: 18px !important;
+        margin-bottom: 40px !important;
+    }
+
+    .tender-table th,
+    .tender-table td {
+        padding: 8px !important;
+    }
+
+    .tender-thumbnail {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .search-input,
+    .filter-dropdown,
+    .refresh-btn,
+    .new-tender-btn {
+        padding: 8px 10px !important;
+        font-size: 0.85rem !important;
+        min-width: 0 !important;
+    }
+
+    .edit-btn {
+        padding: 4px 8px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .page-link {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .pagination-list {
+        gap: 6px !important;
+        padding: 6px 8px !important;
+    }
+
+    .custom-pagination {
+        margin-top: 10px !important;
+    }
+
+    .tender-title-block,
+    .tender-title,
+    .tender-number {
+        max-width: 40vw !important;
+        font-size: 0.85rem !important;
+    }
+
+    @@media (max-width: 768px) {
+        .table-container {
+            padding: 6px !important;
+        }
+
+        .tender-table tr {
+            padding: 6px !important;
+        }
+
+        .tender-table td {
+            font-size: 0.8rem !important;
+            padding: 6px 0 !important;
+        }
+
+        .tender-title {
+            font-size: 0.8rem !important;
+        }
+
+        .search-input,
+        .filter-dropdown,
+        .refresh-btn,
+        .new-tender-btn {
+            font-size: 0.8rem !important;
+            padding: 6px 8px !important;
+        }
+
+        .edit-btn {
+            font-size: 0.75rem !important;
+            padding: 3px 6px !important;
+        }
+
+        .page-link {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 0.75rem !important;
+        }
+
+        .pagination-list {
+            gap: 4px !important;
+            padding: 4px 6px !important;
+        }
+    }</style>
